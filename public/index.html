@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yuki — Asisten Ryukomik</title>
+  <style>
+    :root {
+      --bg: #0a0e16;
+      --bg2: #0e131e;
+      --accent1: #22d3ee;
+      --accent2: #38bdf8;
+      --card: #121826;
+      --line: #232b3a;
+      --ink: #e7ebf3;
+      --muted: #8b94a8;
+      --bot: #161d2b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: var(--ink); padding: 18px;
+      background: radial-gradient(900px 500px at 50% -10%, #15203a, #0a0e16);
+    }
+    .app {
+      position: relative; width: 100%; max-width: 1040px; height: 88vh; display: flex;
+      background: var(--card); border: 1px solid var(--line); border-radius: 20px; overflow: hidden;
+      box-shadow: 0 18px 60px rgba(0,0,0,.5);
+    }
+
+    /* ===== Panel KANAN: panggung karakter (beranimasi) ===== */
+    .stage { position: relative; width: 420px; flex: none; overflow: hidden; padding: 18px;
+             display: grid; place-items: stretch;
+             border-left: 1px solid var(--line);
+             background: radial-gradient(120% 85% at 50% 0%, #182742, #0b1120 72%); }
+    /* BINGKAI / JENDELA karakter -> Yuki "berpijak" di dalam frame, tidak ngambang */
+    .frame { position: relative; width: 100%; height: 100%; border-radius: 18px; overflow: hidden;
+             border: 1px solid #2b3854;
+             background: linear-gradient(180deg, #1b2942 0%, #101a2c 68%, #0a111e 100%);
+             box-shadow: inset 0 0 46px rgba(0,0,0,.5), 0 10px 32px rgba(0,0,0,.45); }
+    /* alas/lantai lembut di dasar bingkai biar dia seperti berpijak, bukan melayang */
+    .frame::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 32%;
+                    background: radial-gradient(120% 90% at 50% 100%, rgba(34,211,238,.16), transparent 72%);
+                    pointer-events: none; }
+    .frame .glow { position: absolute; left: 50%; bottom: 6%; transform: translateX(-50%);
+                   width: 280px; height: 280px; border-radius: 50%;
+                   background: radial-gradient(circle, rgba(34,211,238,.34), transparent 70%);
+                   filter: blur(12px); animation: pulse 4s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity: .45; transform: translateX(-50%) scale(1); }
+                       50% { opacity: .9; transform: translateX(-50%) scale(1.1); } }
+    /* karakter PAS di panel (gambar transparan -> latar gelap tembus).
+       object-fit: contain = seluruh gambar tampil utuh, TIDAK ke-zoom / ke-crop. */
+    .char { position: absolute; inset: 0; width: 100%; height: 100%;
+            object-fit: contain; object-position: bottom center; transform-origin: 50% 100%;
+            animation: breathe 6s ease-in-out infinite; }
+    /* "napas" SANGAT halus (skala kecil saja, tanpa geser/putar) -> hidup tapi tetap diam, tidak gerak aneh */
+    @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.012); } }
+    .nameplate { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; padding: 14px 16px;
+                 display: flex; align-items: center; justify-content: space-between; gap: 10px;
+                 background: linear-gradient(to top, rgba(8,12,20,.94), transparent); }
+    .np-name { font-weight: 800; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+
+    /* ===== Panel KIRI: chat ===== */
+    .side { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .top { display: flex; align-items: center; gap: 12px; padding: 14px 18px;
+           border-bottom: 1px solid var(--line); background: var(--bg2); }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: #34d27b; border: 2px solid #0b1120; }
+    .who { flex: 1; min-width: 0; }
+    .who h1 { margin: 0; font-size: 16px; }
+    .who p { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
+    .pill { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #cdd5e6;
+            background: #1a2233; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); }
+    .micon { display: inline-flex; color: var(--accent1); }
+    .gear { width: 36px; height: 36px; border-radius: 50%; border: none; cursor: pointer;
+            background: #1a2233; color: #aab3c6; display: grid; place-items: center; }
+    .gear:hover { background: #222c40; }
+    .chat { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; background: var(--bg); }
+    .chat::-webkit-scrollbar { width: 8px; }
+    .chat::-webkit-scrollbar-thumb { background: #2a3344; border-radius: 8px; }
+    .row { display: flex; align-items: flex-end; gap: 10px; max-width: 80%; }
+    .row.bot { align-self: flex-start; }
+    .row.user { align-self: flex-end; flex-direction: row-reverse; }
+    .ava-sm { width: 30px; height: 30px; border-radius: 50%; flex: none; display: grid; place-items: center;
+              font-weight: 800; font-size: 13px; color: #06121a;
+              background: linear-gradient(135deg, var(--accent1), var(--accent2)); }
+    .bubble { padding: 11px 15px; border-radius: 16px; line-height: 1.5; font-size: 14.5px; }
+    .bot .bubble { background: var(--bot); color: var(--ink); border: 1px solid var(--line); border-bottom-left-radius: 5px; }
+    .user .bubble { color: #06121a; font-weight: 500; border-bottom-right-radius: 5px;
+                    background: linear-gradient(135deg, var(--accent1), var(--accent2)); }
+    .bubble a { color: var(--accent1); font-weight: 600; text-decoration: none; }
+    .bubble a:hover { text-decoration: underline; }
+    .user .bubble a { color: #06121a; text-decoration: underline; }
+    .bubble .act { font-style: italic; color: var(--muted); }
+    .user .bubble .act { color: rgba(6,18,26,.7); }
+    .play { width: 30px; height: 30px; flex: none; border-radius: 50%; border: none; cursor: pointer;
+            background: #1a2233; color: #aab3c6;
+            display: grid; place-items: center; transition: background .15s; }
+    .play:hover { background: #222c40; }
+    .play.playing { background: linear-gradient(135deg, var(--accent1), var(--accent2)); color: #06121a; }
+    .play.loading { opacity: .7; cursor: default; }
+    .play.loading svg { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .pill svg, .gear svg, .play svg { width: 16px; height: 16px; }
+    .send svg { width: 20px; height: 20px; }
+    .typing { display: flex; gap: 4px; padding: 2px 0; }
+    .typing span { width: 7px; height: 7px; border-radius: 50%; background: #5b6678; animation: blink 1.2s infinite; }
+    .typing span:nth-child(2) { animation-delay: .2s; }
+    .typing span:nth-child(3) { animation-delay: .4s; }
+    @keyframes blink { 0%,60%,100% { opacity: .25 } 30% { opacity: 1 } }
+    .bar { display: flex; align-items: center; gap: 10px; padding: 14px 16px;
+           border-top: 1px solid var(--line); background: var(--bg2); }
+    .bar input { flex: 1; padding: 12px 18px; border: 1px solid var(--line); outline: none; border-radius: 999px;
+                 background: #0e1422; color: var(--ink); font-size: 14.5px; }
+    .bar input:focus { border-color: var(--accent1); background: #0b1018; }
+    .bar input::placeholder { color: #6b7589; }
+    .send { width: 46px; height: 46px; flex: none; border-radius: 50%; border: none; cursor: pointer;
+            color: #06121a; display: grid; place-items: center;
+            background: linear-gradient(135deg, var(--accent1), var(--accent2)); }
+    .send:disabled { opacity: .5; cursor: default; }
+    .menu { position: absolute; top: 64px; right: 18px; background: #141a26; color: #cdd5e6;
+            border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px;
+            font-size: 13px; display: none; gap: 8px; align-items: center; z-index: 5;
+            box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+    .menu.open { display: flex; }
+
+    /* ===== Responsif ===== */
+    @media (max-width: 860px) { .app { max-width: 640px; } .stage { width: 300px; } }
+    @media (max-width: 600px) {
+      .app { flex-direction: column-reverse; height: 94vh; }
+      .stage { width: 100%; height: 300px; border-left: none; border-bottom: 1px solid var(--line); }
+      .char { height: 100%; max-width: 100%; }
+      .nameplate { padding: 10px 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section class="side">
+      <div class="top">
+        <div class="who">
+          <h1 id="name">Yuki</h1>
+          <p>Asisten baca komik · online</p>
+        </div>
+        <button class="gear" id="gear" title="Pengaturan"><i data-lucide="settings"></i></button>
+      </div>
+      <div class="menu" id="menu">
+        <label><input type="checkbox" id="autoplay" /> Putar suara otomatis</label>
+        <label><input type="checkbox" id="adult" /> Mode dewasa (18+)</label>
+      </div>
+      <div class="chat" id="chat"></div>
+      <form class="bar" id="form">
+        <input id="input" placeholder="Ketik pesan..." autocomplete="off" />
+        <button class="send" id="send" type="submit"><i data-lucide="send"></i></button>
+      </form>
+    </section>
+    <aside class="stage">
+      <div class="frame">
+        <div class="glow"></div>
+        <img id="char" class="char" src="expressions/tenang.png" alt="Yuki" onerror="this.style.display='none'" />
+        <div class="nameplate">
+          <div class="np-name">Yuki <span class="dot"></span></div>
+          <div class="pill"><span class="micon" id="moodIconWrap"><i data-lucide="meh"></i></span><span id="mood">tenang</span></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    const NAME = 'Yuki'
+    const chat = document.getElementById('chat')
+    const form = document.getElementById('form')
+    const input = document.getElementById('input')
+    const sendBtn = document.getElementById('send')
+    const char = document.getElementById('char')
+    const moodEl = document.getElementById('mood')
+    const moodIconWrap = document.getElementById('moodIconWrap')
+    const gear = document.getElementById('gear')
+    const menu = document.getElementById('menu')
+    const autoplayBox = document.getElementById('autoplay')
+    const adultBox = document.getElementById('adult')
+    const history = []
+    let currentAudio = null
+
+    // mood -> nama file gambar ekspresi anime (taruh di public/expressions/)
+    const EXPR = {
+      ceria: 'senang', senang: 'senang', 'sayang/manja': 'malu', malu: 'malu',
+      tenang: 'tenang', sedih: 'sedih', kesal: 'kesal',
+      cemas: 'malu', kecewa: 'sedih', lesu: 'lesu'
+    }
+
+    // mood -> ikon Lucide + warna
+    const MOOD = {
+      ceria:          { icon: 'laugh',        color: '#f59e0b' },
+      senang:         { icon: 'smile',        color: '#4f7cff' },
+      'sayang/manja': { icon: 'heart',        color: '#ff6fae' },
+      malu:           { icon: 'sparkles',     color: '#ff8fc7' },
+      tenang:         { icon: 'meh',          color: '#36c6ff' },
+      sedih:          { icon: 'frown',        color: '#6b8afd' },
+      kesal:          { icon: 'angry',        color: '#ef5a5a' },
+      cemas:          { icon: 'alert-circle', color: '#a78bfa' },
+      kecewa:         { icon: 'cloud-rain',   color: '#94a0b8' },
+      lesu:           { icon: 'moon',         color: '#94a0b8' }
+    }
+
+    // render satu ikon Lucide ke dalam sebuah elemen
+    function setIcon(el, name) {
+      el.innerHTML = `<i data-lucide="${name}"></i>`
+      window.lucide && lucide.createIcons()
+    }
+
+    // escape HTML biar aman sebelum diformat
+    function escapeHtml(s) {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+    }
+
+    // teks bersih buat dibacakan TTS (buang aksi *...* dan (...))
+    function cleanForSpeech(text) {
+      return text.replace(/\*[^*]+\*/g, ' ').replace(/\([^)]*\)/g, ' ').replace(/\s{2,}/g, ' ').trim()
+    }
+
+    // format pesan Yuki: link aktif + aksi *...* jadi narasi miring
+    function formatMsg(text) {
+      let html = escapeHtml(text)
+      const links = []
+      const stash = (a) => { links.push(a); return '@@LNK' + (links.length - 1) + '@@' }
+      html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (m, label, url) =>
+        stash('<a href="' + url + '" target="_blank" rel="noopener">' + label + '</a>'))
+      html = html.replace(/(https?:\/\/[^\s<]+)/g, (m, url) =>
+        stash('<a href="' + url + '" target="_blank" rel="noopener">' + url + '</a>'))
+      html = html.replace(/\b(ryukomik\.my\.id)\b/gi, (m) =>
+        stash('<a href="https://ryukomik.my.id" target="_blank" rel="noopener">' + m + '</a>'))
+      html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      html = html.replace(/\*([^*]+)\*/g, '<span class="act">$1</span>')
+      html = html.replace(/@@LNK(\d+)@@/g, (m, i) => links[+i])
+      html = html.replace(/\n/g, '<br>')
+      return html
+    }
+
+    gear.addEventListener('click', () => menu.classList.toggle('open'))
+
+    function setMood(mood, bond, feeling) {
+      const m = MOOD[mood]
+      if (!m) return
+      setIcon(moodIconWrap, m.icon)
+      moodIconWrap.style.color = m.color
+      moodEl.textContent = bond ? `${mood} · ${bond}` : mood
+      if (feeling && char) char.title = feeling
+      // ganti gambar ekspresi Yuki LANGSUNG (tanpa jeda menghilang dulu)
+      if (char) {
+        const next = 'expressions/' + (EXPR[mood] || 'tenang') + '.png'
+        if (char.getAttribute('src') !== next) {
+          char.src = next
+          char.style.display = ''
+        }
+      }
+    }
+
+    // Tombol play suara per pesan — TIDAK auto-play, harus ditekan
+    function makePlayBtn(text) {
+      const btn = document.createElement('button')
+      btn.className = 'play'
+      btn.title = 'Putar suara'
+      btn.innerHTML = '<i data-lucide="volume-2"></i>'
+      const clean = cleanForSpeech(text) || text
+      btn.addEventListener('click', () => speak(clean, btn))
+      return btn
+    }
+
+    async function speak(text, btn) {
+      // kalau audio ini sedang main -> hentikan
+      if (btn.classList.contains('playing')) { currentAudio && currentAudio.pause(); return }
+      // hentikan audio lain yang mungkin sedang main
+      if (currentAudio) {
+        currentAudio.pause()
+        document.querySelectorAll('.play.playing').forEach((b) => { b.classList.remove('playing'); setIcon(b, 'volume-2') })
+      }
+      btn.classList.add('loading'); setIcon(btn, 'loader-2')
+      try {
+        const res = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text })
+        })
+        if (!res.ok) throw new Error('TTS gagal')
+        const blob = await res.blob()
+        const audio = new Audio(URL.createObjectURL(blob))
+        currentAudio = audio
+        btn.classList.remove('loading'); btn.classList.add('playing'); setIcon(btn, 'pause')
+        const reset = () => { btn.classList.remove('playing'); setIcon(btn, 'volume-2') }
+        audio.onended = reset
+        audio.onpause = reset
+        audio.play()
+      } catch (e) {
+        btn.classList.remove('loading'); setIcon(btn, 'volume-2')
+        console.error(e)
+      }
+    }
+
+    function addMsg(text, who) {
+      const row = document.createElement('div')
+      row.className = 'row ' + who
+      if (who === 'bot') {
+        const ava = document.createElement('div')
+        ava.className = 'ava-sm'; ava.textContent = NAME[0]
+        const bubble = document.createElement('div')
+        bubble.className = 'bubble'; bubble.innerHTML = formatMsg(text)
+        row.append(ava, bubble, makePlayBtn(text))
+      } else {
+        const bubble = document.createElement('div')
+        bubble.className = 'bubble'; bubble.textContent = text
+        row.append(bubble)
+      }
+      chat.appendChild(row)
+      window.lucide && lucide.createIcons()
+      chat.scrollTop = chat.scrollHeight
+      return row
+    }
+
+    function showTyping() {
+      const row = document.createElement('div')
+      row.className = 'row bot'
+      row.innerHTML = '<div class="ava-sm">' + NAME[0] + '</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>'
+      chat.appendChild(row)
+      chat.scrollTop = chat.scrollHeight
+      return row
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault()
+      const text = input.value.trim()
+      if (!text) return
+      addMsg(text, 'user')
+      history.push({ role: 'user', content: text })
+      input.value = ''
+      sendBtn.disabled = true
+      const typing = showTyping()
+
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: history, adult: adultBox.checked })
+        })
+        const data = await res.json()
+        typing.remove()
+        const reply = data.reply || '(...)'
+        if (data.mood) setMood(data.mood, data.bond, data.feeling)
+        const row = addMsg(reply, 'bot')
+        history.push({ role: 'assistant', content: reply })
+        // auto-play HANYA kalau diaktifkan di menu pengaturan
+        if (autoplayBox.checked) {
+          const btn = row.querySelector('.play')
+          if (btn) speak(cleanForSpeech(reply) || reply, btn)
+        }
+      } catch (e) {
+        typing.remove()
+        addMsg('Error: ' + e.message, 'bot')
+      } finally {
+        sendBtn.disabled = false
+        input.focus()
+      }
+    })
+
+    // ===== Kedip mata ala VTuber (pakai gambar) =====
+    // Butuh frame "mata tertutup": expressions/<ekspresi>_blink.png (mis. tenang_blink.png).
+    // Kalau frame-nya ADA -> Yuki kedip otomatis; kalau belum ada -> dilewati (aman, tanpa kedip).
+    let blinkBusy = false
+    function exprBase() {
+      const m = ((char && char.getAttribute('src')) || '').match(/expressions\/([a-z]+)\.png/i)
+      return m ? m[1] : 'tenang'
+    }
+    function blinkOnce() {
+      if (blinkBusy || !char) return
+      const openSrc = char.src
+      const blinkSrc = 'expressions/' + exprBase() + '_blink.png'
+      const probe = new Image()
+      probe.onload = () => {
+        blinkBusy = true
+        char.src = blinkSrc
+        setTimeout(() => { char.src = openSrc; blinkBusy = false }, 130)
+      }
+      probe.onerror = () => {}
+      probe.src = blinkSrc
+    }
+    setInterval(blinkOnce, 3800 + Math.random() * 2600)
+
+    // render ikon statis awal (settings, send, mood)
+    window.lucide && lucide.createIcons()
+  </script>
+</body>
+</html>
