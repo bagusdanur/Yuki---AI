@@ -36,22 +36,30 @@ app.use(express.static('public'))
 // Panaskan model embedding di latar belakang (biar recall cepat saat dipakai)
 warmupEmbedder().catch(() => {})
 
-// Pulihkan kondisi emosi & kedekatan dari sesi sebelumnya (Yuki "ingat perasaannya")
-let emotion = new Emotion()
-const boot = await loadMemory()
-if (boot.emotion) emotion = new Emotion(boot.emotion)
+// Emosi & bond TERPISAH per user (di-cache di RAM, persist ke SQLite per user)
+const sessions = new Map() // userId -> Emotion
+async function getEmotion(userId) {
+  if (sessions.has(userId)) return sessions.get(userId)
+  const mem = await loadMemory(userId)
+  const emo = mem.emotion ? new Emotion(mem.emotion) : new Emotion()
+  sessions.set(userId, emo)
+  return emo
+}
 
 // Endpoint chat -> balasan dari Qwen/DeepSeek (dengan emosi + kedekatan + memori)
 app.post('/api/chat', async (req, res) => {
   try {
-    const { messages, adult } = req.body || {}
+    const { messages, adult, userId = 'anon' } = req.body || {}
     const userText = messages?.[messages.length - 1]?.content || ''
+
+    // 0) ambil emosi & bond MILIK user ini (per userId)
+    const emotion = await getEmotion(userId)
 
     // 1) mesin emosi (keyword) -> update KEDEKATAN (bond) + fallback ekspresi
     const { mood: kwMood, bond } = emotion.react(userText)
 
     // 2) RECALL SEMANTIK: ambil memori yang maknanya paling relevan dgn pesan user
-    const recall = await recallMemory(userText)
+    const recall = await recallMemory(userId, userText)
     const memoryContext = buildMemoryContext(recall)
 
     // 2b) Kalau user minta rekomendasi/cari komik -> ambil judul REAL dari Ryukomik
@@ -75,17 +83,17 @@ app.post('/api/chat', async (req, res) => {
     let mood = llmMood || kwMood
     if (mood === 'sayang/manja' && emotion.closeness() < 0.5) mood = 'malu'
 
-    // 5) simpan di background (tidak memblok respon)
-    saveEmotion(emotion.serialize()).catch(() => {})
+    // 5) simpan (per user)
+    try { saveEmotion(userId, emotion.serialize()) } catch {}
     if (worthRemembering(userText)) {
       extractFacts(userText, reply)
-        .then((facts) => (facts.length ? addFacts(facts) : null))
+        .then((facts) => (facts.length ? addFacts(userId, facts) : null))
         .catch(() => {})
     }
     // catat momen emosional yang kuat
     if (['sayang/manja', 'sedih', 'kesal', 'cemas', 'kecewa'].includes(mood)) {
-      addEvent({
-        summary: `Waktu senpai bilang "${userText.slice(0, 60)}", Yuki merasa ${mood}.`,
+      addEvent(userId, {
+        summary: `Waktu dia bilang "${userText.slice(0, 60)}", Yuki merasa ${mood}.`,
         mood
       }).catch(() => {})
     }
@@ -110,7 +118,7 @@ app.post('/api/tts', async (req, res) => {
   }
 })
 
-const PORT = process.env.PORT || 3020
+const PORT = process.env.PORT || 3000
 app.listen(PORT, () => {
   console.log(`✨ AI Anime Chat jalan di http://localhost:${PORT}`)
 })

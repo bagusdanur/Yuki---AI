@@ -52,6 +52,11 @@
     const input = document.getElementById('input')
     const moodEl = document.getElementById('mood')
     const history = []
+    function getUserId(){
+      let id = localStorage.getItem('yuki_uid')
+      if (!id) { id = 'u_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); localStorage.setItem('yuki_uid', id) }
+      return id
+    }
     function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
     function fmt(t){
       let h = esc(t); const L = []
@@ -89,7 +94,7 @@
         const res = await fetch(API + '/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: history })
+          body: JSON.stringify({ messages: history, userId: getUserId() })
         })
         const d = await res.json(); ty.remove()
         const reply = d.reply || '(...)'

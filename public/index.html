@@ -209,6 +209,16 @@
     const history = []
     let currentAudio = null
 
+    // ID anonim per browser (persisten, tanpa login) -> memori per user
+    function getUserId() {
+      let id = localStorage.getItem('yuki_uid')
+      if (!id) {
+        id = 'u_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
+        localStorage.setItem('yuki_uid', id)
+      }
+      return id
+    }
+
     // mood -> nama file gambar ekspresi anime (taruh di public/expressions/)
     const EXPR = {
       ceria: 'senang', senang: 'senang', 'sayang/manja': 'malu', malu: 'malu',
@@ -367,7 +377,7 @@
         const res = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: history, adult: adultBox.checked })
+          body: JSON.stringify({ messages: history, adult: adultBox.checked, userId: getUserId() })
         })
         const data = await res.json()
         typing.remove()
