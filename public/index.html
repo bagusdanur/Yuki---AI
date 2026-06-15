@@ -219,6 +219,23 @@
       return id
     }
 
+    // Simpan & pulihkan riwayat chat di browser ini -> walau di-refresh,
+    // obrolan TIDAK hilang & Yuki tidak balik "dingin seperti orang asing".
+    const HIST_KEY = 'yuki_hist_' + getUserId()
+    function saveHistory() {
+      try { localStorage.setItem(HIST_KEY, JSON.stringify(history.slice(-40))) } catch (e) {}
+    }
+    function restoreHistory() {
+      let saved = []
+      try { saved = JSON.parse(localStorage.getItem(HIST_KEY) || '[]') } catch (e) {}
+      if (!Array.isArray(saved) || !saved.length) return false
+      for (const m of saved) {
+        history.push(m)
+        addMsg(m.content, m.role === 'user' ? 'user' : 'bot')
+      }
+      return true
+    }
+
     // mood -> nama file gambar ekspresi anime (taruh di public/expressions/)
     const EXPR = {
       ceria: 'senang', senang: 'senang', 'sayang/manja': 'malu', malu: 'malu',
@@ -369,6 +386,7 @@
       if (!text) return
       addMsg(text, 'user')
       history.push({ role: 'user', content: text })
+      saveHistory()
       input.value = ''
       sendBtn.disabled = true
       const typing = showTyping()
@@ -377,7 +395,7 @@
         const res = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: history, adult: adultBox.checked, userId: getUserId() })
+          body: JSON.stringify({ messages: history.slice(-16), adult: adultBox.checked, userId: getUserId() })
         })
         const data = await res.json()
         typing.remove()
@@ -385,6 +403,7 @@
         if (data.mood) setMood(data.mood, data.bond, data.feeling)
         const row = addMsg(reply, 'bot')
         history.push({ role: 'assistant', content: reply })
+        saveHistory()
         // auto-play HANYA kalau diaktifkan di menu pengaturan
         if (autoplayBox.checked) {
           const btn = row.querySelector('.play')
@@ -421,6 +440,9 @@
       probe.src = blinkSrc
     }
     setInterval(blinkOnce, 3800 + Math.random() * 2600)
+
+    // pulihkan obrolan sebelumnya (kalau ada) biar lanjut, bukan mulai dari nol
+    restoreHistory()
 
     // render ikon statis awal (settings, send, mood)
     window.lucide && lucide.createIcons()

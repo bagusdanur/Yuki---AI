@@ -81,7 +81,7 @@ app.post('/api/chat', async (req, res) => {
     // 4) EKSPRESI final: utamakan emosi dari ISI CHAT (disetir LLM), fallback ke keyword.
     //    Aturan kompleks: kalau masih "orang asing"/belum dekat, sayang/manja diturunkan jadi malu.
     let mood = llmMood || kwMood
-    if (mood === 'sayang/manja' && emotion.closeness() < 0.5) mood = 'malu'
+    if (mood === 'sayang/manja' && emotion.closeness() < 0.35) mood = 'malu'
 
     // 5) simpan (per user)
     try { saveEmotion(userId, emotion.serialize()) } catch {}

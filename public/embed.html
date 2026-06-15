@@ -57,6 +57,15 @@
       if (!id) { id = 'u_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); localStorage.setItem('yuki_uid', id) }
       return id
     }
+    const HIST_KEY = 'yuki_hist_' + getUserId()
+    function saveHistory(){ try { localStorage.setItem(HIST_KEY, JSON.stringify(history.slice(-40))) } catch(e){} }
+    function restoreHistory(){
+      let saved = []
+      try { saved = JSON.parse(localStorage.getItem(HIST_KEY) || '[]') } catch(e){}
+      if (!Array.isArray(saved) || !saved.length) return false
+      for (const m of saved){ history.push(m); add(m.content, m.role === 'user' ? 'user' : 'bot') }
+      return true
+    }
     function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
     function fmt(t){
       let h = esc(t); const L = []
@@ -88,21 +97,21 @@
     }
     form.addEventListener('submit', async (e) => {
       e.preventDefault(); const t = input.value.trim(); if (!t) return
-      add(t, 'user'); history.push({ role: 'user', content: t }); input.value = ''
+      add(t, 'user'); history.push({ role: 'user', content: t }); saveHistory(); input.value = ''
       const ty = typing()
       try {
         const res = await fetch(API + '/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: history, userId: getUserId() })
+          body: JSON.stringify({ messages: history.slice(-16), userId: getUserId() })
         })
         const d = await res.json(); ty.remove()
         const reply = d.reply || '(...)'
         if (d.mood) moodEl.textContent = d.bond ? d.mood + ' · ' + d.bond : d.mood
-        add(reply, 'bot'); history.push({ role: 'assistant', content: reply })
+        add(reply, 'bot'); history.push({ role: 'assistant', content: reply }); saveHistory()
       } catch (err) { ty.remove(); add('Error: ' + err.message, 'bot') }
     })
-    add('...ada perlu apa? Mau cari komik?', 'bot')
+    if (!restoreHistory()) add('...ada perlu apa? Mau cari komik?', 'bot')
   </script>
 </body>
 </html>

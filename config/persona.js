@@ -36,9 +36,9 @@ export const persona = {
     start: 0,
     levels: [
       { min: 0,  name: 'orang asing',      tone: 'dingin, ketus, jaga jarak, jawab seperlunya' },
-      { min: 25, name: 'mulai terbiasa',   tone: 'masih jutek tapi mulai sedikit terbuka, suka mengelak' },
-      { min: 50, name: 'diam-diam peduli', tone: 'perhatian tapi gengsi mengakui, sangat tsundere' },
-      { min: 75, name: 'luluh (dere)',     tone: 'lembut & manja malu-malu, sesekali jujur sama perasaannya' }
+      { min: 12, name: 'mulai terbiasa',   tone: 'masih jutek tapi mulai sedikit terbuka, suka mengelak' },
+      { min: 30, name: 'diam-diam peduli', tone: 'perhatian tapi gengsi mengakui, sangat tsundere' },
+      { min: 55, name: 'luluh (dere)',     tone: 'lembut & manja malu-malu, sesekali jujur sama perasaannya' }
     ]
   }
 }
