@@ -110,7 +110,7 @@ app.post('/api/tts', async (req, res) => {
   }
 })
 
-const PORT = process.env.PORT || 3000
+const PORT = process.env.PORT || 3020
 app.listen(PORT, () => {
   console.log(`✨ AI Anime Chat jalan di http://localhost:${PORT}`)
 })
