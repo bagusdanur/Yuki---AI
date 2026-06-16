@@ -9,13 +9,17 @@
     :root {
       --bg: #0a0e16;
       --bg2: #0e131e;
-      --accent1: #22d3ee;
-      --accent2: #38bdf8;
+      --accent1: #a78bfa;
+      --accent2: #8b5cf6;
       --card: #121826;
       --line: #232b3a;
       --ink: #e7ebf3;
       --muted: #8b94a8;
       --bot: #161d2b;
+      --accent-rgba-025: rgba(139, 92, 246, 0.25);
+      --accent-rgba-008: rgba(139, 92, 246, 0.08);
+      --accent-rgba-015: rgba(139, 92, 246, 0.15);
+      --accent-rgba-01: rgba(139, 92, 246, 0.1);
     }
 
     * {
@@ -262,7 +266,7 @@
       gap: 10px;
       align-items: center;
       background: rgba(18, 24, 38, 0.75);
-      border: 1px solid rgba(34, 211, 238, 0.25);
+      border: 1px solid var(--accent-rgba-025);
       border-radius: 12px;
       padding: 6px;
       margin: 8px 0;
@@ -291,10 +295,10 @@
     }
 
     .comic-card:hover {
-      background: rgba(34, 211, 238, 0.08);
+      background: var(--accent-rgba-008);
       border-color: var(--accent1);
       transform: translateY(-1px);
-      box-shadow: 0 6px 16px rgba(34, 211, 238, 0.15);
+      box-shadow: 0 6px 16px var(--accent-rgba-015);
     }
 
     .comic-card:hover::after {
@@ -420,7 +424,7 @@
       width: 44px;
       height: 44px;
       border-radius: 50%;
-      background: rgba(34, 211, 238, 0.1);
+      background: var(--accent-rgba-01);
       color: var(--accent1);
       display: grid;
       place-items: center;
@@ -533,8 +537,63 @@
 
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>
+    const THEME_COLORS = {
+      "violet-cyan": { foreground: "#f7f7fb", background: "#090a12", surface0: "#0d0f1a", surface1: "#121522", surface2: "#191d2d", surface3: "#23283a", accent: "#8b5cf6", accent2: "#22d3ee" },
+      "red-cyan": { foreground: "#fff7f8", background: "#10080b", surface0: "#170c10", surface1: "#1f1117", surface2: "#2b1720", surface3: "#3a1f2a", accent: "#ef4444", accent2: "#22d3ee" },
+      "emerald-blue": { foreground: "#f2fbf8", background: "#06100d", surface0: "#0a1713", surface1: "#0f1f1a", surface2: "#162b24", surface3: "#203930", accent: "#10b981", accent2: "#38bdf8" },
+      "pink-indigo": { foreground: "#fff7fb", background: "#0c0812", surface0: "#120d1d", surface1: "#181226", surface2: "#211936", surface3: "#30244b", accent: "#ec4899", accent2: "#818cf8" },
+      "mono-dark": { foreground: "#f5f5f5", background: "#080808", surface0: "#0e0e0e", surface1: "#151515", surface2: "#202020", surface3: "#2a2a2a", accent: "#e5e7eb", accent2: "#94a3b8" },
+      "pure-black": { foreground: "#f8fafc", background: "#000000", surface0: "#050505", surface1: "#0a0a0a", surface2: "#141414", surface3: "#202020", accent: "#d4d4d8", accent2: "#67e8f9" },
+      "soft-slate": { foreground: "#f1f5f9", background: "#111318", surface0: "#161922", surface1: "#1c202a", surface2: "#252b36", surface3: "#313846", accent: "#a5b4fc", accent2: "#7dd3fc" },
+      "midnight-blue": { foreground: "#eef6ff", background: "#07111f", surface0: "#0b1728", surface1: "#101d30", surface2: "#18283e", surface3: "#23364f", accent: "#60a5fa", accent2: "#5eead4" },
+      "paper-white": { foreground: "#111827", background: "#f8fafc", surface0: "#ffffff", surface1: "#ffffff", surface2: "#eef2f7", surface3: "#e2e8f0", accent: "#2563eb", accent2: "#0891b2" },
+      "warm-paper": { foreground: "#201a14", background: "#f7f1e7", surface0: "#fffaf1", surface1: "#fff7ed", surface2: "#f0e4d4", surface3: "#e5d6c2", accent: "#b45309", accent2: "#0f766e" },
+      "mist-gray": { foreground: "#172033", background: "#eef1f5", surface0: "#f8fafc", surface1: "#f6f8fb", surface2: "#e4e9f0", surface3: "#d4dce7", accent: "#475569", accent2: "#0e7490" },
+      "ice-blue": { foreground: "#0f2433", background: "#eff8ff", surface0: "#f8fcff", surface1: "#ffffff", surface2: "#dff1fb", surface3: "#c9e5f2", accent: "#0284c7", accent2: "#0d9488" }
+    };
+
+    function hexToRgb(hex) {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+      return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      } : null
+    }
+
+    function applyTheme(themeKey) {
+      const theme = THEME_COLORS[themeKey] || THEME_COLORS['violet-cyan']
+      const root = document.documentElement
+      root.style.setProperty("--bg", theme.background)
+      root.style.setProperty("--bg2", theme.surface0)
+      root.style.setProperty("--card", theme.surface1)
+      root.style.setProperty("--line", theme.surface2)
+      root.style.setProperty("--accent1", theme.accent)
+      root.style.setProperty("--accent2", theme.accent2)
+      root.style.setProperty("--bot", theme.surface1)
+      root.style.setProperty("--ink", theme.foreground)
+      
+      const rgb = hexToRgb(theme.accent)
+      if (rgb) {
+        root.style.setProperty("--accent-rgba-025", `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.25)`)
+        root.style.setProperty("--accent-rgba-008", `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.08)`)
+        root.style.setProperty("--accent-rgba-015", `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.15)`)
+        root.style.setProperty("--accent-rgba-01", `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`)
+      }
+    }
+
     // alamat server Node (kalau di-embed lintas origin, dioper lewat ?api=)
     const API = new URLSearchParams(location.search).get('api') || ''
+    const initialTheme = new URLSearchParams(location.search).get('theme') || 'violet-cyan'
+    applyTheme(initialTheme)
+
+    // Listen for theme change from parent window
+    window.addEventListener('message', (e) => {
+      if (e.data && e.data.type === 'yuki-theme-change') {
+        applyTheme(e.data.theme)
+      }
+    })
+
     const chat = document.getElementById('chat')
     const form = document.getElementById('form')
     const input = document.getElementById('input')
