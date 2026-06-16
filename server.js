@@ -1,5 +1,6 @@
 import 'dotenv/config'
 import express from 'express'
+import path from 'path'
 import { chat, extractFacts } from './lib/llm.js'
 import { synthesize } from './lib/tts.js'
 import { Emotion } from './lib/emotion.js'
@@ -32,6 +33,11 @@ app.use((req, res, next) => {
 })
 
 app.use(express.static('public'))
+
+// Rute Dokumentasi Yuki AI
+app.get('/docs', (req, res) => {
+  res.sendFile(path.resolve('public/docs.html'))
+})
 
 // Panaskan model embedding di latar belakang (biar recall cepat saat dipakai)
 warmupEmbedder().catch(() => {})
