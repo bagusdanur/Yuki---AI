@@ -49,14 +49,17 @@ async function getEmotion(userId) {
 // Endpoint chat -> balasan dari Qwen/DeepSeek (dengan emosi + kedekatan + memori)
 app.post('/api/chat', async (req, res) => {
   try {
-    const { messages, adult, userId = 'anon' } = req.body || {}
+    const { messages, adult, userId = 'anon', isIdle = false } = req.body || {}
     const userText = messages?.[messages.length - 1]?.content || ''
 
     // 0) ambil emosi & bond MILIK user ini (per userId)
     const emotion = await getEmotion(userId)
 
     // 1) mesin emosi (keyword) -> update KEDEKATAN (bond) + fallback ekspresi
-    const { mood: kwMood, bond } = emotion.react(userText)
+    // Jika isIdle true, kita gunakan emosi yang ada tanpa memicu reaksi baru
+    const { mood: kwMood, bond } = isIdle 
+      ? { mood: emotion.label(), bond: emotion.bondLevel() } 
+      : emotion.react(userText)
 
     // 2) RECALL SEMANTIK: ambil memori yang maknanya paling relevan dgn pesan user
     const recall = await recallMemory(userId, userText)
@@ -64,18 +67,26 @@ app.post('/api/chat', async (req, res) => {
 
     // 2b) Kalau user minta rekomendasi/cari komik -> ambil judul REAL dari Ryukomik
     let comicContext = ''
-    if (wantsComic(userText)) {
+    if (!isIdle && wantsComic(userText)) {
       const q = extractQuery(userText)
       const results = q ? await searchComics(q, { adult }) : await latestComics()
       const list = results.length ? results : await latestComics()
       comicContext = buildComicContext(list, { query: q })
     }
 
+    // Perbaiki bug loop balas diri sendiri: sisipkan pesan user tiruan agar API LLM menerima giliran user
+    const messagesToSend = [...(messages || [])]
+    if (isIdle) {
+      messagesToSend.push({ role: 'user', content: '[terdiam]' })
+    }
+
     // 3) balas + emosi yang DIPILIH SENDIRI oleh Yuki (lewat tag [emosi: X])
-    const { reply, model, emotion: llmMood } = await chat(messages || [], {
+    const { reply, model, emotion: llmMood } = await chat(messagesToSend, {
       emotionDirective: emotion.directive(),
       memoryContext,
-      comicContext
+      comicContext,
+      isIdle,
+      bondName: bond.name
     })
 
     // 4) EKSPRESI final: utamakan emosi dari ISI CHAT (disetir LLM), fallback ke keyword.
@@ -105,11 +116,39 @@ app.post('/api/chat', async (req, res) => {
   }
 })
 
+// Endpoint resolusi cover komik dinamis (untuk riwayat lama tanpa ?img=)
+app.get('/api/comic-cover', async (req, res) => {
+  try {
+    const comicUrl = req.query.url || ''
+    const m = comicUrl.match(/\/komik\/(komiku|doujindesu)\/([^/?#]+)/i)
+    if (!m) return res.json({ image: '' })
+    const [_, sumber, slug] = m
+
+    // Cari dari pencarian berdasarkan slug
+    const results = await searchComics(slug, { adult: sumber === 'doujindesu' })
+    const match = results.find((r) => r.url.includes(slug))
+    if (match && match.image) {
+      return res.json({ image: match.image })
+    }
+
+    // Fallback ke komik terbaru
+    const latest = await latestComics()
+    const matchLatest = latest.find((r) => r.url.includes(slug))
+    if (matchLatest && matchLatest.image) {
+      return res.json({ image: matchLatest.image })
+    }
+
+    res.json({ image: '' })
+  } catch {
+    res.json({ image: '' })
+  }
+})
+
 // Endpoint TTS -> audio dari teks
 app.post('/api/tts', async (req, res) => {
   try {
-    const { text } = req.body
-    const { buffer, mime } = await synthesize(text || '')
+    const { text, mood } = req.body
+    const { buffer, mime } = await synthesize(text || '', mood)
     res.set('Content-Type', mime)
     res.send(buffer)
   } catch (e) {

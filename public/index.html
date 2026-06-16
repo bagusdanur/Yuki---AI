@@ -52,7 +52,8 @@
        object-fit: contain = seluruh gambar tampil utuh, TIDAK ke-zoom / ke-crop. */
     .char { position: absolute; inset: 0; width: 100%; height: 100%;
             object-fit: contain; object-position: bottom center; transform-origin: 50% 100%;
-            animation: breathe 6s ease-in-out infinite; }
+            animation: breathe 6s ease-in-out infinite;
+            transition: opacity 0.2s ease-in-out; z-index: 2; cursor: pointer; }
     /* "napas" SANGAT halus (skala kecil saja, tanpa geser/putar) -> hidup tapi tetap diam, tidak gerak aneh */
     @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.012); } }
     .nameplate { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; padding: 14px 16px;
@@ -157,6 +158,200 @@
       .nameplate { padding: 9px 12px; }
       .np-name { font-size: 14px; }
       .pill { font-size: 11px; padding: 5px 10px; }
+
+      /* Comic card mobile responsive overrides */
+      .comic-card {
+        max-width: 230px; /* Lebih kecil di mobile */
+      }
+    }
+
+    /* ===== Kartu Komik Ryukomik ===== */
+    .comic-card {
+      display: flex;
+      flex-direction: row;
+      gap: 12px;
+      align-items: center;
+      background: rgba(18, 24, 38, 0.7);
+      border: 1px solid rgba(34, 211, 238, 0.25);
+      border-radius: 12px;
+      padding: 6px 8px;
+      margin: 8px 0;
+      cursor: pointer;
+      transition: all 0.2s ease-in-out;
+      position: relative;
+      text-align: left;
+      max-width: 265px; /* Lebar mungil pas di chat bubble */
+      width: 100%;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      overflow: hidden;
+    }
+    .comic-card::after {
+      content: 'Detail →';
+      position: absolute;
+      right: 10px;
+      bottom: 8px;
+      font-size: 9.5px;
+      color: var(--accent1);
+      font-weight: 700;
+      opacity: 0.85;
+      transition: transform 0.2s, opacity 0.2s;
+    }
+    .comic-card:hover {
+      background: rgba(34, 211, 238, 0.08);
+      border-color: var(--accent1);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(34, 211, 238, 0.15);
+    }
+    .comic-card:hover::after {
+      transform: translateX(3px);
+      opacity: 1;
+    }
+    .comic-card-thumb {
+      width: 50px;
+      height: 68px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      flex-shrink: 0;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+    }
+    .comic-card-details {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex-grow: 1;
+      min-width: 0; /* Mencegah flex item meluber jika ada teks panjang */
+      padding-right: 48px; /* Mencegah teks bertabrakan dengan tulisan "Detail →" */
+    }
+    .comic-card-title {
+      font-weight: 700;
+      font-size: 13.5px;
+      color: #fff;
+      margin: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.3;
+    }
+    .comic-card-meta {
+      font-size: 11px;
+      color: var(--muted);
+      margin: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.2;
+    }
+
+    /* ===== CSS Modal Glassmorphism ===== */
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 6, 10, 0.75);
+      backdrop-filter: blur(6px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease-in-out;
+    }
+    .modal.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal-content {
+      background: rgba(18, 24, 38, 0.95);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 30px;
+      width: 90%;
+      max-width: 400px;
+      position: relative;
+      box-shadow: 0 20px 50px rgba(0,0,0,.6), inset 0 1px 1px rgba(255,255,255,0.05);
+      transform: scale(0.9);
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      text-align: center;
+    }
+    .modal.open .modal-content {
+      transform: scale(1);
+    }
+    .modal-close {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 24px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px;
+      transition: color 0.15s;
+    }
+    .modal-close:hover {
+      color: #fff;
+    }
+    .modal-cover-wrap {
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: center;
+    }
+    .modal-cover {
+      width: 100px;
+      height: 140px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+    }
+    .modal-icon {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: rgba(34, 211, 238, 0.1);
+      color: var(--accent1);
+      display: grid;
+      place-items: center;
+      margin: 0 auto 14px;
+    }
+    .modal-icon svg {
+      width: 24px;
+      height: 24px;
+    }
+    .modal-content h2 {
+      margin: 0 0 6px;
+      font-size: 18px;
+      color: #fff;
+      line-height: 1.3;
+    }
+    .modal-info {
+      font-size: 13px;
+      color: var(--accent1);
+      margin: 0 0 14px;
+      font-weight: 600;
+    }
+    .modal-desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+    .modal-actions a {
+      display: inline-block;
+      width: 100%;
+      padding: 10px 20px;
+      background: linear-gradient(135deg, var(--accent1), var(--accent2));
+      color: #06121a;
+      text-decoration: none;
+      font-weight: 700;
+      border-radius: 999px;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .modal-actions a:hover {
+      opacity: 0.9;
+      transform: scale(1.02);
     }
   </style>
 </head>
@@ -183,6 +378,7 @@
     <aside class="stage">
       <div class="frame">
         <div class="glow"></div>
+        <canvas id="particles" style="position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;"></canvas>
         <img id="char" class="char" src="expressions/tenang.png" alt="Yuki" onerror="this.style.display='none'" />
         <div class="nameplate">
           <div class="np-name">Yuki <span class="dot"></span></div>
@@ -190,6 +386,25 @@
         </div>
       </div>
     </aside>
+  </div>
+
+  <!-- Modal Detail Komik -->
+  <div class="modal" id="comic-modal">
+    <div class="modal-content">
+      <button class="modal-close" id="modal-close" onclick="closeComicModal()">&times;</button>
+      <div class="modal-cover-wrap">
+        <img id="modal-cover" class="modal-cover" src="" referrerpolicy="no-referrer" alt="Cover" style="display: none;" />
+        <div id="modal-default-icon" class="modal-icon"><i data-lucide="book-open"></i></div>
+      </div>
+      <h2 id="modal-title">Judul Komik</h2>
+      <p id="modal-info">Chapter Terbaru · Genre</p>
+      <div class="modal-desc">
+        Rekomendasi komik ini diambil secara langsung dari katalog aktif Ryukomik. Klik tombol di bawah untuk mulai membaca kelanjutan ceritanya!
+      </div>
+      <div class="modal-actions">
+        <a id="modal-link" href="#" target="_blank" rel="noopener">Baca Sekarang</a>
+      </div>
+    </div>
   </div>
 
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -233,7 +448,49 @@
         history.push(m)
         addMsg(m.content, m.role === 'user' ? 'user' : 'bot')
       }
+      loadLazyCovers()
       return true
+    }
+
+    async function loadLazyCovers() {
+      const lazyImages = document.querySelectorAll('.lazy-cover[data-url]')
+      for (const img of lazyImages) {
+        const url = img.getAttribute('data-url')
+        const idx = img.getAttribute('data-idx')
+        if (!url) continue
+        img.removeAttribute('data-url') // Cegah request ganda
+        try {
+          const res = await fetch(`/api/comic-cover?url=${encodeURIComponent(url)}`)
+          const data = await res.json()
+          if (data.image) {
+            img.src = data.image
+            img.style.display = 'block'
+            img.classList.remove('lazy-cover')
+            if (idx !== null && window.comicCardsData && window.comicCardsData[idx]) {
+              window.comicCardsData[idx].image = data.image
+            }
+            updateHistoryLinkImage(url, data.image)
+          }
+        } catch (e) {
+          console.error('Lazy load cover error:', e)
+        }
+      }
+    }
+
+    function updateHistoryLinkImage(originalUrl, imgUrl) {
+      let updated = false
+      const coverQuery = `?img=${encodeURIComponent(imgUrl)}`
+      history.forEach((m) => {
+        if (m.role === 'assistant' && m.content.includes(originalUrl)) {
+          if (!m.content.includes(originalUrl + '?img=')) {
+            m.content = m.content.replace(originalUrl, originalUrl + coverQuery)
+            updated = true
+          }
+        }
+      })
+      if (updated) {
+        saveHistory()
+      }
     }
 
     // mood -> nama file gambar ekspresi anime (taruh di public/expressions/)
@@ -278,6 +535,37 @@
       let html = escapeHtml(text)
       const links = []
       const stash = (a) => { links.push(a); return '@@LNK' + (links.length - 1) + '@@' }
+
+      // Deteksi & format blok kartu komik Ryukomik
+      // Format: **Judul**\nChapter · Genre\n[Link](url)
+      const comicRegex = /\*\*([^*]+)\*\*\n([^\n]+)\n\[Link\]\((https?:\/\/ryukomik\.my\.id\/[^\s)]+)\)/gi
+      html = html.replace(comicRegex, (m, title, meta, url) => {
+        window.comicCardsData = window.comicCardsData || []
+        const idx = window.comicCardsData.length
+        
+        // Ekstrak image URL dari query parameter ?img=...
+        let imageUrl = ''
+        try {
+          const parsedUrl = new URL(url.trim())
+          imageUrl = parsedUrl.searchParams.get('img') || ''
+        } catch (e) {}
+
+        window.comicCardsData.push({ title: title.trim(), meta: meta.trim(), url: url.trim(), image: imageUrl })
+        
+        const cardHtml = `<div class="comic-card" onclick="openComicModal(${idx})">
+          ${imageUrl 
+            ? `<img class="comic-card-thumb" src="${escapeHtml(imageUrl)}" referrerpolicy="no-referrer" alt="Cover" />` 
+            : `<img class="comic-card-thumb lazy-cover" src="" referrerpolicy="no-referrer" alt="Cover" style="display: none;" data-idx="${idx}" data-url="${escapeHtml(url.trim())}" />`
+          }
+          <div class="comic-card-details">
+            <div class="comic-card-title">${escapeHtml(title.trim())}</div>
+            <div class="comic-card-meta">${escapeHtml(meta.trim())}</div>
+          </div>
+        </div>`
+
+        return stash(cardHtml)
+      })
+
       html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (m, label, url) =>
         stash('<a href="' + url + '" target="_blank" rel="noopener">' + label + '</a>'))
       html = html.replace(/(https?:\/\/[^\s<]+)/g, (m, url) =>
@@ -300,13 +588,25 @@
       moodIconWrap.style.color = m.color
       moodEl.textContent = bond ? `${mood} · ${bond}` : mood
       if (feeling && char) char.title = feeling
-      // ganti gambar ekspresi Yuki LANGSUNG (tanpa jeda menghilang dulu)
+      // ganti gambar ekspresi Yuki dengan transisi opacity halus
       if (char) {
         const next = 'expressions/' + (EXPR[mood] || 'tenang') + '.png'
         if (char.getAttribute('src') !== next) {
-          char.src = next
-          char.style.display = ''
+          char.style.opacity = '0'
+          setTimeout(() => {
+            char.src = next
+            if (char.complete) {
+              char.style.opacity = '1'
+            } else {
+              char.onload = () => { char.style.opacity = '1' }
+            }
+            char.style.display = ''
+          }, 150)
         }
+      }
+      // Update efek partikel latar belakang sesuai mood baru
+      if (window.updateParticles) {
+        window.updateParticles(mood)
       }
     }
 
@@ -368,6 +668,7 @@
       chat.appendChild(row)
       window.lucide && lucide.createIcons()
       chat.scrollTop = chat.scrollHeight
+      loadLazyCovers() // Muat cover jika ada elemen lazy-cover baru
       return row
     }
 
@@ -380,13 +681,41 @@
       return row
     }
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault()
-      const text = input.value.trim()
-      if (!text) return
-      addMsg(text, 'user')
-      history.push({ role: 'user', content: text })
-      saveHistory()
+    // ===== Mekanisme Idle Timer (Yuki Chat Duluan) =====
+    let idleTimer = null
+    let consecutiveIdleCount = 0
+    const IDLE_TIMEOUT = 120000 // 120 detik (2 menit)
+
+    function resetIdleTimer() {
+      if (idleTimer) clearTimeout(idleTimer)
+      if (consecutiveIdleCount < 3) {
+        idleTimer = setTimeout(() => {
+          sendMessage(null, { isIdle: true })
+        }, IDLE_TIMEOUT)
+      }
+    }
+
+    async function sendMessage(text, options = {}) {
+      const isIdle = options.isIdle || false
+      if (isIdle && sendBtn.disabled) return // Jangan ganggu jika Yuki sedang memproses balasan
+      if (!text && !isIdle) return
+      
+      if (text) {
+        consecutiveIdleCount = 0 // Reset jika user membalas chat
+      }
+      if (isIdle) {
+        if (consecutiveIdleCount >= 3) return // Tambahan pengaman
+        consecutiveIdleCount++
+      }
+
+      resetIdleTimer() // Reset hitung mundur
+
+      if (text) {
+        addMsg(text, 'user')
+        history.push({ role: 'user', content: text })
+        saveHistory()
+      }
+      
       input.value = ''
       sendBtn.disabled = true
       const typing = showTyping()
@@ -395,7 +724,12 @@
         const res = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: history.slice(-16), adult: adultBox.checked, userId: getUserId() })
+          body: JSON.stringify({ 
+            messages: history.slice(-16), 
+            adult: adultBox.checked, 
+            userId: getUserId(),
+            isIdle: isIdle
+          })
         })
         const data = await res.json()
         typing.remove()
@@ -415,12 +749,215 @@
       } finally {
         sendBtn.disabled = false
         input.focus()
+        resetIdleTimer() // Reset hitung mundur lagi setelah balasan diterima
       }
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault()
+      const text = input.value.trim()
+      sendMessage(text)
     })
 
+    // ===== Interaksi klik/sentuh avatar Yuki =====
+    const CLICK_ACTIONS = [
+      '*mencolek pipi Yuki*',
+      '*mengelus kepala Yuki*',
+      '*menatap lekat mata Yuki*',
+      '*mencubit gemas pipi Yuki*',
+      '*memberikan permen ke Yuki*'
+    ]
+
+    char.addEventListener('click', () => {
+      if (sendBtn.disabled) return // Cegah klik beruntun saat Yuki sedang memikirkan jawaban
+      const randomAction = CLICK_ACTIONS[Math.floor(Math.random() * CLICK_ACTIONS.length)]
+      sendMessage(randomAction)
+    })
+
+    // ===== Fungsi Pembantu Modal Detail Komik =====
+    window.openComicModal = function(idx) {
+      const data = window.comicCardsData[idx]
+      if (!data) return
+      document.getElementById('modal-title').textContent = data.title
+      document.getElementById('modal-info').textContent = data.meta
+      document.getElementById('modal-link').href = data.url
+      
+      const coverImg = document.getElementById('modal-cover')
+      const defaultIcon = document.getElementById('modal-default-icon')
+      if (data.image) {
+        coverImg.src = data.image
+        coverImg.style.display = 'block'
+        defaultIcon.style.display = 'none'
+      } else {
+        coverImg.style.display = 'none'
+        defaultIcon.style.display = 'grid'
+      }
+      
+      document.getElementById('comic-modal').classList.add('open')
+    }
+
+    window.closeComicModal = function() {
+      document.getElementById('comic-modal').classList.remove('open')
+    }
+
+    // ===== Efek Partikel Canvas Sesuai Mood =====
+    const canvas = document.getElementById('particles')
+    const ctx = canvas.getContext('2d')
+    let particles = []
+    let activeMood = 'tenang'
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect()
+      canvas.width = rect.width * devicePixelRatio
+      canvas.height = rect.height * devicePixelRatio
+      ctx.scale(devicePixelRatio, devicePixelRatio)
+    }
+    window.addEventListener('resize', resizeCanvas)
+    resizeCanvas()
+
+    class Particle {
+      constructor(type) {
+        this.type = type
+        this.reset()
+      }
+
+      reset() {
+        const w = canvas.width / devicePixelRatio
+        const h = canvas.height / devicePixelRatio
+        this.x = Math.random() * w
+        
+        if (this.type === 'sakura') {
+          this.y = -10 - Math.random() * 20
+          this.r = 3 + Math.random() * 4
+          this.d = 0.5 + Math.random() * 1.5
+          this.speedX = 0.4 + Math.random() * 0.8
+          this.speedY = 0.7 + Math.random() * 1.0
+          this.swing = Math.random() * 2
+          this.swingSpeed = 0.01 + Math.random() * 0.02
+        } else if (this.type === 'rain') {
+          this.y = -10 - Math.random() * 20
+          this.l = 8 + Math.random() * 10
+          this.speedY = 4 + Math.random() * 3
+          this.speedX = -0.4 - Math.random() * 0.4
+        } else if (this.type === 'sparkle') {
+          this.y = h + 10 + Math.random() * 20
+          this.x = Math.random() * w
+          this.r = 1.2 + Math.random() * 2.0
+          this.speedY = -0.3 - Math.random() * 0.5
+          this.speedX = (Math.random() * 2 - 1) * 0.3
+          this.life = 100 + Math.random() * 100
+          this.maxLife = this.life
+        } else if (this.type === 'anger') {
+          this.x = Math.random() * w
+          this.y = h * 0.4 + Math.random() * h * 0.6
+          this.r = 1 + Math.random() * 2.5
+          this.speedY = -0.7 - Math.random() * 1.0
+          this.speedX = (Math.random() * 2 - 1) * 0.3
+          this.color = Math.random() > 0.5 ? 'rgba(239, 90, 90, 0.4)' : 'rgba(244, 63, 94, 0.3)'
+          this.life = 60 + Math.random() * 60
+          this.maxLife = this.life
+        }
+      }
+
+      update() {
+        const w = canvas.width / devicePixelRatio
+        const h = canvas.height / devicePixelRatio
+
+        if (this.type === 'sakura') {
+          this.y += this.speedY
+          this.x += this.speedX + Math.sin(this.swing) * 0.2
+          this.swing += this.swingSpeed
+          if (this.y > h || this.x > w || this.x < 0) this.reset()
+        } else if (this.type === 'rain') {
+          this.y += this.speedY
+          this.x += this.speedX
+          if (this.y > h || this.x < -10) this.reset()
+        } else if (this.type === 'sparkle') {
+          this.y += this.speedY
+          this.x += this.speedX
+          this.life--
+          if (this.life <= 0 || this.x > w || this.x < 0 || this.y < 0) this.reset()
+        } else if (this.type === 'anger') {
+          this.y += this.speedY
+          this.x += this.speedX
+          this.life--
+          if (this.life <= 0 || this.x > w || this.x < 0 || this.y < 0) this.reset()
+        }
+      }
+
+      draw() {
+        if (this.type === 'sakura') {
+          ctx.beginPath()
+          ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2)
+          ctx.fillStyle = 'rgba(255, 182, 193, 0.6)'
+          ctx.fill()
+        } else if (this.type === 'rain') {
+          ctx.beginPath()
+          ctx.strokeStyle = 'rgba(107, 138, 253, 0.4)'
+          ctx.lineWidth = 1
+          ctx.moveTo(this.x, this.y)
+          ctx.lineTo(this.x + this.speedX * 1.5, this.y + this.l)
+          ctx.stroke()
+        } else if (this.type === 'sparkle') {
+          ctx.beginPath()
+          ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2)
+          const opacity = this.life / this.maxLife
+          ctx.fillStyle = `rgba(255, 143, 199, ${opacity * 0.65})`
+          ctx.fill()
+        } else if (this.type === 'anger') {
+          ctx.beginPath()
+          ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2)
+          const opacity = this.life / this.maxLife
+          ctx.fillStyle = this.color.replace('0.4', String(opacity * 0.4)).replace('0.3', String(opacity * 0.3))
+          ctx.fill()
+        }
+      }
+    }
+
+    window.updateParticles = function(mood) {
+      activeMood = mood
+      particles = []
+      
+      let type = ''
+      let count = 0
+      
+      if (mood === 'senang' || mood === 'ceria' || mood === 'sayang/manja') {
+        type = 'sakura'
+        count = 14
+      } else if (mood === 'sedih' || mood === 'kecewa' || mood === 'lesu') {
+        type = 'rain'
+        count = 28
+      } else if (mood === 'malu' || mood === 'cemas') {
+        type = 'sparkle'
+        count = 16
+      } else if (mood === 'kesal') {
+        type = 'anger'
+        count = 12
+      }
+
+      if (type) {
+        for (let i = 0; i < count; i++) {
+          particles.push(new Particle(type))
+        }
+      }
+    }
+
+    function animate() {
+      const w = canvas.width / devicePixelRatio
+      const h = canvas.height / devicePixelRatio
+      ctx.clearRect(0, 0, w, h)
+      
+      for (const p of particles) {
+        p.update()
+        p.draw()
+      }
+      
+      requestAnimationFrame(animate)
+    }
+    
+    animate()
+
     // ===== Kedip mata ala VTuber (pakai gambar) =====
-    // Butuh frame "mata tertutup": expressions/<ekspresi>_blink.png (mis. tenang_blink.png).
-    // Kalau frame-nya ADA -> Yuki kedip otomatis; kalau belum ada -> dilewati (aman, tanpa kedip).
     let blinkBusy = false
     function exprBase() {
       const m = ((char && char.getAttribute('src')) || '').match(/expressions\/([a-z]+)\.png/i)
@@ -428,8 +965,12 @@
     }
     function blinkOnce() {
       if (blinkBusy || !char) return
+      const base = exprBase()
+      const allowedBlink = ['tenang', 'senang']
+      if (!allowedBlink.includes(base)) return
+
       const openSrc = char.src
-      const blinkSrc = 'expressions/' + exprBase() + '_blink.png'
+      const blinkSrc = 'expressions/' + base + '_blink.png'
       const probe = new Image()
       probe.onload = () => {
         blinkBusy = true
@@ -441,11 +982,23 @@
     }
     setInterval(blinkOnce, 3800 + Math.random() * 2600)
 
+    // Close modal on escape key
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeComicModal()
+    })
+    
+    document.getElementById('comic-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'comic-modal') closeComicModal()
+    })
+
     // pulihkan obrolan sebelumnya (kalau ada) biar lanjut, bukan mulai dari nol
     restoreHistory()
 
     // render ikon statis awal (settings, send, mood)
     window.lucide && lucide.createIcons()
+
+    // Mulai hitung mundur idle timer awal
+    resetIdleTimer()
   </script>
 </body>
 </html>
