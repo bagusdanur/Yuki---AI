@@ -1,6 +1,6 @@
 node_modules/
 .env
-data/yuki.db
+data/yuki.db*
 public/audio/
 *.log
 .DS_Store
