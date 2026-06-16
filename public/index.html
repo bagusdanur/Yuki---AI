@@ -150,7 +150,7 @@
       .gear { width: 32px; height: 32px; }
       /* Kecilkan teks & gelembung chat di mobile biar nggak penuh & lebih kebaca */
       .chat { padding: 12px; gap: 9px; }
-      .row { max-width: 90%; gap: 8px; }
+      .row { max-width: 96%; gap: 6px; }
       .ava-sm { width: 26px; height: 26px; font-size: 11px; }
       .bubble { font-size: 13px; padding: 8px 11px; border-radius: 13px; line-height: 1.45; }
       .play { width: 26px; height: 26px; }
@@ -168,8 +168,13 @@
         padding: 5px 6px;
         gap: 8px;
       }
+      .comic-card::after {
+        content: '→' !important; /* Ganti Detail dengan panah tipis di mobile */
+        right: 8px !important;
+        bottom: 6px !important;
+      }
       .comic-card-details {
-        padding-right: 32px; /* Lebih kecil di mobile agar teks punya lebih banyak ruang */
+        padding-right: 18px; /* Lebih lebar untuk teks karena Detail diganti panah */
       }
     }
 

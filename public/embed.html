@@ -262,6 +262,17 @@
       opacity: 0.9;
       transform: scale(1.02);
     }
+    @media (max-width: 600px) {
+      .row { max-width: 96%; gap: 6px; }
+      .comic-card::after {
+        content: '→' !important; /* Ganti Detail dengan panah tipis di mobile */
+        right: 8px !important;
+        bottom: 6px !important;
+      }
+      .comic-card-details {
+        padding-right: 18px !important; /* Lebih lebar untuk teks karena Detail diganti panah */
+      }
+    }
   </style>
 </head>
 <body>
