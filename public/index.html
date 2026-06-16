@@ -78,13 +78,13 @@
     .chat { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px; display: flex; flex-direction: column; gap: 14px; background: var(--bg); }
     .chat::-webkit-scrollbar { width: 8px; }
     .chat::-webkit-scrollbar-thumb { background: #2a3344; border-radius: 8px; }
-    .row { display: flex; align-items: flex-end; gap: 10px; max-width: 80%; }
+    .row { display: flex; align-items: flex-end; gap: 10px; max-width: 80%; width: 100%; }
     .row.bot { align-self: flex-start; }
     .row.user { align-self: flex-end; flex-direction: row-reverse; }
     .ava-sm { width: 30px; height: 30px; border-radius: 50%; flex: none; display: grid; place-items: center;
               font-weight: 800; font-size: 13px; color: #06121a;
               background: linear-gradient(135deg, var(--accent1), var(--accent2)); }
-    .bubble { padding: 11px 15px; border-radius: 16px; line-height: 1.5; font-size: 14.5px; }
+    .bubble { padding: 11px 15px; border-radius: 16px; line-height: 1.5; font-size: 14.5px; min-width: 0; }
     .bot .bubble { background: var(--bot); color: var(--ink); border: 1px solid var(--line); border-bottom-left-radius: 5px; }
     .user .bubble { color: #06121a; font-weight: 500; border-bottom-right-radius: 5px;
                     background: linear-gradient(135deg, var(--accent1), var(--accent2)); }
@@ -161,6 +161,7 @@
 
       /* Comic card mobile responsive overrides */
       .comic-card {
+        min-width: 0 !important; /* Allow card to shrink freely on mobile */
         max-width: 100%; /* Fit exactly inside mobile bubbles */
         padding: 5px 6px;
         gap: 8px;
@@ -182,8 +183,9 @@
       transition: all 0.2s ease-in-out;
       position: relative;
       text-align: left;
-      max-width: 265px; /* Lebar mungil pas di chat bubble */
       width: 100%;
+      min-width: 240px; /* Minimal width on desktop to prevent collapsing */
+      max-width: 100%; /* Fill the chat bubble width */
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       overflow: hidden;
     }
@@ -576,6 +578,8 @@
         stash('<a href="https://ryukomik.my.id" target="_blank" rel="noopener">' + m + '</a>'))
       html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
       html = html.replace(/\*([^*]+)\*/g, '<span class="act">$1</span>')
+      // Clean up whitespaces and newlines around card placeholders to prevent empty <br> elements
+      html = html.replace(/\s*@@LNK(\d+)@@\s*/g, '@@LNK$1@@')
       html = html.replace(/@@LNK(\d+)@@/g, (m, i) => links[+i])
       html = html.replace(/\n/g, '<br>')
       return html

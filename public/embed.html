@@ -20,7 +20,7 @@
     html,body{height:100%;margin:0}
     body{font-family:'Segoe UI',system-ui,sans-serif;color:var(--ink);background:var(--bg);display:flex;flex-direction:column}
     .top{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);background:var(--bg2);position:relative}
-    .ava{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#06121a;background:linear-gradient(135deg,var(--accent1),var(--accent2))}
+    .ava{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#06121a;background:linear-gradient(135deg,var(--accent1),var(--accent2));flex:none}
     .top h1{margin:0;font-size:15px}
     .top p{margin:1px 0 0;font-size:11px;color:var(--muted)}
     .mood{margin-left:auto;font-size:11px;color:#cdd5e6;background:#1a2233;padding:5px 10px;border-radius:999px;border:1px solid var(--line)}
@@ -50,10 +50,10 @@
     .chat::-webkit-scrollbar { width: 6px; }
     .chat::-webkit-scrollbar-thumb { background: #2a3344; border-radius: 6px; }
     
-    .row{display:flex;gap:8px;max-width:88%}
+    .row{display:flex;align-items:flex-end;gap:8px;max-width:88%;width:100%}
     .row.bot{align-self:flex-start}
     .row.user{align-self:flex-end;flex-direction:row-reverse}
-    .b{padding:9px 13px;border-radius:14px;line-height:1.45;font-size:14px}
+    .b{padding:9px 13px;border-radius:14px;line-height:1.45;font-size:14px;min-width:0}
     .bot .b{background:var(--bot);border:1px solid var(--line);border-bottom-left-radius:4px}
     .user .b{color:#06121a;font-weight:500;border-bottom-right-radius:4px;background:linear-gradient(135deg,var(--accent1),var(--accent2))}
     .b a{color:var(--accent1);font-weight:600;text-decoration:none}
@@ -83,8 +83,9 @@
       transition: all 0.2s ease-in-out;
       position: relative;
       text-align: left;
-      max-width: 100%;
       width: 100%;
+      min-width: 0; /* fluid width inside iframe */
+      max-width: 100%;
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       overflow: hidden;
     }
@@ -400,6 +401,8 @@
       h = h.replace(/\b(ryukomik\.my\.id)\b/gi, (m) => st('<a href="https://ryukomik.my.id" target="_blank" rel="noopener">' + m + '</a>'))
       h = h.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
       h = h.replace(/\*([^*]+)\*/g, '<span class="act">$1</span>')
+      // Bersihkan whitespace dan newline di sekitar placeholder kartu komik agar tidak menghasilkan celah kosong <br>
+      h = h.replace(/\s*@@LNK(\d+)@@\s*/g, '@@LNK$1@@')
       h = h.replace(/@@LNK(\d+)@@/g, (m,i) => L[+i])
       h = h.replace(/\n/g, '<br>')
       return h
