@@ -80,6 +80,8 @@
     .chat::-webkit-scrollbar-thumb { background: #2a3344; border-radius: 8px; }
     .row { display: flex; align-items: flex-end; gap: 10px; max-width: 80%; width: 100%; }
     .row.bot { align-self: flex-start; }
+    .row.bot:has(.comic-card) { width: 100%; }
+    .row.bot:has(.comic-card) .bubble { flex: 1; }
     .row.user { align-self: flex-end; flex-direction: row-reverse; }
     .ava-sm { width: 30px; height: 30px; border-radius: 50%; flex: none; display: grid; place-items: center;
               font-weight: 800; font-size: 13px; color: #06121a;
@@ -166,6 +168,9 @@
         padding: 5px 6px;
         gap: 8px;
       }
+      .comic-card-details {
+        padding-right: 32px; /* Lebih kecil di mobile agar teks punya lebih banyak ruang */
+      }
     }
 
     /* ===== Kartu Komik Ryukomik ===== */
@@ -232,10 +237,12 @@
       font-size: 13.5px;
       color: #fff;
       margin: 0;
-      white-space: nowrap;
+      line-height: 1.3;
+      display: -webkit-box;
+      -webkit-line-clamp: 2; /* Allow wrapping up to 2 lines */
+      -webkit-box-orient: vertical;
       overflow: hidden;
       text-overflow: ellipsis;
-      line-height: 1.3;
     }
     .comic-card-meta {
       font-size: 11px;
