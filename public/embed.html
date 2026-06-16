@@ -1,30 +1,84 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Yuki</title>
   <style>
-    :root{
-      --bg:#0a0e16;
-      --bg2:#0e131e;
-      --accent1:#22d3ee;
-      --accent2:#38bdf8;
-      --card:#121826;
-      --line:#232b3a;
-      --ink:#e7ebf3;
-      --muted:#8b94a8;
-      --bot:#161d2b;
+    :root {
+      --bg: #0a0e16;
+      --bg2: #0e131e;
+      --accent1: #22d3ee;
+      --accent2: #38bdf8;
+      --card: #121826;
+      --line: #232b3a;
+      --ink: #e7ebf3;
+      --muted: #8b94a8;
+      --bot: #161d2b;
     }
-    *{box-sizing:border-box}
-    html,body{height:100%;margin:0}
-    body{font-family:'Segoe UI',system-ui,sans-serif;color:var(--ink);background:var(--bg);display:flex;flex-direction:column}
-    .top{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);background:var(--bg2);position:relative}
-    .ava{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#06121a;background:linear-gradient(135deg,var(--accent1),var(--accent2));flex:none}
-    .top h1{margin:0;font-size:15px}
-    .top p{margin:1px 0 0;font-size:11px;color:var(--muted)}
-    .mood{margin-left:auto;font-size:11px;color:#cdd5e6;background:#1a2233;padding:5px 10px;border-radius:999px;border:1px solid var(--line)}
-    
+
+    * {
+      box-sizing: border-box
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      display: flex;
+      flex-direction: column
+    }
+
+    .top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      background: var(--bg2);
+      position: relative
+    }
+
+    .ava {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      color: #06121a;
+      background: linear-gradient(135deg, var(--accent1), var(--accent2));
+      flex: none
+    }
+
+    .top h1 {
+      margin: 0;
+      font-size: 15px
+    }
+
+    .top p {
+      margin: 1px 0 0;
+      font-size: 11px;
+      color: var(--muted)
+    }
+
+    .mood {
+      margin-left: auto;
+      font-size: 11px;
+      color: #cdd5e6;
+      background: #1a2233;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line)
+    }
+
     .close-btn {
       background: none;
       border: none;
@@ -37,38 +91,169 @@
       transition: color 0.15s;
       display: none;
     }
+
     .close-btn:hover {
       color: #fff;
     }
+
     @media (max-width: 600px) {
       .close-btn {
         display: block;
       }
     }
 
-    .chat{flex:1;overflow-y:auto;overflow-x:hidden;padding:14px;display:flex;flex-direction:column;gap:10px}
-    .chat::-webkit-scrollbar { width: 6px; }
-    .chat::-webkit-scrollbar-thumb { background: #2a3344; border-radius: 6px; }
-    
-    .row{display:flex;align-items:flex-end;gap:8px;max-width:88%;width:100%}
-    .row.bot{align-self:flex-start}
-    .row.bot:has(.comic-card) { width: 100%; }
-    .row.bot:has(.comic-card) .b { flex: 1; }
-    .row.user{align-self:flex-end;flex-direction:row-reverse}
-    .b{padding:9px 13px;border-radius:14px;line-height:1.45;font-size:14px;min-width:0}
-    .bot .b{background:var(--bot);border:1px solid var(--line);border-bottom-left-radius:4px}
-    .user .b{color:#06121a;font-weight:500;border-bottom-right-radius:4px;background:linear-gradient(135deg,var(--accent1),var(--accent2))}
-    .b a{color:var(--accent1);font-weight:600;text-decoration:none}
-    .user .b a{color:#06121a;text-decoration:underline}
-    .b .act{font-style:italic;color:var(--muted)}
-    .bar{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line);background:var(--bg2)}
-    .bar input{flex:1;padding:10px 14px;border:1px solid var(--line);outline:none;border-radius:999px;background:#0e1422;color:var(--ink);font-size:14px}
-    .bar input:focus{border-color:var(--accent1)}
-    .bar button{width:42px;border:none;border-radius:50%;cursor:pointer;color:#06121a;font-size:16px;background:linear-gradient(135deg,var(--accent1),var(--accent2));display:grid;place-items:center}
-    .bar button svg{width:16px;height:16px;stroke:#06121a}
-    .typing span{display:inline-block;width:6px;height:6px;border-radius:50%;background:#5b6678;margin-right:3px;animation:bl 1.2s infinite}
-    .typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
-    @keyframes bl{0%,60%,100%{opacity:.25}30%{opacity:1}}
+    .chat {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px
+    }
+
+    .chat::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .chat::-webkit-scrollbar-thumb {
+      background: #2a3344;
+      border-radius: 6px;
+    }
+
+    .row {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      max-width: 88%;
+      width: 100%
+    }
+
+    .row.bot {
+      align-self: flex-start
+    }
+
+    .row.bot:has(.comic-card) {
+      width: 100%;
+    }
+
+    .row.bot:has(.comic-card) .b {
+      flex: 1;
+    }
+
+    .row.user {
+      align-self: flex-end;
+      flex-direction: row-reverse
+    }
+
+    .b {
+      padding: 9px 13px;
+      border-radius: 14px;
+      line-height: 1.45;
+      font-size: 14px;
+      min-width: 0
+    }
+
+    .bot .b {
+      background: var(--bot);
+      border: 1px solid var(--line);
+      border-bottom-left-radius: 4px
+    }
+
+    .user .b {
+      color: #06121a;
+      font-weight: 500;
+      border-bottom-right-radius: 4px;
+      background: linear-gradient(135deg, var(--accent1), var(--accent2))
+    }
+
+    .b a {
+      color: var(--accent1);
+      font-weight: 600;
+      text-decoration: none
+    }
+
+    .user .b a {
+      color: #06121a;
+      text-decoration: underline
+    }
+
+    .b .act {
+      font-style: italic;
+      color: var(--muted)
+    }
+
+    .bar {
+      display: flex;
+      gap: 8px;
+      padding: 10px;
+      border-top: 1px solid var(--line);
+      background: var(--bg2)
+    }
+
+    .bar input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid var(--line);
+      outline: none;
+      border-radius: 999px;
+      background: #0e1422;
+      color: var(--ink);
+      font-size: 14px
+    }
+
+    .bar input:focus {
+      border-color: var(--accent1)
+    }
+
+    .bar button {
+      width: 42px;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      color: #06121a;
+      font-size: 16px;
+      background: linear-gradient(135deg, var(--accent1), var(--accent2));
+      display: grid;
+      place-items: center
+    }
+
+    .bar button svg {
+      width: 16px;
+      height: 16px;
+      stroke: #06121a
+    }
+
+    .typing span {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #5b6678;
+      margin-right: 3px;
+      animation: bl 1.2s infinite
+    }
+
+    .typing span:nth-child(2) {
+      animation-delay: .2s
+    }
+
+    .typing span:nth-child(3) {
+      animation-delay: .4s
+    }
+
+    @keyframes bl {
+
+      0%,
+      60%,
+      100% {
+        opacity: .25
+      }
+
+      30% {
+        opacity: 1
+      }
+    }
 
     /* ===== Kartu Komik Ryukomik ===== */
     .comic-card {
@@ -86,11 +271,13 @@
       position: relative;
       text-align: left;
       width: 100%;
-      min-width: 0; /* fluid width inside iframe */
+      min-width: 0;
+      /* fluid width inside iframe */
       max-width: 100%;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       overflow: hidden;
     }
+
     .comic-card::after {
       content: 'Detail →';
       position: absolute;
@@ -102,16 +289,19 @@
       opacity: 0.85;
       transition: transform 0.2s, opacity 0.2s;
     }
+
     .comic-card:hover {
       background: rgba(34, 211, 238, 0.08);
       border-color: var(--accent1);
       transform: translateY(-1px);
       box-shadow: 0 6px 16px rgba(34, 211, 238, 0.15);
     }
+
     .comic-card:hover::after {
       transform: translateX(2px);
       opacity: 1;
     }
+
     .comic-card-thumb {
       width: 44px;
       height: 60px;
@@ -119,16 +309,18 @@
       border-radius: 6px;
       border: 1px solid rgba(255, 255, 255, 0.1);
       flex-shrink: 0;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
     }
+
     .comic-card-details {
       display: flex;
       flex-direction: column;
       gap: 3px;
       flex-grow: 1;
       min-width: 0;
-      padding-right: 32px; /* reduced space to allow more text width */
+      /* reduced space to allow more text width */
     }
+
     .comic-card-title {
       font-weight: 700;
       font-size: 12.5px;
@@ -136,11 +328,13 @@
       margin: 0;
       line-height: 1.3;
       display: -webkit-box;
-      -webkit-line-clamp: 2; /* Allow wrapping up to 2 lines */
+      -webkit-line-clamp: 2;
+      /* Allow wrapping up to 2 lines */
       -webkit-box-orient: vertical;
       overflow: hidden;
       text-overflow: ellipsis;
     }
+
     .comic-card-meta {
       font-size: 10.5px;
       color: var(--muted);
@@ -165,10 +359,12 @@
       pointer-events: none;
       transition: opacity 0.25s ease-in-out;
     }
+
     .modal.open {
       opacity: 1;
       pointer-events: auto;
     }
+
     .modal-content {
       background: rgba(18, 24, 38, 0.95);
       border: 1px solid var(--line);
@@ -177,14 +373,16 @@
       width: 90%;
       max-width: 310px;
       position: relative;
-      box-shadow: 0 20px 50px rgba(0,0,0,.6), inset 0 1px 1px rgba(255,255,255,0.05);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, .6), inset 0 1px 1px rgba(255, 255, 255, 0.05);
       transform: scale(0.9);
       transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
       text-align: center;
     }
+
     .modal.open .modal-content {
       transform: scale(1);
     }
+
     .modal-close {
       position: absolute;
       top: 12px;
@@ -198,22 +396,26 @@
       padding: 4px;
       transition: color 0.15s;
     }
+
     .modal-close:hover {
       color: #fff;
     }
+
     .modal-cover-wrap {
       margin-bottom: 12px;
       display: flex;
       justify-content: center;
     }
+
     .modal-cover {
       width: 80px;
       height: 110px;
       object-fit: cover;
       border-radius: 8px;
       border: 1px solid var(--line);
-      box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
     }
+
     .modal-icon {
       width: 44px;
       height: 44px;
@@ -224,28 +426,33 @@
       place-items: center;
       margin: 0 auto 12px;
     }
+
     .modal-icon svg {
       width: 20px;
       height: 20px;
     }
+
     .modal-content h2 {
       margin: 0 0 6px;
       font-size: 16px;
       color: #fff;
       line-height: 1.3;
     }
+
     .modal-info {
       font-size: 12px;
       color: var(--accent1);
       margin: 0 0 12px;
       font-weight: 600;
     }
+
     .modal-desc {
       font-size: 12px;
       color: var(--muted);
       line-height: 1.5;
       margin-bottom: 16px;
     }
+
     .modal-actions a {
       display: inline-block;
       width: 100%;
@@ -258,27 +465,36 @@
       font-size: 13px;
       transition: opacity 0.15s, transform 0.1s;
     }
+
     .modal-actions a:hover {
       opacity: 0.9;
       transform: scale(1.02);
     }
+
     @media (max-width: 600px) {
-      .row { max-width: 96%; gap: 6px; }
+      .row {
+        max-width: 96%;
+        gap: 6px;
+      }
+
       .comic-card::after {
-        content: '→' !important; /* Ganti Detail dengan panah tipis di mobile */
+        content: '→' !important;
+        /* Ganti Detail dengan panah tipis di mobile */
         right: 8px !important;
         bottom: 6px !important;
       }
-      .comic-card-details {
-        padding-right: 18px !important; /* Lebih lebar untuk teks karena Detail diganti panah */
-      }
+
     }
   </style>
 </head>
+
 <body>
   <div class="top">
     <div class="ava">Y</div>
-    <div><h1>Yuki</h1><p>Asisten baca komik · Ryukomik</p></div>
+    <div>
+      <h1>Yuki</h1>
+      <p>Asisten baca komik · Ryukomik</p>
+    </div>
     <div class="mood" id="mood">tenang</div>
     <button class="close-btn" id="close-btn" title="Tutup Obrolan" onclick="closeWidget()">&times;</button>
   </div>
@@ -286,7 +502,11 @@
   <form class="bar" id="form">
     <input id="input" placeholder="Tanya Yuki soal komik..." autocomplete="off" />
     <button type="submit">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+        stroke-linejoin="round">
+        <line x1="22" y1="2" x2="11" y2="13"></line>
+        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+      </svg>
     </button>
   </form>
 
@@ -295,13 +515,15 @@
     <div class="modal-content">
       <button class="modal-close" id="modal-close" onclick="closeComicModal()">&times;</button>
       <div class="modal-cover-wrap">
-        <img id="modal-cover" class="modal-cover" src="" referrerpolicy="no-referrer" alt="Cover" style="display: none;" />
+        <img id="modal-cover" class="modal-cover" src="" referrerpolicy="no-referrer" alt="Cover"
+          style="display: none;" />
         <div id="modal-default-icon" class="modal-icon"><i data-lucide="book-open"></i></div>
       </div>
       <h2 id="modal-title">Judul Komik</h2>
       <p id="modal-info">Chapter Terbaru · Genre</p>
       <div class="modal-desc">
-        Rekomendasi komik ini diambil secara langsung dari katalog aktif Ryukomik. Klik tombol di bawah untuk mulai membaca kelanjutan ceritanya!
+        Rekomendasi komik ini diambil secara langsung dari katalog aktif Ryukomik. Klik tombol di bawah untuk mulai
+        membaca kelanjutan ceritanya!
       </div>
       <div class="modal-actions">
         <a id="modal-link" href="#" target="_blank" rel="noopener">Baca Sekarang</a>
@@ -318,24 +540,24 @@
     const input = document.getElementById('input')
     const moodEl = document.getElementById('mood')
     const history = []
-    
-    function getUserId(){
+
+    function getUserId() {
       let id = localStorage.getItem('yuki_uid')
       if (!id) { id = 'u_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); localStorage.setItem('yuki_uid', id) }
       return id
     }
-    
+
     const HIST_KEY = 'yuki_hist_' + getUserId()
-    function saveHistory(){ try { localStorage.setItem(HIST_KEY, JSON.stringify(history.slice(-40))) } catch(e){} }
-    function restoreHistory(){
+    function saveHistory() { try { localStorage.setItem(HIST_KEY, JSON.stringify(history.slice(-40))) } catch (e) { } }
+    function restoreHistory() {
       let saved = []
-      try { saved = JSON.parse(localStorage.getItem(HIST_KEY) || '[]') } catch(e){}
+      try { saved = JSON.parse(localStorage.getItem(HIST_KEY) || '[]') } catch (e) { }
       if (!Array.isArray(saved) || !saved.length) return false
-      for (const m of saved){ history.push(m); add(m.content, m.role === 'user' ? 'user' : 'bot') }
+      for (const m of saved) { history.push(m); add(m.content, m.role === 'user' ? 'user' : 'bot') }
       loadLazyCovers()
       return true
     }
-    
+
     async function loadLazyCovers() {
       const lazyImages = document.querySelectorAll('.lazy-cover[data-url]')
       for (const img of lazyImages) {
@@ -377,29 +599,29 @@
       }
     }
 
-    function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
-    
-    function fmt(t){
+    function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') }
+
+    function fmt(t) {
       let h = esc(t); const L = []
       const st = (a) => { L.push(a); return '@@LNK' + (L.length - 1) + '@@' }
-      
+
       // Format kartu komik Ryukomik
       const comicRegex = /\*\*([^*]+)\*\*\n([^\n]+)\n\[Link\]\((https?:\/\/ryukomik\.my\.id\/[^\s)]+)\)/gi
       h = h.replace(comicRegex, (m, title, meta, url) => {
         window.comicCardsData = window.comicCardsData || []
         const idx = window.comicCardsData.length
-        
+
         let imageUrl = ''
         try {
           const parsedUrl = new URL(url.trim())
           imageUrl = parsedUrl.searchParams.get('img') || ''
-        } catch (e) {}
+        } catch (e) { }
 
         window.comicCardsData.push({ title: title.trim(), meta: meta.trim(), url: url.trim(), image: imageUrl })
-        
+
         const cardHtml = `<div class="comic-card" onclick="openComicModal(${idx})">
-          ${imageUrl 
-            ? `<img class="comic-card-thumb" src="${esc(imageUrl)}" referrerpolicy="no-referrer" alt="Cover" />` 
+          ${imageUrl
+            ? `<img class="comic-card-thumb" src="${esc(imageUrl)}" referrerpolicy="no-referrer" alt="Cover" />`
             : `<img class="comic-card-thumb lazy-cover" src="" referrerpolicy="no-referrer" alt="Cover" style="display: none;" data-idx="${idx}" data-url="${esc(url.trim())}" />`
           }
           <div class="comic-card-details">
@@ -411,19 +633,19 @@
         return st(cardHtml)
       })
 
-      h = h.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (m,a,u) => st('<a href="'+u+'" target="_blank" rel="noopener">'+a+'</a>'))
-      h = h.replace(/(https?:\/\/[^\s<]+)/g, (m,u) => st('<a href="'+u+'" target="_blank" rel="noopener">'+u+'</a>'))
+      h = h.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (m, a, u) => st('<a href="' + u + '" target="_blank" rel="noopener">' + a + '</a>'))
+      h = h.replace(/(https?:\/\/[^\s<]+)/g, (m, u) => st('<a href="' + u + '" target="_blank" rel="noopener">' + u + '</a>'))
       h = h.replace(/\b(ryukomik\.my\.id)\b/gi, (m) => st('<a href="https://ryukomik.my.id" target="_blank" rel="noopener">' + m + '</a>'))
       h = h.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
       h = h.replace(/\*([^*]+)\*/g, '<span class="act">$1</span>')
       // Bersihkan whitespace dan newline di sekitar placeholder kartu komik agar tidak menghasilkan celah kosong <br>
       h = h.replace(/\s*@@LNK(\d+)@@\s*/g, '@@LNK$1@@')
-      h = h.replace(/@@LNK(\d+)@@/g, (m,i) => L[+i])
+      h = h.replace(/@@LNK(\d+)@@/g, (m, i) => L[+i])
       h = h.replace(/\n/g, '<br>')
       return h
     }
-    
-    function add(t, who){
+
+    function add(t, who) {
       const r = document.createElement('div'); r.className = 'row ' + who
       const b = document.createElement('div'); b.className = 'b'
       if (who === 'bot') b.innerHTML = fmt(t); else b.textContent = t
@@ -434,8 +656,8 @@
       } else r.append(b)
       chat.appendChild(r); chat.scrollTop = chat.scrollHeight; return r
     }
-    
-    function typing(){
+
+    function typing() {
       const r = document.createElement('div'); r.className = 'row bot'
       r.innerHTML = '<div class="ava" style="width:28px;height:28px;font-size:12px">Y</div><div class="b"><span class="typing"><span></span><span></span><span></span></span></div>'
       chat.appendChild(r); chat.scrollTop = chat.scrollHeight; return r
@@ -444,14 +666,14 @@
     function openComicModal(idx) {
       const data = window.comicCardsData && window.comicCardsData[idx]
       if (!data) return
-      
+
       document.getElementById('modal-title').textContent = data.title
       document.getElementById('modal-info').textContent = data.meta
       document.getElementById('modal-link').href = data.url
-      
+
       const img = document.getElementById('modal-cover')
       const defaultIcon = document.getElementById('modal-default-icon')
-      
+
       if (data.image) {
         img.src = data.image
         img.style.display = 'block'
@@ -460,7 +682,7 @@
         img.style.display = 'none'
         defaultIcon.style.display = 'grid'
       }
-      
+
       document.getElementById('comic-modal').classList.add('open')
       window.lucide && lucide.createIcons()
     }
@@ -476,7 +698,7 @@
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') closeComicModal()
     })
-    
+
     document.getElementById('comic-modal').addEventListener('click', (e) => {
       if (e.target.id === 'comic-modal') closeComicModal()
     })
@@ -498,11 +720,12 @@
         loadLazyCovers()
       } catch (err) { ty.remove(); add('Error: ' + err.message, 'bot') }
     })
-    
+
     if (!restoreHistory()) add('...ada perlu apa? Mau cari komik?', 'bot')
-    
+
     // Inisialisasi ikon Lucide
     window.lucide && lucide.createIcons()
   </script>
 </body>
+
 </html>

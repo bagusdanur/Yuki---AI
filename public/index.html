@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -16,166 +17,627 @@
       --muted: #8b94a8;
       --bot: #161d2b;
     }
-    * { box-sizing: border-box; }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: var(--ink); padding: 18px;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: var(--ink);
+      padding: 18px;
       background: radial-gradient(900px 500px at 50% -10%, #15203a, #0a0e16);
     }
+
     .app {
-      position: relative; width: 100%; max-width: 1040px; height: 88vh; display: flex;
-      background: var(--card); border: 1px solid var(--line); border-radius: 20px; overflow: hidden;
-      box-shadow: 0 18px 60px rgba(0,0,0,.5);
+      position: relative;
+      width: 100%;
+      max-width: 1040px;
+      height: 88vh;
+      display: flex;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 18px 60px rgba(0, 0, 0, .5);
     }
 
     /* ===== Panel KANAN: panggung karakter (beranimasi) ===== */
-    .stage { position: relative; width: 420px; flex: none; overflow: hidden; padding: 18px;
-             display: grid; place-items: stretch;
-             border-left: 1px solid var(--line);
-             background: radial-gradient(120% 85% at 50% 0%, #182742, #0b1120 72%); }
+    .stage {
+      position: relative;
+      width: 420px;
+      flex: none;
+      overflow: hidden;
+      padding: 18px;
+      display: grid;
+      place-items: stretch;
+      border-left: 1px solid var(--line);
+      background: radial-gradient(120% 85% at 50% 0%, #182742, #0b1120 72%);
+    }
+
     /* BINGKAI / JENDELA karakter -> Yuki "berpijak" di dalam frame, tidak ngambang */
-    .frame { position: relative; width: 100%; height: 100%; border-radius: 18px; overflow: hidden;
-             border: 1px solid #2b3854;
-             background: linear-gradient(180deg, #1b2942 0%, #101a2c 68%, #0a111e 100%);
-             box-shadow: inset 0 0 46px rgba(0,0,0,.5), 0 10px 32px rgba(0,0,0,.45); }
+    .frame {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid #2b3854;
+      background: linear-gradient(180deg, #1b2942 0%, #101a2c 68%, #0a111e 100%);
+      box-shadow: inset 0 0 46px rgba(0, 0, 0, .5), 0 10px 32px rgba(0, 0, 0, .45);
+    }
+
     /* alas/lantai lembut di dasar bingkai biar dia seperti berpijak, bukan melayang */
-    .frame::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 32%;
-                    background: radial-gradient(120% 90% at 50% 100%, rgba(34,211,238,.16), transparent 72%);
-                    pointer-events: none; }
-    .frame .glow { position: absolute; left: 50%; bottom: 6%; transform: translateX(-50%);
-                   width: 280px; height: 280px; border-radius: 50%;
-                   background: radial-gradient(circle, rgba(34,211,238,.34), transparent 70%);
-                   filter: blur(12px); animation: pulse 4s ease-in-out infinite; }
-    @keyframes pulse { 0%,100% { opacity: .45; transform: translateX(-50%) scale(1); }
-                       50% { opacity: .9; transform: translateX(-50%) scale(1.1); } }
+    .frame::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 32%;
+      background: radial-gradient(120% 90% at 50% 100%, rgba(34, 211, 238, .16), transparent 72%);
+      pointer-events: none;
+    }
+
+    .frame .glow {
+      position: absolute;
+      left: 50%;
+      bottom: 6%;
+      transform: translateX(-50%);
+      width: 280px;
+      height: 280px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(34, 211, 238, .34), transparent 70%);
+      filter: blur(12px);
+      animation: pulse 4s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: .45;
+        transform: translateX(-50%) scale(1);
+      }
+
+      50% {
+        opacity: .9;
+        transform: translateX(-50%) scale(1.1);
+      }
+    }
+
     /* karakter PAS di panel (gambar transparan -> latar gelap tembus).
        object-fit: contain = seluruh gambar tampil utuh, TIDAK ke-zoom / ke-crop. */
-    .char { position: absolute; inset: 0; width: 100%; height: 100%;
-            object-fit: contain; object-position: bottom center; transform-origin: 50% 100%;
-            animation: breathe 6s ease-in-out infinite;
-            transition: opacity 0.2s ease-in-out; z-index: 2; cursor: pointer; }
+    .char {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: bottom center;
+      transform-origin: 50% 100%;
+      animation: breathe 6s ease-in-out infinite;
+      transition: opacity 0.2s ease-in-out;
+      z-index: 2;
+      cursor: pointer;
+    }
+
     /* "napas" SANGAT halus (skala kecil saja, tanpa geser/putar) -> hidup tapi tetap diam, tidak gerak aneh */
-    @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.012); } }
-    .nameplate { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; padding: 14px 16px;
-                 display: flex; align-items: center; justify-content: space-between; gap: 10px;
-                 background: linear-gradient(to top, rgba(8,12,20,.94), transparent); }
-    .np-name { font-weight: 800; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+    @keyframes breathe {
+
+      0%,
+      100% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.012);
+      }
+    }
+
+    .nameplate {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 3;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: linear-gradient(to top, rgba(8, 12, 20, .94), transparent);
+    }
+
+    .np-name {
+      font-weight: 800;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
 
     /* ===== Panel KIRI: chat ===== */
-    .side { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-    .top { display: flex; align-items: center; gap: 12px; padding: 14px 18px;
-           border-bottom: 1px solid var(--line); background: var(--bg2); }
-    .dot { width: 10px; height: 10px; border-radius: 50%; background: #34d27b; border: 2px solid #0b1120; }
-    .who { flex: 1; min-width: 0; }
-    .who h1 { margin: 0; font-size: 16px; }
-    .who p { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
-    .pill { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #cdd5e6;
-            background: #1a2233; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); }
-    .micon { display: inline-flex; color: var(--accent1); }
-    .gear { width: 36px; height: 36px; border-radius: 50%; border: none; cursor: pointer;
-            background: #1a2233; color: #aab3c6; display: grid; place-items: center; }
-    .gear:hover { background: #222c40; }
-    .chat { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px; display: flex; flex-direction: column; gap: 14px; background: var(--bg); }
-    .chat::-webkit-scrollbar { width: 8px; }
-    .chat::-webkit-scrollbar-thumb { background: #2a3344; border-radius: 8px; }
-    .row { display: flex; align-items: flex-end; gap: 10px; max-width: 80%; width: 100%; }
-    .row.bot { align-self: flex-start; }
-    .row.bot:has(.comic-card) { width: 100%; }
-    .row.bot:has(.comic-card) .bubble { flex: 1; }
-    .row.user { align-self: flex-end; flex-direction: row-reverse; }
-    .ava-sm { width: 30px; height: 30px; border-radius: 50%; flex: none; display: grid; place-items: center;
-              font-weight: 800; font-size: 13px; color: #06121a;
-              background: linear-gradient(135deg, var(--accent1), var(--accent2)); }
-    .bubble { padding: 11px 15px; border-radius: 16px; line-height: 1.5; font-size: 14.5px; min-width: 0; }
-    .bot .bubble { background: var(--bot); color: var(--ink); border: 1px solid var(--line); border-bottom-left-radius: 5px; }
-    .user .bubble { color: #06121a; font-weight: 500; border-bottom-right-radius: 5px;
-                    background: linear-gradient(135deg, var(--accent1), var(--accent2)); }
-    .bubble a { color: var(--accent1); font-weight: 600; text-decoration: none; }
-    .bubble a:hover { text-decoration: underline; }
-    .user .bubble a { color: #06121a; text-decoration: underline; }
-    .bubble .act { font-style: italic; color: var(--muted); }
-    .user .bubble .act { color: rgba(6,18,26,.7); }
-    .play { width: 30px; height: 30px; flex: none; border-radius: 50%; border: none; cursor: pointer;
-            background: #1a2233; color: #aab3c6;
-            display: grid; place-items: center; transition: background .15s; }
-    .play:hover { background: #222c40; }
-    .play.playing { background: linear-gradient(135deg, var(--accent1), var(--accent2)); color: #06121a; }
-    .play.loading { opacity: .7; cursor: default; }
-    .play.loading svg { animation: spin 1s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .pill svg, .gear svg, .play svg { width: 16px; height: 16px; }
-    .send svg { width: 20px; height: 20px; }
-    .typing { display: flex; gap: 4px; padding: 2px 0; }
-    .typing span { width: 7px; height: 7px; border-radius: 50%; background: #5b6678; animation: blink 1.2s infinite; }
-    .typing span:nth-child(2) { animation-delay: .2s; }
-    .typing span:nth-child(3) { animation-delay: .4s; }
-    @keyframes blink { 0%,60%,100% { opacity: .25 } 30% { opacity: 1 } }
-    .bar { display: flex; align-items: center; gap: 10px; padding: 14px 16px;
-           border-top: 1px solid var(--line); background: var(--bg2); }
-    .bar input { flex: 1; padding: 12px 18px; border: 1px solid var(--line); outline: none; border-radius: 999px;
-                 background: #0e1422; color: var(--ink); font-size: 14.5px; }
-    .bar input:focus { border-color: var(--accent1); background: #0b1018; }
-    .bar input::placeholder { color: #6b7589; }
-    .send { width: 46px; height: 46px; flex: none; border-radius: 50%; border: none; cursor: pointer;
-            color: #06121a; display: grid; place-items: center;
-            background: linear-gradient(135deg, var(--accent1), var(--accent2)); }
-    .send:disabled { opacity: .5; cursor: default; }
-    .menu { position: absolute; top: 64px; right: 18px; background: #141a26; color: #cdd5e6;
-            border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px;
-            font-size: 13px; display: none; gap: 8px; align-items: center; z-index: 5;
-            box-shadow: 0 10px 30px rgba(0,0,0,.5); }
-    .menu.open { display: flex; }
+    .side {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      background: var(--bg2);
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #34d27b;
+      border: 2px solid #0b1120;
+    }
+
+    .who {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .who h1 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .who p {
+      margin: 2px 0 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #cdd5e6;
+      background: #1a2233;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+    }
+
+    .micon {
+      display: inline-flex;
+      color: var(--accent1);
+    }
+
+    .gear {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      background: #1a2233;
+      color: #aab3c6;
+      display: grid;
+      place-items: center;
+    }
+
+    .gear:hover {
+      background: #222c40;
+    }
+
+    .chat {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      background: var(--bg);
+    }
+
+    .chat::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .chat::-webkit-scrollbar-thumb {
+      background: #2a3344;
+      border-radius: 8px;
+    }
+
+    .row {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      max-width: 80%;
+      width: 100%;
+    }
+
+    .row.bot {
+      align-self: flex-start;
+    }
+
+    .row.bot:has(.comic-card) {
+      width: 100%;
+    }
+
+    .row.bot:has(.comic-card) .bubble {
+      flex: 1;
+    }
+
+    .row.user {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+
+    .ava-sm {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      flex: none;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 13px;
+      color: #06121a;
+      background: linear-gradient(135deg, var(--accent1), var(--accent2));
+    }
+
+    .bubble {
+      padding: 11px 15px;
+      border-radius: 16px;
+      line-height: 1.5;
+      font-size: 14.5px;
+      min-width: 0;
+    }
+
+    .bot .bubble {
+      background: var(--bot);
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-bottom-left-radius: 5px;
+    }
+
+    .user .bubble {
+      color: #06121a;
+      font-weight: 500;
+      border-bottom-right-radius: 5px;
+      background: linear-gradient(135deg, var(--accent1), var(--accent2));
+    }
+
+    .bubble a {
+      color: var(--accent1);
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .bubble a:hover {
+      text-decoration: underline;
+    }
+
+    .user .bubble a {
+      color: #06121a;
+      text-decoration: underline;
+    }
+
+    .bubble .act {
+      font-style: italic;
+      color: var(--muted);
+    }
+
+    .user .bubble .act {
+      color: rgba(6, 18, 26, .7);
+    }
+
+    .play {
+      width: 30px;
+      height: 30px;
+      flex: none;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      background: #1a2233;
+      color: #aab3c6;
+      display: grid;
+      place-items: center;
+      transition: background .15s;
+    }
+
+    .play:hover {
+      background: #222c40;
+    }
+
+    .play.playing {
+      background: linear-gradient(135deg, var(--accent1), var(--accent2));
+      color: #06121a;
+    }
+
+    .play.loading {
+      opacity: .7;
+      cursor: default;
+    }
+
+    .play.loading svg {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .pill svg,
+    .gear svg,
+    .play svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .send svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .typing {
+      display: flex;
+      gap: 4px;
+      padding: 2px 0;
+    }
+
+    .typing span {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #5b6678;
+      animation: blink 1.2s infinite;
+    }
+
+    .typing span:nth-child(2) {
+      animation-delay: .2s;
+    }
+
+    .typing span:nth-child(3) {
+      animation-delay: .4s;
+    }
+
+    @keyframes blink {
+
+      0%,
+      60%,
+      100% {
+        opacity: .25
+      }
+
+      30% {
+        opacity: 1
+      }
+    }
+
+    .bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px;
+      border-top: 1px solid var(--line);
+      background: var(--bg2);
+    }
+
+    .bar input {
+      flex: 1;
+      padding: 12px 18px;
+      border: 1px solid var(--line);
+      outline: none;
+      border-radius: 999px;
+      background: #0e1422;
+      color: var(--ink);
+      font-size: 14.5px;
+    }
+
+    .bar input:focus {
+      border-color: var(--accent1);
+      background: #0b1018;
+    }
+
+    .bar input::placeholder {
+      color: #6b7589;
+    }
+
+    .send {
+      width: 46px;
+      height: 46px;
+      flex: none;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      color: #06121a;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--accent1), var(--accent2));
+    }
+
+    .send:disabled {
+      opacity: .5;
+      cursor: default;
+    }
+
+    .menu {
+      position: absolute;
+      top: 64px;
+      right: 18px;
+      background: #141a26;
+      color: #cdd5e6;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 13px;
+      display: none;
+      gap: 8px;
+      align-items: center;
+      z-index: 5;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
+    }
+
+    .menu.open {
+      display: flex;
+    }
 
     /* ===== Responsif ===== */
-    @media (max-width: 860px) { .app { max-width: 640px; } .stage { width: 300px; } }
+    @media (max-width: 860px) {
+      .app {
+        max-width: 640px;
+      }
+
+      .stage {
+        width: 300px;
+      }
+    }
+
     @media (max-width: 600px) {
-      body { padding: 0; }
+      body {
+        padding: 0;
+      }
+
       .app {
         flex-direction: column-reverse;
-        width: 100%; max-width: 100%;
-        height: 100vh; height: 100dvh;
-        border: none; border-radius: 0;
+        width: 100%;
+        max-width: 100%;
+        height: 100vh;
+        height: 100dvh;
+        border: none;
+        border-radius: 0;
       }
+
       /* Panggung karakter jadi banner ATAS dengan tinggi TETAP -> Yuki selalu keliatan */
-      .stage { width: 100%; flex: none; height: 34vh; min-height: 190px; max-height: 320px;
-               padding: 10px; border-left: none; border-bottom: 1px solid var(--line); }
-      .frame { border-radius: 14px; }
-      .char { width: 100%; height: 100%; }
+      .stage {
+        width: 100%;
+        flex: none;
+        height: 34vh;
+        min-height: 190px;
+        max-height: 320px;
+        padding: 10px;
+        border-left: none;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .frame {
+        border-radius: 14px;
+      }
+
+      .char {
+        width: 100%;
+        height: 100%;
+      }
+
       /* KUNCI anti-bug: min-height:0 biar AREA CHAT yang scroll sendiri,
          bukan mendorong panggung karakter keluar layar saat chat menumpuk */
-      .side { flex: 1; min-height: 0; }
-      .top { padding: 10px 12px; }
-      .who h1 { font-size: 14px; }
-      .who p { font-size: 11px; }
-      .gear { width: 32px; height: 32px; }
+      .side {
+        flex: 1;
+        min-height: 0;
+      }
+
+      .top {
+        padding: 10px 12px;
+      }
+
+      .who h1 {
+        font-size: 14px;
+      }
+
+      .who p {
+        font-size: 11px;
+      }
+
+      .gear {
+        width: 32px;
+        height: 32px;
+      }
+
       /* Kecilkan teks & gelembung chat di mobile biar nggak penuh & lebih kebaca */
-      .chat { padding: 12px; gap: 9px; }
-      .row { max-width: 96%; gap: 6px; }
-      .ava-sm { width: 26px; height: 26px; font-size: 11px; }
-      .bubble { font-size: 13px; padding: 8px 11px; border-radius: 13px; line-height: 1.45; }
-      .play { width: 26px; height: 26px; }
-      .bar { padding: 10px 12px; gap: 8px; }
-      .bar input { padding: 9px 14px; font-size: 13px; }
-      .send { width: 40px; height: 40px; }
-      .nameplate { padding: 9px 12px; }
-      .np-name { font-size: 14px; }
-      .pill { font-size: 11px; padding: 5px 10px; }
+      .chat {
+        padding: 12px;
+        gap: 9px;
+      }
+
+      .row {
+        max-width: 96%;
+        gap: 6px;
+      }
+
+      .ava-sm {
+        width: 26px;
+        height: 26px;
+        font-size: 11px;
+      }
+
+      .bubble {
+        font-size: 13px;
+        padding: 8px 11px;
+        border-radius: 13px;
+        line-height: 1.45;
+      }
+
+      .play {
+        width: 26px;
+        height: 26px;
+      }
+
+      .bar {
+        padding: 10px 12px;
+        gap: 8px;
+      }
+
+      .bar input {
+        padding: 9px 14px;
+        font-size: 13px;
+      }
+
+      .send {
+        width: 40px;
+        height: 40px;
+      }
+
+      .nameplate {
+        padding: 9px 12px;
+      }
+
+      .np-name {
+        font-size: 14px;
+      }
+
+      .pill {
+        font-size: 11px;
+        padding: 5px 10px;
+      }
 
       /* Comic card mobile responsive overrides */
       .comic-card {
-        min-width: 0 !important; /* Allow card to shrink freely on mobile */
-        max-width: 100%; /* Fit exactly inside mobile bubbles */
+        min-width: 0 !important;
+        /* Allow card to shrink freely on mobile */
+        max-width: 100%;
+        /* Fit exactly inside mobile bubbles */
         padding: 5px 6px;
         gap: 8px;
       }
+
       .comic-card::after {
-        content: '→' !important; /* Ganti Detail dengan panah tipis di mobile */
+        content: '→' !important;
+        /* Ganti Detail dengan panah tipis di mobile */
         right: 8px !important;
         bottom: 6px !important;
       }
-      .comic-card-details {
-        padding-right: 18px; /* Lebih lebar untuk teks karena Detail diganti panah */
-      }
+
     }
 
     /* ===== Kartu Komik Ryukomik ===== */
@@ -194,11 +656,14 @@
       position: relative;
       text-align: left;
       width: 100%;
-      min-width: 240px; /* Minimal width on desktop to prevent collapsing */
-      max-width: 100%; /* Fill the chat bubble width */
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      min-width: 240px;
+      /* Minimal width on desktop to prevent collapsing */
+      max-width: 100%;
+      /* Fill the chat bubble width */
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       overflow: hidden;
     }
+
     .comic-card::after {
       content: 'Detail →';
       position: absolute;
@@ -210,16 +675,19 @@
       opacity: 0.85;
       transition: transform 0.2s, opacity 0.2s;
     }
+
     .comic-card:hover {
       background: rgba(34, 211, 238, 0.08);
       border-color: var(--accent1);
       transform: translateY(-2px);
       box-shadow: 0 6px 16px rgba(34, 211, 238, 0.15);
     }
+
     .comic-card:hover::after {
       transform: translateX(3px);
       opacity: 1;
     }
+
     .comic-card-thumb {
       width: 50px;
       height: 68px;
@@ -227,16 +695,19 @@
       border-radius: 8px;
       border: 1px solid rgba(255, 255, 255, 0.1);
       flex-shrink: 0;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
     }
+
     .comic-card-details {
       display: flex;
       flex-direction: column;
       gap: 4px;
       flex-grow: 1;
-      min-width: 0; /* Mencegah flex item meluber jika ada teks panjang */
-      padding-right: 48px; /* Mencegah teks bertabrakan dengan tulisan "Detail →" */
+      min-width: 0;
+      /* Mencegah flex item meluber jika ada teks panjang */
+      /* Mencegah teks bertabrakan dengan tulisan "Detail →" */
     }
+
     .comic-card-title {
       font-weight: 700;
       font-size: 13.5px;
@@ -244,11 +715,13 @@
       margin: 0;
       line-height: 1.3;
       display: -webkit-box;
-      -webkit-line-clamp: 2; /* Allow wrapping up to 2 lines */
+      -webkit-line-clamp: 2;
+      /* Allow wrapping up to 2 lines */
       -webkit-box-orient: vertical;
       overflow: hidden;
       text-overflow: ellipsis;
     }
+
     .comic-card-meta {
       font-size: 11px;
       color: var(--muted);
@@ -273,10 +746,12 @@
       pointer-events: none;
       transition: opacity 0.25s ease-in-out;
     }
+
     .modal.open {
       opacity: 1;
       pointer-events: auto;
     }
+
     .modal-content {
       background: rgba(18, 24, 38, 0.95);
       border: 1px solid var(--line);
@@ -285,14 +760,16 @@
       width: 90%;
       max-width: 400px;
       position: relative;
-      box-shadow: 0 20px 50px rgba(0,0,0,.6), inset 0 1px 1px rgba(255,255,255,0.05);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, .6), inset 0 1px 1px rgba(255, 255, 255, 0.05);
       transform: scale(0.9);
       transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
       text-align: center;
     }
+
     .modal.open .modal-content {
       transform: scale(1);
     }
+
     .modal-close {
       position: absolute;
       top: 14px;
@@ -306,22 +783,26 @@
       padding: 4px;
       transition: color 0.15s;
     }
+
     .modal-close:hover {
       color: #fff;
     }
+
     .modal-cover-wrap {
       margin-bottom: 16px;
       display: flex;
       justify-content: center;
     }
+
     .modal-cover {
       width: 100px;
       height: 140px;
       object-fit: cover;
       border-radius: 8px;
       border: 1px solid var(--line);
-      box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
     }
+
     .modal-icon {
       width: 50px;
       height: 50px;
@@ -332,28 +813,33 @@
       place-items: center;
       margin: 0 auto 14px;
     }
+
     .modal-icon svg {
       width: 24px;
       height: 24px;
     }
+
     .modal-content h2 {
       margin: 0 0 6px;
       font-size: 18px;
       color: #fff;
       line-height: 1.3;
     }
+
     .modal-info {
       font-size: 13px;
       color: var(--accent1);
       margin: 0 0 14px;
       font-weight: 600;
     }
+
     .modal-desc {
       font-size: 13px;
       color: var(--muted);
       line-height: 1.5;
       margin-bottom: 20px;
     }
+
     .modal-actions a {
       display: inline-block;
       width: 100%;
@@ -365,12 +851,14 @@
       border-radius: 999px;
       transition: opacity 0.15s, transform 0.1s;
     }
+
     .modal-actions a:hover {
       opacity: 0.9;
       transform: scale(1.02);
     }
   </style>
 </head>
+
 <body>
   <div class="app">
     <section class="side">
@@ -394,11 +882,13 @@
     <aside class="stage">
       <div class="frame">
         <div class="glow"></div>
-        <canvas id="particles" style="position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;"></canvas>
+        <canvas id="particles"
+          style="position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;"></canvas>
         <img id="char" class="char" src="expressions/tenang.png" alt="Yuki" onerror="this.style.display='none'" />
         <div class="nameplate">
           <div class="np-name">Yuki <span class="dot"></span></div>
-          <div class="pill"><span class="micon" id="moodIconWrap"><i data-lucide="meh"></i></span><span id="mood">tenang</span></div>
+          <div class="pill"><span class="micon" id="moodIconWrap"><i data-lucide="meh"></i></span><span
+              id="mood">tenang</span></div>
         </div>
       </div>
     </aside>
@@ -409,13 +899,15 @@
     <div class="modal-content">
       <button class="modal-close" id="modal-close" onclick="closeComicModal()">&times;</button>
       <div class="modal-cover-wrap">
-        <img id="modal-cover" class="modal-cover" src="" referrerpolicy="no-referrer" alt="Cover" style="display: none;" />
+        <img id="modal-cover" class="modal-cover" src="" referrerpolicy="no-referrer" alt="Cover"
+          style="display: none;" />
         <div id="modal-default-icon" class="modal-icon"><i data-lucide="book-open"></i></div>
       </div>
       <h2 id="modal-title">Judul Komik</h2>
       <p id="modal-info">Chapter Terbaru · Genre</p>
       <div class="modal-desc">
-        Rekomendasi komik ini diambil secara langsung dari katalog aktif Ryukomik. Klik tombol di bawah untuk mulai membaca kelanjutan ceritanya!
+        Rekomendasi komik ini diambil secara langsung dari katalog aktif Ryukomik. Klik tombol di bawah untuk mulai
+        membaca kelanjutan ceritanya!
       </div>
       <div class="modal-actions">
         <a id="modal-link" href="#" target="_blank" rel="noopener">Baca Sekarang</a>
@@ -454,11 +946,11 @@
     // obrolan TIDAK hilang & Yuki tidak balik "dingin seperti orang asing".
     const HIST_KEY = 'yuki_hist_' + getUserId()
     function saveHistory() {
-      try { localStorage.setItem(HIST_KEY, JSON.stringify(history.slice(-40))) } catch (e) {}
+      try { localStorage.setItem(HIST_KEY, JSON.stringify(history.slice(-40))) } catch (e) { }
     }
     function restoreHistory() {
       let saved = []
-      try { saved = JSON.parse(localStorage.getItem(HIST_KEY) || '[]') } catch (e) {}
+      try { saved = JSON.parse(localStorage.getItem(HIST_KEY) || '[]') } catch (e) { }
       if (!Array.isArray(saved) || !saved.length) return false
       for (const m of saved) {
         history.push(m)
@@ -518,16 +1010,16 @@
 
     // mood -> ikon Lucide + warna
     const MOOD = {
-      ceria:          { icon: 'laugh',        color: '#f59e0b' },
-      senang:         { icon: 'smile',        color: '#4f7cff' },
-      'sayang/manja': { icon: 'heart',        color: '#ff6fae' },
-      malu:           { icon: 'sparkles',     color: '#ff8fc7' },
-      tenang:         { icon: 'meh',          color: '#36c6ff' },
-      sedih:          { icon: 'frown',        color: '#6b8afd' },
-      kesal:          { icon: 'angry',        color: '#ef5a5a' },
-      cemas:          { icon: 'alert-circle', color: '#a78bfa' },
-      kecewa:         { icon: 'cloud-rain',   color: '#94a0b8' },
-      lesu:           { icon: 'moon',         color: '#94a0b8' }
+      ceria: { icon: 'laugh', color: '#f59e0b' },
+      senang: { icon: 'smile', color: '#4f7cff' },
+      'sayang/manja': { icon: 'heart', color: '#ff6fae' },
+      malu: { icon: 'sparkles', color: '#ff8fc7' },
+      tenang: { icon: 'meh', color: '#36c6ff' },
+      sedih: { icon: 'frown', color: '#6b8afd' },
+      kesal: { icon: 'angry', color: '#ef5a5a' },
+      cemas: { icon: 'alert-circle', color: '#a78bfa' },
+      kecewa: { icon: 'cloud-rain', color: '#94a0b8' },
+      lesu: { icon: 'moon', color: '#94a0b8' }
     }
 
     // render satu ikon Lucide ke dalam sebuah elemen
@@ -558,19 +1050,19 @@
       html = html.replace(comicRegex, (m, title, meta, url) => {
         window.comicCardsData = window.comicCardsData || []
         const idx = window.comicCardsData.length
-        
+
         // Ekstrak image URL dari query parameter ?img=...
         let imageUrl = ''
         try {
           const parsedUrl = new URL(url.trim())
           imageUrl = parsedUrl.searchParams.get('img') || ''
-        } catch (e) {}
+        } catch (e) { }
 
         window.comicCardsData.push({ title: title.trim(), meta: meta.trim(), url: url.trim(), image: imageUrl })
-        
+
         const cardHtml = `<div class="comic-card" onclick="openComicModal(${idx})">
-          ${imageUrl 
-            ? `<img class="comic-card-thumb" src="${escapeHtml(imageUrl)}" referrerpolicy="no-referrer" alt="Cover" />` 
+          ${imageUrl
+            ? `<img class="comic-card-thumb" src="${escapeHtml(imageUrl)}" referrerpolicy="no-referrer" alt="Cover" />`
             : `<img class="comic-card-thumb lazy-cover" src="" referrerpolicy="no-referrer" alt="Cover" style="display: none;" data-idx="${idx}" data-url="${escapeHtml(url.trim())}" />`
           }
           <div class="comic-card-details">
@@ -717,7 +1209,7 @@
       const isIdle = options.isIdle || false
       if (isIdle && sendBtn.disabled) return // Jangan ganggu jika Yuki sedang memproses balasan
       if (!text && !isIdle) return
-      
+
       if (text) {
         consecutiveIdleCount = 0 // Reset jika user membalas chat
       }
@@ -733,7 +1225,7 @@
         history.push({ role: 'user', content: text })
         saveHistory()
       }
-      
+
       input.value = ''
       sendBtn.disabled = true
       const typing = showTyping()
@@ -742,9 +1234,9 @@
         const res = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            messages: history.slice(-16), 
-            adult: adultBox.checked, 
+          body: JSON.stringify({
+            messages: history.slice(-16),
+            adult: adultBox.checked,
             userId: getUserId(),
             isIdle: isIdle
           })
@@ -793,13 +1285,13 @@
     })
 
     // ===== Fungsi Pembantu Modal Detail Komik =====
-    window.openComicModal = function(idx) {
+    window.openComicModal = function (idx) {
       const data = window.comicCardsData[idx]
       if (!data) return
       document.getElementById('modal-title').textContent = data.title
       document.getElementById('modal-info').textContent = data.meta
       document.getElementById('modal-link').href = data.url
-      
+
       const coverImg = document.getElementById('modal-cover')
       const defaultIcon = document.getElementById('modal-default-icon')
       if (data.image) {
@@ -810,11 +1302,11 @@
         coverImg.style.display = 'none'
         defaultIcon.style.display = 'grid'
       }
-      
+
       document.getElementById('comic-modal').classList.add('open')
     }
 
-    window.closeComicModal = function() {
+    window.closeComicModal = function () {
       document.getElementById('comic-modal').classList.remove('open')
     }
 
@@ -843,7 +1335,7 @@
         const w = canvas.width / devicePixelRatio
         const h = canvas.height / devicePixelRatio
         this.x = Math.random() * w
-        
+
         if (this.type === 'sakura') {
           this.y = -10 - Math.random() * 20
           this.r = 3 + Math.random() * 4
@@ -932,13 +1424,13 @@
       }
     }
 
-    window.updateParticles = function(mood) {
+    window.updateParticles = function (mood) {
       activeMood = mood
       particles = []
-      
+
       let type = ''
       let count = 0
-      
+
       if (mood === 'senang' || mood === 'ceria' || mood === 'sayang/manja') {
         type = 'sakura'
         count = 14
@@ -964,15 +1456,15 @@
       const w = canvas.width / devicePixelRatio
       const h = canvas.height / devicePixelRatio
       ctx.clearRect(0, 0, w, h)
-      
+
       for (const p of particles) {
         p.update()
         p.draw()
       }
-      
+
       requestAnimationFrame(animate)
     }
-    
+
     animate()
 
     // ===== Kedip mata ala VTuber (pakai gambar) =====
@@ -995,7 +1487,7 @@
         char.src = blinkSrc
         setTimeout(() => { char.src = openSrc; blinkBusy = false }, 130)
       }
-      probe.onerror = () => {}
+      probe.onerror = () => { }
       probe.src = blinkSrc
     }
     setInterval(blinkOnce, 3800 + Math.random() * 2600)
@@ -1004,7 +1496,7 @@
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') closeComicModal()
     })
-    
+
     document.getElementById('comic-modal').addEventListener('click', (e) => {
       if (e.target.id === 'comic-modal') closeComicModal()
     })
@@ -1019,4 +1511,5 @@
     resetIdleTimer()
   </script>
 </body>
+
 </html>
