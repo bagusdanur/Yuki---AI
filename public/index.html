@@ -490,10 +490,12 @@
       padding: 10px 14px;
       font-size: 13px;
       display: none;
+      flex-direction: column;
       gap: 8px;
-      align-items: center;
+      align-items: flex-start;
       z-index: 5;
       box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
+      min-width: 160px;
     }
 
     .menu.open {
@@ -881,6 +883,7 @@
       </div>
       <div class="menu" id="menu">
         <button id="show-code-btn" style="background: none; border: none; color: var(--accent1); cursor: pointer; font-size: 12.5px; font-weight: 600; padding: 4px; text-align: left; display: flex; align-items: center; gap: 6px; width: 100%;"><i data-lucide="key" style="width: 14px; height: 14px;"></i> Info Kunci Ingatan</button>
+        <button id="reset-data-btn" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 12.5px; font-weight: 600; padding: 4px; text-align: left; display: flex; align-items: center; gap: 6px; width: 100%; border-top: 1px solid var(--line); padding-top: 8px; margin-top: 4px;"><i data-lucide="trash-2" style="width: 14px; height: 14px;"></i> Mulai Ulang Hubungan</button>
       </div>
       <div class="chat" id="chat"></div>
       <form class="bar" id="form">
@@ -1270,6 +1273,36 @@
         infoCodeModal.classList.add('open')
         window.lucide && lucide.createIcons()
       })
+
+      const resetDataBtn = document.getElementById('reset-data-btn')
+      if (resetDataBtn) {
+        resetDataBtn.addEventListener('click', () => {
+          menu.classList.remove('open')
+          const confirmReset = confirm('Apakah kamu yakin ingin melupakan seluruh ingatan dengan Yuki dan mulai dari awal? Tindakan ini tidak bisa dibatalkan kecuali kamu memiliki Kunci Ingatan.')
+          if (confirmReset) {
+            const uid = getUserId()
+            if (uid) {
+              localStorage.removeItem('yuki_hist_v3_' + uid)
+            }
+            localStorage.removeItem('yuki_uid_v3')
+            localStorage.removeItem('yuki_username_v3')
+            localStorage.removeItem('yuki_access_code_v3')
+
+            history.length = 0
+            chat.innerHTML = ''
+            
+            onboardName.value = ''
+            onboardCode.value = ''
+            document.getElementById('onboarding-step-1').style.display = 'block'
+            document.getElementById('onboarding-step-restore').style.display = 'none'
+            document.getElementById('onboarding-step-result').style.display = 'none'
+            onboardSubmit.disabled = false
+            onboardSubmit.textContent = 'Mulai Hubungan Baru'
+
+            onboardingModal.classList.add('open')
+          }
+        })
+      }
     })
 
 

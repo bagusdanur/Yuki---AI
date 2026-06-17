@@ -113,6 +113,22 @@
       color: #fff;
     }
 
+    .settings-btn {
+      color: var(--muted);
+      margin-left: 10px;
+      display: flex;
+      align-items: center;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      transition: color 0.15s;
+    }
+
+    .settings-btn:hover {
+      color: #fff;
+    }
+
     @media (max-width: 600px) {
       .close-btn {
         display: block;
@@ -515,6 +531,7 @@
     </div>
     <div class="mood" id="mood">tenang</div>
     <a href="/docs" target="_blank" class="docs-link" title="Dokumentasi"><i data-lucide="book-open" style="width: 16px; height: 16px;"></i></a>
+    <button class="settings-btn" id="settings-btn" title="Kunci Ingatan & Pengaturan"><i data-lucide="settings" style="width: 16px; height: 16px;"></i></button>
     <button class="close-btn" id="close-btn" title="Tutup Obrolan" onclick="closeWidget()">&times;</button>
   </div>
   <div class="chat" id="chat"></div>
@@ -547,6 +564,45 @@
       <div class="modal-actions">
         <a id="modal-link" href="#" target="_blank" rel="noopener">Baca Sekarang</a>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal Pengaturan & Kunci Ingatan -->
+  <div class="modal" id="settings-modal">
+    <div class="modal-content" style="max-width: 320px;">
+      <button class="modal-close" onclick="closeSettingsModal()">&times;</button>
+      <div class="modal-icon" style="background: var(--accent-rgba-01); color: var(--accent1); margin: 0 auto 12px;"><i data-lucide="settings"></i></div>
+      <h2>Kunci Ingatan & Data</h2>
+      
+      <!-- Bagian 1: Tampilkan Kode Akses Saat Ini -->
+      <div id="embed-settings-view">
+        <p class="modal-desc" style="font-size: 11px; margin-bottom: 10px;">
+          Gunakan Kunci Ingatan di bawah untuk memulihkan hubunganmu di perangkat lain.
+        </p>
+        <div style="background: rgba(0, 0, 0, 0.2); border: 1px dashed var(--accent1); border-radius: 8px; padding: 8px; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+          <span id="embed-result-code" style="font-family: monospace; font-size: 13.5px; font-weight: 700; color: #fff; letter-spacing: 0.5px;">Belum Terdaftar</span>
+          <button id="embed-copy-btn" title="Salin Kode" style="background: #1a2233; border: 1px solid var(--line); border-radius: 4px; width: 28px; height: 28px; color: var(--muted); cursor: pointer; display: grid; place-items: center; transition: all 0.15s;"><i data-lucide="copy" style="width: 12px; height: 12px;"></i></button>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <button id="embed-show-restore-btn" style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 999px; background: #1a2233; color: var(--accent1); font-weight: 600; cursor: pointer; font-size: 12px;">Pulihkan Ingatan</button>
+          <button id="embed-reset-btn" style="width: 100%; padding: 8px; border: none; border-radius: 999px; background: rgba(239, 68, 68, 0.15); color: #ef4444; font-weight: 600; cursor: pointer; font-size: 12px;">Mulai Ulang Hubungan</button>
+        </div>
+      </div>
+
+      <!-- Bagian 2: Form Restore Kode Akses -->
+      <div id="embed-settings-restore" style="display: none;">
+        <p class="modal-desc" style="font-size: 11px; margin-bottom: 10px;">
+          Masukkan Kunci Ingatan untuk memulihkan chat history dan hubungan sebelumnya.
+        </p>
+        <input type="text" id="embed-restore-code-input" placeholder="YUKI-XXXX-XXXX" autocomplete="off" 
+          style="width: 100%; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; background: #0e1422; color: var(--ink); font-size: 12.5px; outline: none; margin-bottom: 10px; text-align: center; border-color: var(--line);" />
+        <div style="display: flex; gap: 6px;">
+          <button id="embed-restore-cancel-btn" style="flex: 1; padding: 8px; border: 1px solid var(--line); border-radius: 999px; background: #1a2233; color: var(--muted); font-weight: 600; cursor: pointer; font-size: 12px;">Batal</button>
+          <button id="embed-restore-submit-btn" style="flex: 1; padding: 8px; border: none; border-radius: 999px; background: linear-gradient(135deg, var(--accent1), var(--accent2)); color: #06121a; font-weight: 600; cursor: pointer; font-size: 12px;">Pulihkan</button>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -633,9 +689,49 @@
 
     function getUserId() {
       let id = localStorage.getItem('yuki_uid_v3')
-      if (!id) { id = 'u_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); localStorage.setItem('yuki_uid_v3', id) }
+      if (!id) {
+        id = 'u_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
+        localStorage.setItem('yuki_uid_v3', id)
+        registerWidgetUserBackground(id)
+      }
       return id
     }
+
+    async function registerWidgetUserBackground(offlineId) {
+      try {
+        const res = await fetch(API + '/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: 'Teman Yuki' })
+        })
+        if (res.ok) {
+          const data = await res.json()
+          localStorage.setItem('yuki_uid_v3', data.userId)
+          localStorage.setItem('yuki_access_code_v3', data.accessCode)
+          localStorage.setItem('yuki_username_v3', 'Teman Yuki')
+          
+          // Pindahkan history lokal jika ada
+          const oldHistKey = 'yuki_hist_v3_' + offlineId
+          const newHistKey = 'yuki_hist_v3_' + data.userId
+          const savedHist = localStorage.getItem(oldHistKey)
+          if (savedHist) {
+            localStorage.setItem(newHistKey, savedHist)
+            localStorage.removeItem(oldHistKey)
+          }
+        }
+      } catch (e) {
+        console.error('Failed register widget user:', e)
+      }
+    }
+
+    // Jika user ID ada tapi access code belum disiapkan, daftarkan ulang di background
+    setTimeout(() => {
+      const id = getUserId()
+      const code = localStorage.getItem('yuki_access_code_v3')
+      if (id && !code) {
+        registerWidgetUserBackground(id)
+      }
+    }, 1000)
 
     const HIST_KEY = 'yuki_hist_v3_' + getUserId()
     function saveHistory() { try { localStorage.setItem(HIST_KEY, JSON.stringify(history.slice(-40))) } catch (e) { } }
@@ -781,16 +877,120 @@
       document.getElementById('comic-modal').classList.remove('open')
     }
 
+    function openSettingsModal() {
+      const code = localStorage.getItem('yuki_access_code_v3') || 'Menyiapkan Kunci...'
+      document.getElementById('embed-result-code').textContent = code
+      document.getElementById('embed-settings-view').style.display = 'block'
+      document.getElementById('embed-settings-restore').style.display = 'none'
+      document.getElementById('settings-modal').classList.add('open')
+      window.lucide && lucide.createIcons()
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('settings-modal').classList.remove('open')
+    }
+
     function closeWidget() {
       window.parent.postMessage('yuki-close', '*')
     }
 
     window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeComicModal()
+      if (e.key === 'Escape') {
+        closeComicModal()
+        closeSettingsModal()
+      }
     })
 
     document.getElementById('comic-modal').addEventListener('click', (e) => {
       if (e.target.id === 'comic-modal') closeComicModal()
+    })
+
+    document.getElementById('settings-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'settings-modal') closeSettingsModal()
+    })
+
+    document.getElementById('settings-btn').addEventListener('click', openSettingsModal)
+
+    document.getElementById('embed-copy-btn').addEventListener('click', () => {
+      const text = document.getElementById('embed-result-code').textContent
+      if (!text || text === 'Menyiapkan Kunci...') return
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('embed-copy-btn')
+        const oldHtml = btn.innerHTML
+        btn.innerHTML = '<i data-lucide="check" style="width: 12px; height: 12px; color: #34d27b;"></i>'
+        window.lucide && lucide.createIcons()
+        setTimeout(() => {
+          btn.innerHTML = oldHtml
+          window.lucide && lucide.createIcons()
+        }, 1500)
+      }).catch(() => {
+        alert('Gagal menyalin kode.')
+      })
+    })
+
+    document.getElementById('embed-show-restore-btn').addEventListener('click', () => {
+      document.getElementById('embed-settings-view').style.display = 'none'
+      document.getElementById('embed-settings-restore').style.display = 'block'
+      document.getElementById('embed-restore-code-input').value = ''
+    })
+
+    document.getElementById('embed-restore-cancel-btn').addEventListener('click', () => {
+      document.getElementById('embed-settings-restore').style.display = 'none'
+      document.getElementById('embed-settings-view').style.display = 'block'
+    })
+
+    document.getElementById('embed-restore-submit-btn').addEventListener('click', async () => {
+      const codeInput = document.getElementById('embed-restore-code-input')
+      const code = codeInput.value.trim()
+      if (!code) { alert('Masukkan Kode Akses!'); return }
+      
+      const submitBtn = document.getElementById('embed-restore-submit-btn')
+      submitBtn.disabled = true
+      submitBtn.textContent = 'Memulihkan...'
+      
+      try {
+        const res = await fetch(API + '/api/login-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accessCode: code })
+        })
+        if (!res.ok) throw new Error('Kode akses salah atau tidak ditemukan')
+        const data = await res.json()
+        
+        localStorage.setItem('yuki_uid_v3', data.userId)
+        localStorage.setItem('yuki_access_code_v3', code)
+        localStorage.setItem('yuki_username_v3', data.username)
+
+        history.length = 0
+        chat.innerHTML = ''
+        if (data.history && data.history.length) {
+          for (const m of data.history) {
+            history.push(m)
+            add(m.content, m.role === 'user' ? 'user' : 'bot')
+          }
+        }
+        window.location.reload()
+      } catch (err) {
+        alert('Gagal memulihkan ingatan: ' + err.message)
+      } finally {
+        submitBtn.disabled = false
+        submitBtn.textContent = 'Pulihkan'
+      }
+    })
+
+    document.getElementById('embed-reset-btn').addEventListener('click', () => {
+      const confirmReset = confirm('Apakah kamu yakin ingin melupakan seluruh ingatan dengan Yuki dan mulai dari awal? Tindakan ini tidak bisa dibatalkan kecuali kamu memiliki Kunci Ingatan.')
+      if (confirmReset) {
+        const uid = getUserId()
+        if (uid) {
+          localStorage.removeItem('yuki_hist_v3_' + uid)
+        }
+        localStorage.removeItem('yuki_uid_v3')
+        localStorage.removeItem('yuki_username_v3')
+        localStorage.removeItem('yuki_access_code_v3')
+
+        window.location.reload()
+      }
     })
 
     form.addEventListener('submit', async (e) => {
