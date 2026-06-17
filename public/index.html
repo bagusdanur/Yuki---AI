@@ -1071,25 +1071,45 @@
     const history = []
     let currentAudio = null
 
+    // Migration/Reset from v2 to v3 to start fresh for all users
+    try {
+      const oldUidV2 = localStorage.getItem('yuki_uid_v2');
+      if (oldUidV2) {
+        localStorage.removeItem('yuki_hist_v2_' + oldUidV2);
+        localStorage.removeItem('yuki_uid_v2');
+        localStorage.removeItem('yuki_username_v2');
+        localStorage.removeItem('yuki_access_code_v2');
+      }
+      const oldUidV1 = localStorage.getItem('yuki_uid');
+      if (oldUidV1) {
+        localStorage.removeItem('yuki_hist_' + oldUidV1);
+        localStorage.removeItem('yuki_uid');
+        localStorage.removeItem('yuki_username');
+        localStorage.removeItem('yuki_access_code');
+      }
+    } catch (e) {
+      console.error('Clean old storage error:', e);
+    }
+
     // ID anonim per browser (persisten, tanpa login) -> memori per user
     function getUserId() {
-      return localStorage.getItem('yuki_uid') || ''
+      return localStorage.getItem('yuki_uid_v3') || ''
     }
 
     function getHistKey() {
-      return 'yuki_hist_' + getUserId()
+      return 'yuki_hist_v3_' + getUserId()
     }
 
     // Simpan & pulihkan riwayat chat di browser ini -> walau di-refresh,
     // obrolan TIDAK hilang & Yuki tidak balik "dingin seperti orang asing".
     function saveHistory() {
       const key = getHistKey()
-      if (!key || key === 'yuki_hist_') return
+      if (!key || key === 'yuki_hist_v3_') return
       try { localStorage.setItem(key, JSON.stringify(history.slice(-40))) } catch (e) { }
     }
     function restoreHistory() {
       const key = getHistKey()
-      if (!key || key === 'yuki_hist_') return false
+      if (!key || key === 'yuki_hist_v3_') return false
       let saved = []
       try { saved = JSON.parse(localStorage.getItem(key) || '[]') } catch (e) { }
       if (!Array.isArray(saved) || !saved.length) return false
@@ -1126,7 +1146,7 @@
       } else {
         onboardingModal.classList.remove('open')
         if (!restoreHistory()) {
-          const username = localStorage.getItem('yuki_username') || 'kamu'
+          const username = localStorage.getItem('yuki_username_v3') || 'kamu'
           addMsg(`...ada perlu apa, ${username}? Mau cari komik?`, 'bot')
         }
       }
@@ -1157,9 +1177,9 @@
           })
           if (!res.ok) throw new Error('Registrasi gagal')
           const data = await res.json()
-          localStorage.setItem('yuki_uid', data.userId)
-          localStorage.setItem('yuki_access_code', data.accessCode)
-          localStorage.setItem('yuki_username', name)
+          localStorage.setItem('yuki_uid_v3', data.userId)
+          localStorage.setItem('yuki_access_code_v3', data.accessCode)
+          localStorage.setItem('yuki_username_v3', name)
           
           onboardResultCode.textContent = data.accessCode
           document.getElementById('onboarding-step-1').style.display = 'none'
@@ -1187,9 +1207,9 @@
           })
           if (!res.ok) throw new Error('Kode akses salah atau tidak ditemukan')
           const data = await res.json()
-          localStorage.setItem('yuki_uid', data.userId)
-          localStorage.setItem('yuki_access_code', code)
-          localStorage.setItem('yuki_username', data.username)
+          localStorage.setItem('yuki_uid_v3', data.userId)
+          localStorage.setItem('yuki_access_code_v3', code)
+          localStorage.setItem('yuki_username_v3', data.username)
 
           history.length = 0
           chat.innerHTML = ''
@@ -1237,7 +1257,7 @@
 
       onboardStartBtn.addEventListener('click', () => {
         onboardingModal.classList.remove('open')
-        const username = localStorage.getItem('yuki_username') || 'kamu'
+        const username = localStorage.getItem('yuki_username_v3') || 'kamu'
         chat.innerHTML = ''
         addMsg(`...ada perlu apa, ${username}? Mau cari komik?`, 'bot')
         resetIdleTimer()
@@ -1245,7 +1265,7 @@
 
       showCodeBtn.addEventListener('click', () => {
         menu.classList.remove('open')
-        const code = localStorage.getItem('yuki_access_code') || 'Belum terdaftar'
+        const code = localStorage.getItem('yuki_access_code_v3') || 'Belum terdaftar'
         infoResultCode.textContent = code
         infoCodeModal.classList.add('open')
         window.lucide && lucide.createIcons()

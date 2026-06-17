@@ -615,13 +615,29 @@
     const moodEl = document.getElementById('mood')
     const history = []
 
+    // Migration/Reset from v2 to v3 to start fresh for all users
+    try {
+      const oldUidV2 = localStorage.getItem('yuki_uid_v2');
+      if (oldUidV2) {
+        localStorage.removeItem('yuki_hist_v2_' + oldUidV2);
+        localStorage.removeItem('yuki_uid_v2');
+      }
+      const oldUidV1 = localStorage.getItem('yuki_uid');
+      if (oldUidV1) {
+        localStorage.removeItem('yuki_hist_' + oldUidV1);
+        localStorage.removeItem('yuki_uid');
+      }
+    } catch (e) {
+      console.error('Clean old storage error:', e);
+    }
+
     function getUserId() {
-      let id = localStorage.getItem('yuki_uid')
-      if (!id) { id = 'u_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); localStorage.setItem('yuki_uid', id) }
+      let id = localStorage.getItem('yuki_uid_v3')
+      if (!id) { id = 'u_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); localStorage.setItem('yuki_uid_v3', id) }
       return id
     }
 
-    const HIST_KEY = 'yuki_hist_' + getUserId()
+    const HIST_KEY = 'yuki_hist_v3_' + getUserId()
     function saveHistory() { try { localStorage.setItem(HIST_KEY, JSON.stringify(history.slice(-40))) } catch (e) { } }
     function restoreHistory() {
       let saved = []
