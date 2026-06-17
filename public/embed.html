@@ -100,11 +100,25 @@
       color: #fff;
     }
 
+    .docs-link {
+      color: var(--muted);
+      margin-left: 10px;
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .docs-link:hover {
+      color: #fff;
+    }
+
     @media (max-width: 600px) {
       .close-btn {
         display: block;
       }
     }
+
 
     .chat {
       flex: 1;
@@ -500,6 +514,7 @@
       <p>Asisten baca komik · Ryukomik</p>
     </div>
     <div class="mood" id="mood">tenang</div>
+    <a href="/docs" target="_blank" class="docs-link" title="Dokumentasi"><i data-lucide="book-open" style="width: 16px; height: 16px;"></i></a>
     <button class="close-btn" id="close-btn" title="Tutup Obrolan" onclick="closeWidget()">&times;</button>
   </div>
   <div class="chat" id="chat"></div>

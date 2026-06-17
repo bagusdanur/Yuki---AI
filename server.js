@@ -5,7 +5,8 @@ import { chat, extractFacts } from './lib/llm.js'
 import { synthesize } from './lib/tts.js'
 import { Emotion } from './lib/emotion.js'
 import {
-  loadMemory, addFacts, addEvent, buildMemoryContext, recallMemory, saveEmotion
+  loadMemory, addFacts, addEvent, buildMemoryContext, recallMemory, saveEmotion,
+  registerUser, getUserByAccessCode, saveChatMessage, getChatHistory
 } from './lib/memory.js'
 import { warmupEmbedder } from './lib/semantic.js'
 import { searchComics, latestComics, wantsComic, extractQuery, buildComicContext } from './lib/ryukomik.js'
@@ -51,6 +52,44 @@ async function getEmotion(userId) {
   sessions.set(userId, emo)
   return emo
 }
+
+// Endpoint untuk mendaftar user baru (Onboarding)
+app.post('/api/register', async (req, res) => {
+  try {
+    const { username } = req.body || {}
+    if (!username || !username.trim()) {
+      return res.status(400).json({ error: 'Nama tidak boleh kosong.' })
+    }
+    const result = await registerUser(username.trim())
+    res.json(result)
+  } catch (e) {
+    console.error(e)
+    res.status(500).json({ error: String(e.message || e) })
+  }
+})
+
+// Endpoint untuk memulihkan akun via Kode Akses
+app.post('/api/login-code', async (req, res) => {
+  try {
+    const { accessCode } = req.body || {}
+    if (!accessCode || !accessCode.trim()) {
+      return res.status(400).json({ error: 'Kode akses tidak boleh kosong.' })
+    }
+    const user = getUserByAccessCode(accessCode)
+    if (!user) {
+      return res.status(404).json({ error: 'Kode akses tidak ditemukan atau salah.' })
+    }
+    const history = getChatHistory(user.userId)
+    res.json({
+      userId: user.userId,
+      username: user.username,
+      history
+    })
+  } catch (e) {
+    console.error(e)
+    res.status(500).json({ error: String(e.message || e) })
+  }
+})
 
 // Endpoint chat -> balasan dari Qwen/DeepSeek (dengan emosi + kedekatan + memori)
 app.post('/api/chat', async (req, res) => {
@@ -102,6 +141,19 @@ app.post('/api/chat', async (req, res) => {
 
     // 5) simpan (per user)
     try { saveEmotion(userId, emotion.serialize()) } catch {}
+    
+    // Simpan pesan user (atau tag terdiam) dan balasan Yuki ke SQLite chat history
+    try {
+      if (isIdle) {
+        saveChatMessage(userId, 'user', '[terdiam]')
+      } else if (userText) {
+        saveChatMessage(userId, 'user', userText)
+      }
+      saveChatMessage(userId, 'assistant', reply)
+    } catch (err) {
+      console.error('[server] Gagal menyimpan ke chat_history:', err)
+    }
+
     if (worthRemembering(userText)) {
       extractFacts(userText, reply)
         .then((facts) => (facts.length ? addFacts(userId, facts) : null))

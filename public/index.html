@@ -98,9 +98,10 @@
       width: 280px;
       height: 280px;
       border-radius: 50%;
-      background: radial-gradient(circle, var(--accent-rgba-034), transparent 70%);
+      background: radial-gradient(circle, var(--glow-color, var(--accent-rgba-034)), transparent 70%);
       filter: blur(12px);
       animation: pulse 4s ease-in-out infinite;
+      transition: background 0.8s ease-in-out;
     }
 
     @keyframes pulse {
@@ -128,7 +129,7 @@
       object-position: bottom center;
       transform-origin: 50% 100%;
       animation: breathe 6s ease-in-out infinite;
-      transition: opacity 0.2s ease-in-out;
+      transition: opacity 0.25s ease-in-out, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
       z-index: 2;
       cursor: pointer;
     }
@@ -873,11 +874,13 @@
           <h1 id="name">Yuki</h1>
           <p>Asisten baca komik · online</p>
         </div>
-        <button class="gear" id="gear" title="Pengaturan"><i data-lucide="settings"></i></button>
+        <div style="display: flex; gap: 8px;">
+          <a href="/docs" target="_blank" class="gear" title="Dokumentasi" style="text-decoration: none; display: grid; place-items: center;"><i data-lucide="book-open"></i></a>
+          <button class="gear" id="gear" title="Pengaturan"><i data-lucide="settings"></i></button>
+        </div>
       </div>
       <div class="menu" id="menu">
-        <label><input type="checkbox" id="autoplay" /> Putar suara otomatis</label>
-        <label><input type="checkbox" id="adult" /> Mode dewasa (18+)</label>
+        <button id="show-code-btn" style="background: none; border: none; color: var(--accent1); cursor: pointer; font-size: 12.5px; font-weight: 600; padding: 4px; text-align: left; display: flex; align-items: center; gap: 6px; width: 100%;"><i data-lucide="key" style="width: 14px; height: 14px;"></i> Info Kunci Ingatan</button>
       </div>
       <div class="chat" id="chat"></div>
       <form class="bar" id="form">
@@ -918,6 +921,78 @@
       <div class="modal-actions">
         <a id="modal-link" href="#" target="_blank" rel="noopener">Baca Sekarang</a>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal Onboarding -->
+  <div class="modal" id="onboarding-modal">
+    <div class="modal-content" style="max-width: 420px; background: rgba(15, 20, 32, 0.95); border: 1px solid rgba(255, 255, 255, 0.1);">
+      <div class="modal-icon" style="background: var(--accent-rgba-015); color: var(--accent1); margin: 0 auto 14px;">
+        <i data-lucide="sparkles"></i>
+      </div>
+      <h2 style="margin: 0 0 8px; color: #fff;">Selamat Datang di Yuki AI 2.0</h2>
+      <p class="modal-desc" style="margin-bottom: 20px; font-size: 13px; color: var(--muted); line-height: 1.5;">
+        Halo! Masukkan namamu dulu yuk, biar Yuki bisa mengingat siapa dirimu dan menyimpan perkembangan hubungan kalian.
+      </p>
+      
+      <!-- Form Input Nama -->
+      <div id="onboarding-step-1">
+        <input type="text" id="onboard-name" placeholder="Masukkan namamu..." autocomplete="off" 
+          style="width: 100%; padding: 12px 18px; border: 1px solid var(--line); border-radius: 999px; background: #0e1422; color: var(--ink); font-size: 14.5px; outline: none; margin-bottom: 14px; text-align: center; border-color: var(--line);" />
+        <button id="onboard-submit" style="width: 100%; padding: 12px; border: none; border-radius: 999px; background: linear-gradient(135deg, var(--accent1), var(--accent2)); color: #06121a; font-weight: 700; cursor: pointer; transition: opacity 0.15s; font-size: 14px;">
+          Mulai Hubungan Baru
+        </button>
+        <div style="margin-top: 14px; font-size: 12px; color: var(--muted);">
+          Sudah punya ingatan sebelumnya? 
+          <a href="#" id="onboard-show-restore" style="color: var(--accent1); text-decoration: none; font-weight: 600;">Pulihkan Ingatan</a>
+        </div>
+      </div>
+
+      <!-- Form Restore Kode Akses -->
+      <div id="onboarding-step-restore" style="display: none;">
+        <input type="text" id="onboard-code" placeholder="Masukkan Kode Akses (YUKI-XXXX-XXXX)..." autocomplete="off" 
+          style="width: 100%; padding: 12px 18px; border: 1px solid var(--line); border-radius: 999px; background: #0e1422; color: var(--ink); font-size: 14px; outline: none; margin-bottom: 14px; text-align: center; border-color: var(--line);" />
+        <button id="onboard-restore-submit" style="width: 100%; padding: 12px; border: none; border-radius: 999px; background: linear-gradient(135deg, var(--accent1), var(--accent2)); color: #06121a; font-weight: 700; cursor: pointer; transition: opacity 0.15s; font-size: 14px;">
+          Pulihkan Sekarang
+        </button>
+        <div style="margin-top: 14px; font-size: 12px; color: var(--muted);">
+          Ingin memulai hubungan baru? 
+          <a href="#" id="onboard-show-register" style="color: var(--accent1); text-decoration: none; font-weight: 600;">Mulai Baru</a>
+        </div>
+      </div>
+
+      <!-- Tampilan Hasil Kode Akses Baru -->
+      <div id="onboarding-step-result" style="display: none;">
+        <p class="modal-desc" style="color: var(--ink); font-size: 13px; margin-bottom: 14px; line-height: 1.5;">
+          Ini adalah <strong>Kode Akses unikmu</strong>. Simpan kode ini baik-baik! Jika data browsermu terhapus, kamu bisa menggunakannya untuk memulihkan ingatan Yuki.
+        </p>
+        <div style="background: rgba(0, 0, 0, 0.2); border: 1px dashed var(--accent1); border-radius: 12px; padding: 12px 14px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 10px;">
+          <span id="onboard-result-code" style="font-family: monospace; font-size: 18px; font-weight: 700; letter-spacing: 1px; color: #fff;">YUKI-XXXX-XXXX</span>
+          <button id="onboard-copy-btn" title="Salin Kode" style="background: #1a2233; border: 1px solid var(--line); border-radius: 6px; width: 34px; height: 34px; color: var(--muted); cursor: pointer; display: grid; place-items: center; transition: all 0.15s;"><i data-lucide="copy" style="width: 15px; height: 15px;"></i></button>
+        </div>
+        <button id="onboard-start" style="width: 100%; padding: 12px; border: none; border-radius: 999px; background: linear-gradient(135deg, var(--accent1), var(--accent2)); color: #06121a; font-weight: 700; cursor: pointer; font-size: 14px;">
+          Mulai Mengobrol
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Tampilkan Kode Akses (Info Kunci Ingatan) -->
+  <div class="modal" id="info-code-modal">
+    <div class="modal-content" style="max-width: 380px;">
+      <button class="modal-close" onclick="document.getElementById('info-code-modal').classList.remove('open')">&times;</button>
+      <div class="modal-icon" style="background: var(--accent-rgba-01); color: var(--accent1); margin: 0 auto 14px;">
+        <i data-lucide="key"></i>
+      </div>
+      <h2>Kunci Ingatan Yuki</h2>
+      <p class="modal-desc" style="font-size: 12.5px; margin-bottom: 14px; color: var(--muted); line-height: 1.5;">
+        Gunakan kode akses di bawah ini untuk memulihkan ingatan Yuki di perangkat lain atau jika data browser Anda terhapus.
+      </p>
+      <div style="background: rgba(0, 0, 0, 0.2); border: 1px dashed var(--accent1); border-radius: 12px; padding: 12px; margin-bottom: 18px; display: flex; align-items: center; justify-content: center; gap: 10px;">
+        <span id="info-result-code" style="font-family: monospace; font-size: 16px; font-weight: 700; color: #fff;">YUKI-XXXX-XXXX</span>
+        <button id="info-copy-btn" title="Salin Kode" style="background: #1a2233; border: 1px solid var(--line); border-radius: 6px; width: 34px; height: 34px; color: var(--muted); cursor: pointer; display: grid; place-items: center; transition: all 0.15s;"><i data-lucide="copy" style="width: 15px; height: 15px;"></i></button>
+      </div>
+      <button onclick="document.getElementById('info-code-modal').classList.remove('open')" style="width: 100%; padding: 10px; border: none; border-radius: 999px; background: linear-gradient(135deg, var(--accent1), var(--accent2)); color: #06121a; font-weight: 700; cursor: pointer; font-size: 14px;">Tutup</button>
     </div>
   </div>
 
@@ -993,31 +1068,32 @@
     const moodIconWrap = document.getElementById('moodIconWrap')
     const gear = document.getElementById('gear')
     const menu = document.getElementById('menu')
-    const autoplayBox = document.getElementById('autoplay')
-    const adultBox = document.getElementById('adult')
     const history = []
     let currentAudio = null
 
     // ID anonim per browser (persisten, tanpa login) -> memori per user
     function getUserId() {
-      let id = localStorage.getItem('yuki_uid')
-      if (!id) {
-        id = 'u_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
-        localStorage.setItem('yuki_uid', id)
-      }
-      return id
+      return localStorage.getItem('yuki_uid') || ''
+    }
+
+    function getHistKey() {
+      return 'yuki_hist_' + getUserId()
     }
 
     // Simpan & pulihkan riwayat chat di browser ini -> walau di-refresh,
     // obrolan TIDAK hilang & Yuki tidak balik "dingin seperti orang asing".
-    const HIST_KEY = 'yuki_hist_' + getUserId()
     function saveHistory() {
-      try { localStorage.setItem(HIST_KEY, JSON.stringify(history.slice(-40))) } catch (e) { }
+      const key = getHistKey()
+      if (!key || key === 'yuki_hist_') return
+      try { localStorage.setItem(key, JSON.stringify(history.slice(-40))) } catch (e) { }
     }
     function restoreHistory() {
+      const key = getHistKey()
+      if (!key || key === 'yuki_hist_') return false
       let saved = []
-      try { saved = JSON.parse(localStorage.getItem(HIST_KEY) || '[]') } catch (e) { }
+      try { saved = JSON.parse(localStorage.getItem(key) || '[]') } catch (e) { }
       if (!Array.isArray(saved) || !saved.length) return false
+      chat.innerHTML = ''
       for (const m of saved) {
         history.push(m)
         addMsg(m.content, m.role === 'user' ? 'user' : 'bot')
@@ -1025,6 +1101,157 @@
       loadLazyCovers()
       return true
     }
+
+    // ===== HANDLER MODAL ONBOARDING & KODE AKSES YUKI 2.0 =====
+    document.addEventListener('DOMContentLoaded', () => {
+      const onboardingModal = document.getElementById('onboarding-modal')
+      const onboardName = document.getElementById('onboard-name')
+      const onboardCode = document.getElementById('onboard-code')
+      const onboardSubmit = document.getElementById('onboard-submit')
+      const onboardRestoreSubmit = document.getElementById('onboard-restore-submit')
+      const onboardShowRestore = document.getElementById('onboard-show-restore')
+      const onboardShowRegister = document.getElementById('onboard-show-register')
+      const onboardCopyBtn = document.getElementById('onboard-copy-btn')
+      const onboardStartBtn = document.getElementById('onboard-start')
+      const onboardResultCode = document.getElementById('onboard-result-code')
+      const showCodeBtn = document.getElementById('show-code-btn')
+      const infoCodeModal = document.getElementById('info-code-modal')
+      const infoResultCode = document.getElementById('info-result-code')
+      const infoCopyBtn = document.getElementById('info-copy-btn')
+
+      // Cek apakah user sudah terdaftar di browser ini
+      const uid = getUserId()
+      if (!uid) {
+        onboardingModal.classList.add('open')
+      } else {
+        onboardingModal.classList.remove('open')
+        if (!restoreHistory()) {
+          const username = localStorage.getItem('yuki_username') || 'kamu'
+          addMsg(`...ada perlu apa, ${username}? Mau cari komik?`, 'bot')
+        }
+      }
+
+      onboardShowRestore.addEventListener('click', (e) => {
+        e.preventDefault()
+        document.getElementById('onboarding-step-1').style.display = 'none'
+        document.getElementById('onboarding-step-restore').style.display = 'block'
+      })
+
+      onboardShowRegister.addEventListener('click', (e) => {
+        e.preventDefault()
+        document.getElementById('onboarding-step-restore').style.display = 'none'
+        document.getElementById('onboarding-step-1').style.display = 'block'
+      })
+
+      // Klik pendaftaran nama baru
+      onboardSubmit.addEventListener('click', async () => {
+        const name = onboardName.value.trim()
+        if (!name) { alert('Masukkan nama panggilanmu dulu!'); return }
+        onboardSubmit.disabled = true
+        onboardSubmit.textContent = 'Mendaftar...'
+        try {
+          const res = await fetch('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: name })
+          })
+          if (!res.ok) throw new Error('Registrasi gagal')
+          const data = await res.json()
+          localStorage.setItem('yuki_uid', data.userId)
+          localStorage.setItem('yuki_access_code', data.accessCode)
+          localStorage.setItem('yuki_username', name)
+          
+          onboardResultCode.textContent = data.accessCode
+          document.getElementById('onboarding-step-1').style.display = 'none'
+          document.getElementById('onboarding-step-result').style.display = 'block'
+          window.lucide && lucide.createIcons()
+        } catch (err) {
+          alert('Gagal membuat profil: ' + err.message)
+        } finally {
+          onboardSubmit.disabled = false
+          onboardSubmit.textContent = 'Mulai Hubungan Baru'
+        }
+      })
+
+      // Klik restore kode akses
+      onboardRestoreSubmit.addEventListener('click', async () => {
+        const code = onboardCode.value.trim()
+        if (!code) { alert('Masukkan Kode Akses!'); return }
+        onboardRestoreSubmit.disabled = true
+        onboardRestoreSubmit.textContent = 'Memulihkan...'
+        try {
+          const res = await fetch('/api/login-code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accessCode: code })
+          })
+          if (!res.ok) throw new Error('Kode akses salah atau tidak ditemukan')
+          const data = await res.json()
+          localStorage.setItem('yuki_uid', data.userId)
+          localStorage.setItem('yuki_access_code', code)
+          localStorage.setItem('yuki_username', data.username)
+
+          history.length = 0
+          chat.innerHTML = ''
+          if (data.history && data.history.length) {
+            for (const m of data.history) {
+              history.push(m)
+              addMsg(m.content, m.role === 'user' ? 'user' : 'bot')
+            }
+            saveHistory()
+          } else {
+            addMsg(`...ada perlu apa, ${data.username}? Mau cari komik?`, 'bot')
+          }
+          
+          onboardingModal.classList.remove('open')
+        } catch (err) {
+          alert('Gagal memulihkan ingatan: ' + err.message)
+        } finally {
+          onboardRestoreSubmit.disabled = false
+          onboardRestoreSubmit.textContent = 'Pulihkan Sekarang'
+        }
+      })
+
+      // Fungsi menyalin teks ke clipboard
+      function copyToClipboard(text, btn) {
+        navigator.clipboard.writeText(text).then(() => {
+          const oldHtml = btn.innerHTML
+          btn.innerHTML = '<i data-lucide="check" style="width: 15px; height: 15px; color: #34d27b;"></i>'
+          window.lucide && lucide.createIcons()
+          setTimeout(() => {
+            btn.innerHTML = oldHtml
+            window.lucide && lucide.createIcons()
+          }, 1500)
+        }).catch(() => {
+          alert('Gagal menyalin kode.')
+        })
+      }
+
+      onboardCopyBtn.addEventListener('click', () => {
+        copyToClipboard(onboardResultCode.textContent, onboardCopyBtn)
+      })
+
+      infoCopyBtn.addEventListener('click', () => {
+        copyToClipboard(infoResultCode.textContent, infoCopyBtn)
+      })
+
+      onboardStartBtn.addEventListener('click', () => {
+        onboardingModal.classList.remove('open')
+        const username = localStorage.getItem('yuki_username') || 'kamu'
+        chat.innerHTML = ''
+        addMsg(`...ada perlu apa, ${username}? Mau cari komik?`, 'bot')
+        resetIdleTimer()
+      })
+
+      showCodeBtn.addEventListener('click', () => {
+        menu.classList.remove('open')
+        const code = localStorage.getItem('yuki_access_code') || 'Belum terdaftar'
+        infoResultCode.textContent = code
+        infoCodeModal.classList.add('open')
+        window.lucide && lucide.createIcons()
+      })
+    })
+
 
     async function loadLazyCovers() {
       const lazyImages = document.querySelectorAll('.lazy-cover[data-url]')
@@ -1155,6 +1382,7 @@
       return html
     }
 
+    let activeExpression = 'tenang'
     gear.addEventListener('click', () => menu.classList.toggle('open'))
 
     function setMood(mood, bond, feeling) {
@@ -1164,17 +1392,35 @@
       moodIconWrap.style.color = m.color
       moodEl.textContent = bond ? `${mood} · ${bond}` : mood
       if (feeling && char) char.title = feeling
-      // ganti gambar ekspresi Yuki dengan transisi opacity halus
+      
+      activeMood = mood
+      activeExpression = EXPR[mood] || 'tenang'
+
+      // Update ambient glow color dynamically
+      const rgb = hexToRgb(m.color)
+      const glowEl = document.querySelector('.frame .glow')
+      if (rgb && glowEl) {
+        glowEl.style.setProperty('--glow-color', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.34)`)
+      }
+
+      // ganti gambar ekspresi Yuki dengan transisi opacity + bounce halus
       if (char) {
-        const next = 'expressions/' + (EXPR[mood] || 'tenang') + '.png'
+        const next = 'expressions/' + activeExpression + '.png'
         if (char.getAttribute('src') !== next) {
           char.style.opacity = '0'
+          char.style.transform = 'scale(0.95)' // shrink
           setTimeout(() => {
             char.src = next
             if (char.complete) {
               char.style.opacity = '1'
+              char.style.transform = 'scale(1.03)' // bounce
+              setTimeout(() => { char.style.transform = '' }, 250)
             } else {
-              char.onload = () => { char.style.opacity = '1' }
+              char.onload = () => { 
+                char.style.opacity = '1'
+                char.style.transform = 'scale(1.03)'
+                setTimeout(() => { char.style.transform = '' }, 250)
+              }
             }
             char.style.display = ''
           }, 150)
@@ -1210,7 +1456,7 @@
         const res = await fetch('/api/tts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text })
+          body: JSON.stringify({ text, mood: activeMood })
         })
         if (!res.ok) throw new Error('TTS gagal')
         const blob = await res.blob()
@@ -1302,7 +1548,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             messages: history.slice(-16),
-            adult: adultBox.checked,
+            adult: false,
             userId: getUserId(),
             isIdle: isIdle
           })
@@ -1314,11 +1560,6 @@
         const row = addMsg(reply, 'bot')
         history.push({ role: 'assistant', content: reply })
         saveHistory()
-        // auto-play HANYA kalau diaktifkan di menu pengaturan
-        if (autoplayBox.checked) {
-          const btn = row.querySelector('.play')
-          if (btn) speak(cleanForSpeech(reply) || reply, btn)
-        }
       } catch (e) {
         typing.remove()
         addMsg('Error: ' + e.message, 'bot')
@@ -1535,23 +1776,23 @@
 
     // ===== Kedip mata ala VTuber (pakai gambar) =====
     let blinkBusy = false
-    function exprBase() {
-      const m = ((char && char.getAttribute('src')) || '').match(/expressions\/([a-z]+)\.png/i)
-      return m ? m[1] : 'tenang'
-    }
     function blinkOnce() {
       if (blinkBusy || !char) return
-      const base = exprBase()
+      const base = activeExpression
       const allowedBlink = ['tenang', 'senang']
       if (!allowedBlink.includes(base)) return
 
-      const openSrc = char.src
       const blinkSrc = 'expressions/' + base + '_blink.png'
       const probe = new Image()
       probe.onload = () => {
         blinkBusy = true
         char.src = blinkSrc
-        setTimeout(() => { char.src = openSrc; blinkBusy = false }, 130)
+        setTimeout(() => { 
+          if (activeExpression === base) {
+            char.src = 'expressions/' + base + '.png'
+          }
+          blinkBusy = false 
+        }, 130)
       }
       probe.onerror = () => { }
       probe.src = blinkSrc
@@ -1566,9 +1807,6 @@
     document.getElementById('comic-modal').addEventListener('click', (e) => {
       if (e.target.id === 'comic-modal') closeComicModal()
     })
-
-    // pulihkan obrolan sebelumnya (kalau ada) biar lanjut, bukan mulai dari nol
-    restoreHistory()
 
     // render ikon statis awal (settings, send, mood)
     window.lucide && lucide.createIcons()
