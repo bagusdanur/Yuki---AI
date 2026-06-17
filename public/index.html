@@ -175,6 +175,7 @@
       min-width: 0;
       display: flex;
       flex-direction: column;
+      position: relative;
     }
 
     .top {
@@ -208,6 +209,39 @@
       margin: 2px 0 0;
       font-size: 12px;
       color: var(--muted);
+    }
+
+    .bond-meter-wrap {
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .bond-meter-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .bond-meter-bar {
+      flex: 1;
+      max-width: 100px;
+      height: 6px;
+      background: #1a2233;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+    }
+
+    .bond-meter-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent2), var(--accent1));
+      border-radius: 999px;
+      width: 0%;
+      transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
     .pill {
@@ -882,6 +916,10 @@
         </div>
       </div>
       <div class="menu" id="menu">
+        <div class="bond-meter-wrap" id="bond-meter-wrap" style="display: none; flex-direction: column; align-items: flex-start; gap: 6px; border-bottom: 1px solid var(--line); padding-bottom: 10px; margin-bottom: 4px; width: 100%;">
+          <div class="bond-meter-label">Kedekatan: <span id="bond-val">0</span>/100</div>
+          <div class="bond-meter-bar" style="width: 100%; max-width: 100%;"><div class="bond-meter-fill" id="bond-fill" style="width: 0%;"></div></div>
+        </div>
         <button id="show-code-btn" style="background: none; border: none; color: var(--accent1); cursor: pointer; font-size: 12.5px; font-weight: 600; padding: 4px; text-align: left; display: flex; align-items: center; gap: 6px; width: 100%;"><i data-lucide="key" style="width: 14px; height: 14px;"></i> Info Kunci Ingatan</button>
         <button id="reset-data-btn" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 12.5px; font-weight: 600; padding: 4px; text-align: left; display: flex; align-items: center; gap: 6px; width: 100%; border-top: 1px solid var(--line); padding-top: 8px; margin-top: 4px;"><i data-lucide="trash-2" style="width: 14px; height: 14px;"></i> Mulai Ulang Hubungan</button>
       </div>
@@ -1221,10 +1259,14 @@
               history.push(m)
               addMsg(m.content, m.role === 'user' ? 'user' : 'bot')
             }
-            saveHistory()
           } else {
             addMsg(`...ada perlu apa, ${data.username}? Mau cari komik?`, 'bot')
           }
+          
+          if (data.bondValue !== undefined) {
+             setMood(activeMood, null, null, data.bondValue)
+          }
+          saveHistory()
           
           onboardingModal.classList.remove('open')
         } catch (err) {
@@ -1438,7 +1480,7 @@
     let activeExpression = 'tenang'
     gear.addEventListener('click', () => menu.classList.toggle('open'))
 
-    function setMood(mood, bond, feeling) {
+    function setMood(mood, bond, feeling, bondValue) {
       const m = MOOD[mood]
       if (!m) return
       setIcon(moodIconWrap, m.icon)
@@ -1446,6 +1488,15 @@
       moodEl.textContent = bond ? `${mood} · ${bond}` : mood
       if (feeling && char) char.title = feeling
       
+      if (bondValue !== undefined && bondValue !== null) {
+        const wrap = document.getElementById('bond-meter-wrap')
+        const valEl = document.getElementById('bond-val')
+        const fillEl = document.getElementById('bond-fill')
+        if (wrap) wrap.style.display = 'flex'
+        if (valEl) valEl.textContent = Math.round(bondValue)
+        if (fillEl) fillEl.style.width = Math.min(100, Math.max(0, bondValue)) + '%'
+      }
+
       activeMood = mood
       activeExpression = EXPR[mood] || 'tenang'
 
@@ -1609,7 +1660,7 @@
         const data = await res.json()
         typing.remove()
         const reply = data.reply || '(...)'
-        if (data.mood) setMood(data.mood, data.bond, data.feeling)
+        if (data.mood) setMood(data.mood, data.bond, data.feeling, data.bondValue)
         const row = addMsg(reply, 'bot')
         history.push({ role: 'assistant', content: reply })
         saveHistory()

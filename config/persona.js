@@ -19,15 +19,15 @@ export const persona = {
   // Emosi dasar (baseline) skala 0..1 — mood selalu menarik balik ke sini
   // Tsundere: joy/affection/trust rendah di awal, naik pelan seiring kedekatan
   baselineMood: {
-    joy: 0.35,
+    joy: 0.30,
     sadness: 0.12,
-    affection: 0.2,
-    anger: 0.05,
+    affection: 0.08,
+    anger: 0.08,
     fear: 0.1,
     surprise: 0.1,
     fluster: 0,
     energy: 0.5,
-    trust: 0.2
+    trust: 0.10
   },
 
   // Hubungan dengan lawan bicara (persisten lintas sesi, skala 0..100)

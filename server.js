@@ -80,10 +80,13 @@ app.post('/api/login-code', async (req, res) => {
       return res.status(404).json({ error: 'Kode akses tidak ditemukan atau salah.' })
     }
     const history = getChatHistory(user.userId)
+    const emotion = await getEmotion(user.userId)
+    
     res.json({
       userId: user.userId,
       username: user.username,
-      history
+      history,
+      bondValue: emotion.bond
     })
   } catch (e) {
     console.error(e)
@@ -126,7 +129,7 @@ app.post('/api/chat', async (req, res) => {
     }
 
     // 3) balas + emosi yang DIPILIH SENDIRI oleh Yuki (lewat tag [emosi: X])
-    const { reply, model, emotion: llmMood } = await chat(messagesToSend, {
+    let { reply, model, emotion: llmMood } = await chat(messagesToSend, {
       emotionDirective: emotion.directive(),
       memoryContext,
       comicContext,
@@ -134,10 +137,38 @@ app.post('/api/chat', async (req, res) => {
       bondName: bond.name
     })
 
+    // Content Filter & Retry
+    if (!emotion.isContentAppropriate(reply)) {
+      console.log(`[Content Filter] Balasan ditolak karena melanggar bond level "${bond.name}". Retrying...`)
+      const retryResult = await chat(messagesToSend, {
+        emotionDirective: emotion.directive(),
+        memoryContext,
+        comicContext,
+        isIdle,
+        bondName: bond.name,
+        retryReason: `Balasan sebelumnya DITOLAK karena terlalu mesra/hangat untuk tingkat kedekatan "${bond.name}". Tulis ulang dengan nada DINGIN, KETUS, dan TANPA kata romantis.`
+      })
+      reply = retryResult.reply
+      llmMood = retryResult.emotion
+
+      // Sanitize as last resort
+      if (!emotion.isContentAppropriate(reply)) {
+        reply = reply.replace(/(sayang|cinta|kangen|rindu|peluk|dear|darling|~|♡|❤)/gi, '')
+                     .replace(/suka sama kamu|suka kamu/gi, '...apa?')
+                     .replace(/\s{2,}/g, ' ')
+                     .trim()
+      }
+    }
+
     // 4) EKSPRESI final: utamakan emosi dari ISI CHAT (disetir LLM), fallback ke keyword.
-    //    Aturan kompleks: kalau masih "orang asing"/belum dekat, sayang/manja diturunkan jadi malu.
+    //    Validasi terhadap bond level (hard override)
     let mood = llmMood || kwMood
-    if (mood === 'sayang/manja' && emotion.closeness() < 0.35) mood = 'malu'
+    const allowed = emotion.allowedEmotions()
+    if (!allowed.includes(mood)) {
+      if (mood === 'sayang/manja') mood = 'malu'
+      else if (mood === 'ceria') mood = 'senang'
+      else mood = 'tenang'
+    }
 
     // 5) simpan (per user)
     try { saveEmotion(userId, emotion.serialize()) } catch {}
@@ -167,7 +198,7 @@ app.post('/api/chat', async (req, res) => {
       }).catch(() => {})
     }
 
-    res.json({ reply, model, mood, bond: bond.name, feeling: emotion.feeling() })
+    res.json({ reply, model, mood, bond: bond.name, bondValue: emotion.bond, feeling: emotion.feeling() })
   } catch (e) {
     console.error(e)
     res.status(500).json({ error: String(e.message || e) })
