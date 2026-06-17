@@ -104,7 +104,10 @@ app.post('/api/chat', async (req, res) => {
     const emotion = await getEmotion(userId)
 
     // 1) mesin emosi (keyword) -> update KEDEKATAN (bond) + fallback ekspresi
-    // Jika isIdle true, kita gunakan emosi yang ada tanpa memicu reaksi baru
+    // Jika isIdle true, jalankan peluruhan emosi pasif tanpa memicu reaksi baru
+    if (isIdle) {
+      emotion.decay({ perTurn: false })
+    }
     const { mood: kwMood, bond } = isIdle 
       ? { mood: emotion.label(), bond: emotion.bondLevel() } 
       : emotion.react(userText)
@@ -171,7 +174,10 @@ app.post('/api/chat', async (req, res) => {
     }
 
     // 5) simpan (per user)
-    try { saveEmotion(userId, emotion.serialize()) } catch {}
+    try {
+      emotion.updateFromLLMMood(mood)
+      saveEmotion(userId, emotion.serialize())
+    } catch {}
     
     // Simpan pesan user (atau tag terdiam) dan balasan Yuki ke SQLite chat history
     try {
