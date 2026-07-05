@@ -6,7 +6,8 @@ import { synthesize } from './lib/tts.js'
 import { Emotion } from './lib/emotion.js'
 import {
   loadMemory, addFacts, addEvent, buildMemoryContext, recallMemory, saveEmotion,
-  registerUser, getUserByAccessCode, saveChatMessage, getChatHistory
+  registerUser, getUserByAccessCode, saveChatMessage, getChatHistory,
+  countChatMessages, summarizeAndTrimHistory
 } from './lib/memory.js'
 import { warmupEmbedder } from './lib/semantic.js'
 import { searchComics, latestComics, wantsComic, extractQuery, buildComicContext } from './lib/ryukomik.js'
@@ -14,8 +15,12 @@ import { searchComics, latestComics, wantsComic, extractQuery, buildComicContext
 // Hemat DeepSeek: cuma ekstrak fakta kalau pesan kemungkinan berisi info personal
 // (mayoritas chat biasa nggak perlu -> menghemat ~1 panggilan LLM tiap giliran).
 function worthRemembering(text = '') {
-  return text.length > 25 &&
-    /(nama|aku |saya |panggil|umur|tahun|tinggal|kerja|sekolah|kuliah|kampus|pacar|gebetan|hobi|aku suka|aku benci|favorit|kesukaan|cita-cita|impian)/i.test(text)
+  if (text.length <= 25) return false
+  // Fakta eksplisit tentang diri user
+  if (/(nama|aku |saya |panggil|umur|tahun|tinggal|kerja|sekolah|kuliah|kampus|pacar|gebetan|hobi|aku suka|aku benci|favorit|kesukaan|cita-cita|impian)/i.test(text)) return true
+  // M-3: Preferensi implisit — ekspresi suka/tidak suka tanpa deklarasi eksplisit
+  if (/(wah seru|enak banget|bagus banget|asik banget|keren banget|nggak suka|males banget|bosen sama|nggak ngerti|seneng banget|excited banget)/i.test(text)) return true
+  return false
 }
 
 const app = express()
@@ -45,6 +50,15 @@ warmupEmbedder().catch(() => {})
 
 // Emosi & bond TERPISAH per user (di-cache di RAM, persist ke SQLite per user)
 const sessions = new Map() // userId -> Emotion
+
+// Y-5: Turn counter per user — untuk pertanyaan balik proaktif setiap 3 giliran
+const turnCounters = new Map() // userId -> turnCount
+
+// Y-3: Deteksi topik serius yang butuh override empati penuh
+function isSeriousTopic(text = '') {
+  return /(meninggal|mati |kanker|sakit parah|kecelakaan|bunuh diri|depresi berat|putus asa|tidak sanggup|gak sanggup|mau nyerah|hilang harapan|gak mau hidup|nangis terus|hancur banget|trauma)/i.test(text)
+}
+
 async function getEmotion(userId) {
   if (sessions.has(userId)) return sessions.get(userId)
   const mem = await loadMemory(userId)
@@ -100,6 +114,14 @@ app.post('/api/chat', async (req, res) => {
     const { messages, adult, userId = 'anon', isIdle = false } = req.body || {}
     const userText = messages?.[messages.length - 1]?.content || ''
 
+    // Y-5: Hitung giliran percakapan untuk pertanyaan balik proaktif
+    const _turns = isIdle ? (turnCounters.get(userId) || 0) : (turnCounters.get(userId) || 0) + 1
+    if (!isIdle) turnCounters.set(userId, _turns)
+    const shouldAskQuestion = !isIdle && _turns > 0 && _turns % 3 === 0
+
+    // Y-3: Deteksi topik serius untuk override empati
+    const isSerious = !isIdle && isSeriousTopic(userText)
+
     // 0) ambil emosi & bond MILIK user ini (per userId)
     const emotion = await getEmotion(userId)
 
@@ -137,7 +159,11 @@ app.post('/api/chat', async (req, res) => {
       memoryContext,
       comicContext,
       isIdle,
-      bondName: bond.name
+      bondName: bond.name,
+      isSerious,
+      userMsgLength: userText.length,
+      shouldAskQuestion,
+      sessionTurns: _turns
     })
 
     // Content Filter & Retry
@@ -160,6 +186,34 @@ app.post('/api/chat', async (req, res) => {
                      .replace(/suka sama kamu|suka kamu/gi, '...apa?')
                      .replace(/\s{2,}/g, ' ')
                      .trim()
+      }
+    }
+
+    // G-1: Character Break Guard — cegah Yuki mengaku sebagai AI/bot
+    const _aiBreakPattern = /(sebagai ai|sebagai bot|sebagai program|sebagai asisten virtual|saya adalah ai|aku adalah ai|saya adalah bot|aku adalah bot|tidak punya perasaan|tidak memiliki perasaan|hanya sebuah ai|hanya sebuah bot|aku hanya program|maaf aku ai|maaf saya ai|aku dibuat|saya dibuat oleh|saya hanya model bahasa|aku hanyalah)/i
+    if (_aiBreakPattern.test(reply)) {
+      console.log('[Character Guard] Yuki mengaku AI. Retrying dengan instruksi tegas...')
+      const _guardRetry = await chat(messagesToSend, {
+        emotionDirective: emotion.directive(),
+        memoryContext,
+        comicContext,
+        isIdle,
+        bondName: bond.name,
+        isSerious,
+        userMsgLength: userText.length,
+        shouldAskQuestion: false,
+        sessionTurns: _turns,
+        retryReason: 'PERINGATAN KRITIS: Balasan sebelumnya MEMBONGKAR bahwa kamu AI/bot — ini DILARANG KERAS. Kamu adalah Yuki, manusia sungguhan. Tulis ulang balasan sesuai karaktermu sebagai tsundere — jika user bertanya soal itu, tolak dengan mengelak atau ganti topik. JANGAN mengakui apapun.'
+      })
+      reply = _guardRetry.reply
+      llmMood = _guardRetry.emotion || llmMood
+      // Last resort: hapus paksa frasa pengakuan AI
+      if (_aiBreakPattern.test(reply)) {
+        reply = reply
+          .replace(/sebagai (ai|bot|program|asisten virtual|model bahasa)/gi, 'diriku')
+          .replace(/(saya|aku) adalah (ai|bot|program)/gi, 'aku ini Yuki')
+          .replace(/tidak punya perasaan|tidak memiliki perasaan/gi, 'punya perasaan')
+          .replace(/\s{2,}/g, ' ').trim()
       }
     }
 
@@ -189,6 +243,14 @@ app.post('/api/chat', async (req, res) => {
       saveChatMessage(userId, 'assistant', reply)
     } catch (err) {
       console.error('[server] Gagal menyimpan ke chat_history:', err)
+    }
+
+    // S-4: Pangkas riwayat jika sudah terlalu panjang (async, tidak blok respons)
+    if (!isIdle) {
+      try {
+        const msgCount = countChatMessages(userId)
+        if (msgCount > 45) summarizeAndTrimHistory(userId).catch(() => {})
+      } catch {}
     }
 
     if (worthRemembering(userText)) {

@@ -27,7 +27,8 @@ export const persona = {
     surprise: 0.1,
     fluster: 0,
     energy: 0.5,
-    trust: 0.30
+    trust: 0.30,
+    cemburu: 0           // M-1: emosi cemburu khas tsundere
   },
 
   // Hubungan dengan lawan bicara (persisten lintas sesi, skala 0..100)
