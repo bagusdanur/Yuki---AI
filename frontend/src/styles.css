@@ -92,9 +92,9 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 .avatar-toggle { position: absolute; z-index: 6; top: 10px; right: 10px; width: 34px; height: 34px; display: none; place-items: center; padding: 0; border: 1px solid rgba(255,255,255,.13); border-radius: 7px; color: #d2d0ff; background: rgba(10,13,20,.72); backdrop-filter: blur(8px); }
 .mobile-bond { display: none; }
 .character-glow { position: absolute; left: 9%; right: 9%; bottom: -6%; height: 45%; border-radius: 50%; background: rgba(124,120,225,.25); filter: blur(48px); }
-.character { position: absolute; z-index: 2; inset: 4% 0 0; width: 100%; height: 96%; object-fit: contain; object-position: bottom center; filter: drop-shadow(0 18px 28px rgba(0,0,0,.28)); animation: character-enter .32s ease-out both, breathe 6s .32s ease-in-out infinite; }
+.character { position: absolute; z-index: 2; inset: 4% 0 0; width: 100%; height: 96%; object-fit: contain; object-position: bottom center; filter: drop-shadow(0 18px 28px rgba(0,0,0,.28)); transform-origin: 50% 72%; will-change: transform, opacity; animation: character-enter .32s ease-out both, character-idle 8s .32s ease-in-out infinite; }
 @keyframes character-enter { from { opacity: 0; filter: blur(3px) drop-shadow(0 18px 28px rgba(0,0,0,.28)); } to { opacity: 1; } }
-@keyframes breathe { 50% { transform: scale(1.01); } }
+@keyframes character-idle { 0%, 100% { transform: translateY(0) rotate(0) scale(1); } 35% { transform: translateY(-1px) rotate(-.16deg) scale(1.006); } 70% { transform: translateY(0) rotate(.12deg) scale(1.003); } }
 .character-footer { position: absolute; z-index: 4; left: 0; right: 0; bottom: 0; padding: 50px 15px 14px; display: flex; justify-content: space-between; align-items: flex-end; background: linear-gradient(to top, rgba(7,9,15,.96), transparent); }
 .character-footer > div:first-child { display: flex; align-items: center; gap: 8px; }
 .character-footer strong { font-size: 15px; }
@@ -127,7 +127,7 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   .character-panel { grid-row: 1; padding: 9px; grid-template-rows: minmax(0, 1fr); border-bottom: 1px solid #292c35; }
   .panel-meta, .status-strip, .feeling { display: none; }
   .character-frame { border-radius: 6px; }
-  .character { inset: -9% 0 auto; width: 100%; height: 156%; object-position: center top; animation: character-enter .32s ease-out both; }
+  .character { inset: -9% 0 auto; width: 100%; height: 156%; object-position: center top; animation: character-enter .32s ease-out both, character-idle 8s .32s ease-in-out infinite; }
   .avatar-toggle { display: grid; }
   .mobile-bond { position: absolute; z-index: 5; top: 11px; left: 80px; width: 132px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px 8px; align-items: center; color: #a9abb4; font: 700 8px/1 ui-monospace, monospace; text-transform: uppercase; letter-spacing: .06em; }
   .mobile-bond span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

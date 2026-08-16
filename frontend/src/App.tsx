@@ -13,6 +13,7 @@ const moodImage: Record<string, string> = {
   'sayang/manja': 'senang', sedih: 'sedih', kesal: 'kesal', cemas: 'lesu',
   kecewa: 'sedih', lesu: 'lesu', cemburu: 'kesal',
 }
+const blinkExpressions = new Set(['tenang', 'senang'])
 
 type ConnectionState = 'idle' | 'thinking' | 'slow' | 'retrying' | 'offline' | 'error'
 interface InstallPromptEvent extends Event {
@@ -160,6 +161,7 @@ export default function App() {
   const [feeling, setFeeling] = useState(() => localStorage.getItem(SESSION_KEYS.feeling) || 'Lagi kalem, jawab seperlunya.')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [avatarCompact, setAvatarCompact] = useState(false)
+  const [blinking, setBlinking] = useState(false)
   const [connection, setConnection] = useState<ConnectionState>(() => navigator.onLine ? 'idle' : 'offline')
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null)
   const [updateReady, setUpdateReady] = useState(false)
@@ -184,12 +186,33 @@ export default function App() {
   }, [])
   useEffect(() => () => requestTimers.current.forEach(window.clearTimeout), [])
 
-  const avatar = useMemo(() => `/expressions/${moodImage[mood] || 'tenang'}.png`, [mood])
+  const avatarExpression = useMemo(() => moodImage[mood] || 'tenang', [mood])
+  const avatar = `/expressions/${avatarExpression}${blinking && blinkExpressions.has(avatarExpression) ? '_blink' : ''}.png`
 
   useEffect(() => {
-    const image = new Image()
-    image.src = avatar
-  }, [avatar])
+    const paths = [`/expressions/${avatarExpression}.png`]
+    if (blinkExpressions.has(avatarExpression)) paths.push(`/expressions/${avatarExpression}_blink.png`)
+    paths.forEach(src => { const image = new Image(); image.src = src })
+  }, [avatarExpression])
+
+  useEffect(() => {
+    setBlinking(false)
+    if (!blinkExpressions.has(avatarExpression) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const timers: number[] = []
+    const later = (callback: () => void, delay: number) => { const id = window.setTimeout(callback, delay); timers.push(id) }
+    const schedule = () => later(() => {
+      if (document.hidden) { schedule(); return }
+      setBlinking(true)
+      later(() => {
+        setBlinking(false)
+        if (Math.random() < 0.22) {
+          later(() => { setBlinking(true); later(() => { setBlinking(false); schedule() }, 95) }, 115)
+        } else schedule()
+      }, 110)
+    }, 3_200 + Math.random() * 4_800)
+    schedule()
+    return () => timers.forEach(window.clearTimeout)
+  }, [avatarExpression])
 
   function ready(next: Session, restored: Message[] = [], restoredBond = 0) {
     saveSession(next); setSession(next); setMessages(restored); setError('')
@@ -316,7 +339,7 @@ export default function App() {
         </button>
         <div className="grid" />
         <div className="character-glow" />
-        <img key={avatar} className="character" src={avatar} alt={`Yuki sedang ${mood}`} onError={event => { if (!event.currentTarget.src.endsWith('/tenang.png')) event.currentTarget.src = '/expressions/tenang.png' }} />
+        <img key={avatarExpression} className="character" src={avatar} alt={`Yuki sedang ${mood}`} onError={event => { if (!event.currentTarget.src.endsWith('/tenang.png')) event.currentTarget.src = '/expressions/tenang.png' }} />
         <div className="character-footer">
           <div><strong>Yuki</strong><span className="online-dot" /></div>
           <div className="mood-pill"><span>{mood}</span><i /> <span>{bond}</span></div>
