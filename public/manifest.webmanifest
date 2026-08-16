@@ -1,0 +1,15 @@
+{
+  "name": "Yuki — Character Chat",
+  "short_name": "Yuki",
+  "description": "Teman chat tsundere yang mengingat hubungan dan percakapanmu.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#08090c",
+  "theme_color": "#090a0e",
+  "lang": "id",
+  "icons": [
+    { "src": "/yuki-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

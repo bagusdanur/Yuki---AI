@@ -28,7 +28,7 @@ export async function register(username: string) {
 }
 
 export async function restore(accessCode: string) {
-  return request<{ userId: string; username: string; history: Message[] }>('/api/login-code', {
+  return request<{ userId: string; username: string; history: Message[]; bondValue?: number }>('/api/login-code', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessCode }),
   })
 }

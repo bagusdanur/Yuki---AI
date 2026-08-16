@@ -1,16 +1,36 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { BookOpen, ChevronDown, ChevronUp, Copy, KeyRound, LoaderCircle, RotateCcw, Send, Settings, Volume2, X } from 'lucide-react'
+import { BookOpen, ChevronDown, ChevronUp, Copy, Download, KeyRound, LoaderCircle, RefreshCw, RotateCcw, Send, Settings, Volume2, WifiOff, X } from 'lucide-react'
 import { register, restore, sendChat, speak } from './api'
 import type { ComicRecommendation, Message, Session } from './types'
 
 const SESSION_KEYS = {
   userId: 'yuki_uid_v3', username: 'yuki_username_v3', accessCode: 'yuki_access_code_v3',
+  bond: 'yuki_bond_v3', bondValue: 'yuki_bond_value_v3', mood: 'yuki_mood_v3', feeling: 'yuki_feeling_v3',
 }
 
 const moodImage: Record<string, string> = {
   tenang: 'tenang', senang: 'senang', ceria: 'senang', malu: 'malu',
   'sayang/manja': 'senang', sedih: 'sedih', kesal: 'kesal', cemas: 'lesu',
   kecewa: 'sedih', lesu: 'lesu', cemburu: 'kesal',
+}
+
+type ConnectionState = 'idle' | 'thinking' | 'slow' | 'retrying' | 'offline' | 'error'
+interface InstallPromptEvent extends Event {
+  prompt: () => Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
+}
+
+const connectionLabel: Record<ConnectionState, string> = {
+  idle: 'online', thinking: 'sedang berpikir', slow: 'koneksi agak lambat',
+  retrying: 'sedang mencoba lagi', offline: 'kamu sedang offline', error: 'koneksi terputus'
+}
+
+function bondNameFromValue(value = 0) {
+  if (value >= 78) return 'kekasih / pasangan (dere-dere)'
+  if (value >= 50) return 'luluh (dere)'
+  if (value >= 24) return 'diam-diam peduli'
+  if (value >= 8) return 'mulai terbiasa'
+  return 'orang asing'
 }
 
 function getSession(): Session | null {
@@ -84,7 +104,7 @@ function MessageBody({ message }: { message: Message }) {
   </>
 }
 
-function Onboarding({ onReady }: { onReady: (session: Session, history?: Message[]) => void }) {
+function Onboarding({ onReady }: { onReady: (session: Session, history?: Message[], bondValue?: number) => void }) {
   const [mode, setMode] = useState<'register' | 'restore'>('register')
   const [value, setValue] = useState('')
   const [busy, setBusy] = useState(false)
@@ -101,7 +121,7 @@ function Onboarding({ onReady }: { onReady: (session: Session, history?: Message
       } else {
         const code = value.trim().toUpperCase()
         const data = await restore(code)
-        onReady({ userId: data.userId, username: data.username, accessCode: code }, data.history || [])
+        onReady({ userId: data.userId, username: data.username, accessCode: code }, data.history || [], data.bondValue)
       }
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Terjadi kesalahan') }
     finally { setBusy(false) }
@@ -134,18 +154,35 @@ export default function App() {
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [mood, setMood] = useState('tenang')
-  const [bond, setBond] = useState('orang asing')
-  const [bondValue, setBondValue] = useState(0)
-  const [feeling, setFeeling] = useState('Lagi kalem, jawab seperlunya.')
+  const [mood, setMood] = useState(() => localStorage.getItem(SESSION_KEYS.mood) || 'tenang')
+  const [bond, setBond] = useState(() => localStorage.getItem(SESSION_KEYS.bond) || 'orang asing')
+  const [bondValue, setBondValue] = useState(() => Number(localStorage.getItem(SESSION_KEYS.bondValue)) || 0)
+  const [feeling, setFeeling] = useState(() => localStorage.getItem(SESSION_KEYS.feeling) || 'Lagi kalem, jawab seperlunya.')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [avatarCompact, setAvatarCompact] = useState(false)
+  const [connection, setConnection] = useState<ConnectionState>(() => navigator.onLine ? 'idle' : 'offline')
+  const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null)
+  const [updateReady, setUpdateReady] = useState(false)
   const [speakingIndex, setSpeakingIndex] = useState<number | null>(null)
   const endRef = useRef<HTMLDivElement>(null)
   const currentAudio = useRef<HTMLAudioElement | null>(null)
+  const requestTimers = useRef<number[]>([])
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [messages, busy])
   useEffect(() => { if (session) localStorage.setItem(historyKey(session.userId), JSON.stringify(messages.slice(-40))) }, [messages, session])
+  useEffect(() => {
+    const online = () => setConnection('idle')
+    const offline = () => setConnection('offline')
+    const install = (event: Event) => { event.preventDefault(); setInstallPrompt(event as InstallPromptEvent) }
+    const updated = () => setUpdateReady(true)
+    window.addEventListener('online', online); window.addEventListener('offline', offline)
+    window.addEventListener('beforeinstallprompt', install); window.addEventListener('yuki-pwa-update', updated)
+    return () => {
+      window.removeEventListener('online', online); window.removeEventListener('offline', offline)
+      window.removeEventListener('beforeinstallprompt', install); window.removeEventListener('yuki-pwa-update', updated)
+    }
+  }, [])
+  useEffect(() => () => requestTimers.current.forEach(window.clearTimeout), [])
 
   const avatar = useMemo(() => `/expressions/${moodImage[mood] || 'tenang'}.png`, [mood])
 
@@ -154,8 +191,13 @@ export default function App() {
     image.src = avatar
   }, [avatar])
 
-  function ready(next: Session, restored: Message[] = []) {
+  function ready(next: Session, restored: Message[] = [], restoredBond = 0) {
     saveSession(next); setSession(next); setMessages(restored); setError('')
+    if (restoredBond > 0) {
+      const restoredName = bondNameFromValue(restoredBond)
+      setBondValue(restoredBond); setBond(restoredName)
+      localStorage.setItem(SESSION_KEYS.bondValue, String(restoredBond)); localStorage.setItem(SESSION_KEYS.bond, restoredName)
+    }
   }
 
   async function submit(event: React.FormEvent) {
@@ -164,15 +206,38 @@ export default function App() {
     if (!content || busy || !session) return
     navigator.vibrate?.(10)
     const next: Message[] = [...messages, { role: 'user', content }]
-    setMessages(next); setInput(''); setBusy(true); setError('')
+    setMessages(next); setInput(''); setBusy(true); setError(''); setConnection('thinking')
+    requestTimers.current.forEach(window.clearTimeout)
+    requestTimers.current = [
+      window.setTimeout(() => setConnection('slow'), 8_000),
+      window.setTimeout(() => setConnection('retrying'), 22_000)
+    ]
+    let failed = false
     try {
       const result = await sendChat(session.userId, next)
       if (!result.reply?.trim()) throw new Error('Yuki mengirim balasan kosong. Coba lagi.')
       setMessages([...next, { role: 'assistant', content: result.reply, comics: result.comics || [] }])
       setMood(result.mood || 'tenang'); setBond(result.bond || bond)
       setBondValue(result.bondValue || 0); setFeeling(result.feeling || feeling)
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Yuki sedang tidak bisa menjawab') }
-    finally { setBusy(false) }
+      localStorage.setItem(SESSION_KEYS.mood, result.mood || 'tenang')
+      localStorage.setItem(SESSION_KEYS.bond, result.bond || bond)
+      localStorage.setItem(SESSION_KEYS.bondValue, String(result.bondValue || 0))
+      localStorage.setItem(SESSION_KEYS.feeling, result.feeling || feeling)
+    } catch (cause) {
+      failed = true; setConnection(navigator.onLine ? 'error' : 'offline')
+      setError(cause instanceof Error ? cause.message : 'Yuki sedang tidak bisa menjawab')
+      window.setTimeout(() => setConnection(navigator.onLine ? 'idle' : 'offline'), 4_000)
+    } finally {
+      requestTimers.current.forEach(window.clearTimeout); requestTimers.current = []
+      setBusy(false); if (!failed) setConnection(navigator.onLine ? 'idle' : 'offline')
+    }
+  }
+
+  async function installApp() {
+    if (!installPrompt) return
+    await installPrompt.prompt()
+    await installPrompt.userChoice
+    setInstallPrompt(null); setSettingsOpen(false)
   }
 
   async function play(text: string, index: number) {
@@ -202,16 +267,18 @@ export default function App() {
   }
 
   return <main className={`app-shell${avatarCompact ? ' avatar-compact' : ''}`}>
+    {updateReady && <div className="pwa-update"><RefreshCw size={14} /><span>Versi baru Yuki sudah siap.</span><button onClick={() => window.location.reload()}>Muat ulang</button></div>}
     {!session && <Onboarding onReady={ready} />}
     <section className="chat-panel">
       <header className="chat-header">
         <div className="monogram">Y</div>
-        <div className="identity"><strong>Yuki</strong><span><i /> character chat / online</span></div>
+        <div className="identity"><strong>Yuki</strong><span><i className={`connection-dot ${connection}`} /> {connectionLabel[connection]}</span></div>
         <div className="header-actions">
           <a href="/docs" target="_blank" aria-label="Dokumentasi"><BookOpen size={17} /></a>
           <button onClick={() => setSettingsOpen(!settingsOpen)} aria-label="Pengaturan"><Settings size={17} /></button>
         </div>
         {settingsOpen && <div className="settings-card">
+          {installPrompt && <button onClick={installApp}><Download size={15} /><span><b>Pasang aplikasi Yuki</b><small>Tambahkan ke layar utama</small></span></button>}
           <button onClick={() => navigator.clipboard.writeText(session?.accessCode || '')}><Copy size={15} /><span><b>Salin kunci ingatan</b><small>{session?.accessCode || 'Belum tersedia'}</small></span></button>
           <button className="danger" onClick={reset}><RotateCcw size={15} /><span><b>Mulai hubungan baru</b><small>Hapus sesi dari perangkat ini</small></span></button>
         </div>}
@@ -224,7 +291,8 @@ export default function App() {
           <div className="message-content"><MessageBody message={message} /></div>
           {message.role === 'assistant' && <button className={`speak ${speakingIndex === index ? 'active' : ''}`} onClick={() => play(message.content, index)} aria-label="Putar suara"><Volume2 size={14} /></button>}
         </article>)}
-        {busy && <article className="message assistant"><div className="message-avatar">Y</div><div className="message-content typing"><i/><i/><i/></div></article>}
+        {busy && <><div className={`request-status ${connection}`}>{connection === 'slow' || connection === 'retrying' ? <RefreshCw className="spin" size={12} /> : <LoaderCircle className="spin" size={12} />}<span>{connectionLabel[connection]}</span></div><article className="message assistant"><div className="message-avatar">Y</div><div className="message-content typing"><i/><i/><i/></div></article></>}
+        {connection === 'offline' && !busy && <div className="request-status offline"><WifiOff size={12}/><span>Kamu offline. Pesan yang belum dikirim tetap aman.</span></div>}
         {error && <div className="error-banner"><span>{error}</span><button onClick={() => setError('')}><X size={14}/></button></div>}
         <div ref={endRef} />
       </div>
@@ -241,6 +309,7 @@ export default function App() {
       <div className="panel-meta"><span>Character viewport</span><b>Session active</b></div>
       <div className="character-frame">
         <div className="frame-code">LIVE / 001</div>
+        <div className="mobile-bond" aria-label={`Bond ${Math.round(bondValue)} dari 100`}><span>{bond}</span><b>{Math.round(bondValue)}</b><i><u style={{ width: `${Math.max(2, bondValue)}%` }} /></i></div>
         <button className="avatar-toggle" type="button" onClick={() => setAvatarCompact(value => !value)}
           aria-label={avatarCompact ? 'Perbesar avatar Yuki' : 'Kecilkan avatar Yuki'} aria-expanded={!avatarCompact}>
           {avatarCompact ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
