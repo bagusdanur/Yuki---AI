@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { BookOpen, Copy, KeyRound, LoaderCircle, RotateCcw, Send, Settings, Volume2, X } from 'lucide-react'
+import { BookOpen, ChevronDown, ChevronUp, Copy, KeyRound, LoaderCircle, RotateCcw, Send, Settings, Volume2, X } from 'lucide-react'
 import { register, restore, sendChat, speak } from './api'
 import type { Message, Session } from './types'
 
@@ -99,6 +99,7 @@ export default function App() {
   const [bondValue, setBondValue] = useState(0)
   const [feeling, setFeeling] = useState('Lagi kalem, jawab seperlunya.')
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [avatarCompact, setAvatarCompact] = useState(false)
   const [speakingIndex, setSpeakingIndex] = useState<number | null>(null)
   const endRef = useRef<HTMLDivElement>(null)
   const currentAudio = useRef<HTMLAudioElement | null>(null)
@@ -108,6 +109,11 @@ export default function App() {
 
   const avatar = useMemo(() => `/expressions/${moodImage[mood] || 'tenang'}.png`, [mood])
 
+  useEffect(() => {
+    const image = new Image()
+    image.src = avatar
+  }, [avatar])
+
   function ready(next: Session, restored: Message[] = []) {
     saveSession(next); setSession(next); setMessages(restored); setError('')
   }
@@ -116,6 +122,7 @@ export default function App() {
     event.preventDefault()
     const content = input.trim()
     if (!content || busy || !session) return
+    navigator.vibrate?.(10)
     const next: Message[] = [...messages, { role: 'user', content }]
     setMessages(next); setInput(''); setBusy(true); setError('')
     try {
@@ -154,7 +161,7 @@ export default function App() {
     setSession(null); setMessages([]); setSettingsOpen(false)
   }
 
-  return <main className="app-shell">
+  return <main className={`app-shell${avatarCompact ? ' avatar-compact' : ''}`}>
     {!session && <Onboarding onReady={ready} />}
     <section className="chat-panel">
       <header className="chat-header">
@@ -184,7 +191,7 @@ export default function App() {
 
       <form className="composer" onSubmit={submit}>
         <span className="composer-index">01</span>
-        <textarea rows={1} value={input} onChange={e => setInput(e.target.value)} placeholder="Tulis pesan untuk Yuki…"
+        <textarea rows={1} value={input} onChange={e => setInput(e.target.value)} onFocus={() => setAvatarCompact(true)} placeholder="Tulis pesan untuk Yuki…"
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit() } }} />
         <button disabled={busy || !input.trim()} aria-label="Kirim pesan">{busy ? <LoaderCircle className="spin" size={19}/> : <Send size={19}/>}</button>
       </form>
@@ -194,9 +201,13 @@ export default function App() {
       <div className="panel-meta"><span>Character viewport</span><b>Session active</b></div>
       <div className="character-frame">
         <div className="frame-code">LIVE / 001</div>
+        <button className="avatar-toggle" type="button" onClick={() => setAvatarCompact(value => !value)}
+          aria-label={avatarCompact ? 'Perbesar avatar Yuki' : 'Kecilkan avatar Yuki'} aria-expanded={!avatarCompact}>
+          {avatarCompact ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+        </button>
         <div className="grid" />
         <div className="character-glow" />
-        <img className="character" src={avatar} alt="Yuki" onError={event => { if (!event.currentTarget.src.endsWith('/tenang.png')) event.currentTarget.src = '/expressions/tenang.png' }} />
+        <img key={avatar} className="character" src={avatar} alt={`Yuki sedang ${mood}`} onError={event => { if (!event.currentTarget.src.endsWith('/tenang.png')) event.currentTarget.src = '/expressions/tenang.png' }} />
         <div className="character-footer">
           <div><strong>Yuki</strong><span className="online-dot" /></div>
           <div className="mood-pill"><span>{mood}</span><i /> <span>{bond}</span></div>

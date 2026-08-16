@@ -74,8 +74,10 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 .character-frame { position: relative; min-height: 0; overflow: hidden; border: 1px solid #343846; border-radius: 7px; background: #172033; box-shadow: inset 0 0 90px rgba(3,5,10,.48); }
 .grid { position: absolute; inset: 0; opacity: .7; background: linear-gradient(rgba(170,167,255,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(170,167,255,.04) 1px, transparent 1px); background-size: 32px 32px; }
 .frame-code { position: absolute; z-index: 4; top: 15px; left: 16px; color: rgba(236,235,255,.58); font: 700 9px/1 ui-monospace, monospace; letter-spacing: .14em; }
+.avatar-toggle { position: absolute; z-index: 6; top: 10px; right: 10px; width: 34px; height: 34px; display: none; place-items: center; padding: 0; border: 1px solid rgba(255,255,255,.13); border-radius: 7px; color: #d2d0ff; background: rgba(10,13,20,.72); backdrop-filter: blur(8px); }
 .character-glow { position: absolute; left: 9%; right: 9%; bottom: -6%; height: 45%; border-radius: 50%; background: rgba(124,120,225,.25); filter: blur(48px); }
-.character { position: absolute; z-index: 2; inset: 4% 0 0; width: 100%; height: 96%; object-fit: contain; object-position: bottom center; filter: drop-shadow(0 18px 28px rgba(0,0,0,.28)); animation: breathe 6s ease-in-out infinite; }
+.character { position: absolute; z-index: 2; inset: 4% 0 0; width: 100%; height: 96%; object-fit: contain; object-position: bottom center; filter: drop-shadow(0 18px 28px rgba(0,0,0,.28)); animation: character-enter .32s ease-out both, breathe 6s .32s ease-in-out infinite; }
+@keyframes character-enter { from { opacity: 0; filter: blur(3px) drop-shadow(0 18px 28px rgba(0,0,0,.28)); } to { opacity: 1; } }
 @keyframes breathe { 50% { transform: scale(1.01); } }
 .character-footer { position: absolute; z-index: 4; left: 0; right: 0; bottom: 0; padding: 50px 15px 14px; display: flex; justify-content: space-between; align-items: flex-end; background: linear-gradient(to top, rgba(7,9,15,.96), transparent); }
 .character-footer > div:first-child { display: flex; align-items: center; gap: 8px; }
@@ -101,12 +103,17 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 .text-button { width: 100%; margin-top: 15px; border: 0; color: #8d90a0; background: transparent; font-size: 12px; }.text-button:hover { color: #cfccff; }
 
 @media (max-width: 900px) {
-  .app-shell { width: calc(100% - 20px); height: calc(100dvh - 20px); min-height: 0; margin: 10px; grid-template-columns: 1fr; grid-template-rows: clamp(210px, 30dvh, 260px) minmax(0, 1fr); }
+  .app-shell { width: calc(100% - 20px); height: calc(100dvh - 20px); min-height: 0; margin: 10px; grid-template-columns: 1fr; grid-template-rows: clamp(210px, 30dvh, 260px) minmax(0, 1fr); transition: grid-template-rows .28s ease; }
+  .app-shell.avatar-compact { grid-template-rows: 92px minmax(0, 1fr); }
   .chat-panel { grid-row: 2; grid-template-rows: 60px minmax(0, 1fr) 70px; border-right: 0; }
   .character-panel { grid-row: 1; padding: 9px; grid-template-rows: minmax(0, 1fr); border-bottom: 1px solid #292c35; }
   .panel-meta, .status-strip, .feeling { display: none; }
   .character-frame { border-radius: 6px; }
-  .character { inset: -9% 0 auto; width: 100%; height: 156%; object-position: center top; animation: none; }
+  .character { inset: -9% 0 auto; width: 100%; height: 156%; object-position: center top; animation: character-enter .32s ease-out both; }
+  .avatar-toggle { display: grid; }
+  .avatar-compact .character { inset: -48% 0 auto; height: 245%; }
+  .avatar-compact .character-footer { padding-bottom: 8px; }
+  .avatar-compact .mood-pill { display: none; }
   .character-footer { padding: 54px 12px 11px; }
   .chat-header { padding: 0 14px; }.monogram { width: 32px; height: 32px; }
   .messages { padding: 18px 14px 26px; background: #090b10; }.message { max-width: 94%; }
@@ -118,6 +125,7 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   .character-panel { padding: max(7px, env(safe-area-inset-top)) 7px 7px; }
   .character-frame { border-radius: 0 0 8px 8px; }
   .character { inset: -8% 0 auto; width: 100%; height: 158%; object-position: center top; }
+  .avatar-compact .character { inset: -55% 0 auto; height: 270%; }
   .character-glow { left: 20%; right: 20%; bottom: -12%; height: 70%; }
   .character-footer { padding: 58px 12px 11px; }
   .character-footer strong { font-size: 14px; }
@@ -141,4 +149,8 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   .composer textarea { padding: 13px 12px; font-size: 16px; }
   .composer > button { width: 46px; height: 46px; }
   .onboarding { padding: 28px 22px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell, .character { transition: none; animation: none; }
 }
