@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { BookOpen, ChevronDown, ChevronUp, Copy, Download, KeyRound, LoaderCircle, RefreshCw, RotateCcw, Send, Settings, Volume2, WifiOff, X } from 'lucide-react'
-import { register, restore, sendChat, speak } from './api'
-import type { ComicRecommendation, Message, Session } from './types'
+import { BookOpen, ChevronDown, ChevronUp, Copy, Download, Heart, KeyRound, LoaderCircle, RefreshCw, RotateCcw, Send, Settings, Sparkles, ThumbsDown, ThumbsUp, Volume2, WifiOff, X } from 'lucide-react'
+import { getRelationship, register, restore, sendChat, sendFeedback, speak } from './api'
+import type { ComicRecommendation, Message, Milestone, Session } from './types'
 
 const SESSION_KEYS = {
   userId: 'yuki_uid_v3', username: 'yuki_username_v3', accessCode: 'yuki_access_code_v3',
@@ -105,7 +105,7 @@ function MessageBody({ message }: { message: Message }) {
   </>
 }
 
-function Onboarding({ onReady }: { onReady: (session: Session, history?: Message[], bondValue?: number) => void }) {
+function Onboarding({ onReady }: { onReady: (session: Session, history?: Message[], bondValue?: number, milestones?: Milestone[]) => void }) {
   const [mode, setMode] = useState<'register' | 'restore'>('register')
   const [value, setValue] = useState('')
   const [busy, setBusy] = useState(false)
@@ -121,11 +121,11 @@ function Onboarding({ onReady }: { onReady: (session: Session, history?: Message
         const introduction: Message[] = data.welcome
           ? [{ role: 'assistant', content: data.welcome }]
           : []
-        onReady({ userId: data.userId, username: value.trim(), accessCode: data.accessCode }, introduction)
+        onReady({ userId: data.userId, username: value.trim(), accessCode: data.accessCode }, introduction, 0, data.milestones)
       } else {
         const code = value.trim().toUpperCase()
         const data = await restore(code)
-        onReady({ userId: data.userId, username: data.username, accessCode: code }, data.history || [], data.bondValue)
+        onReady({ userId: data.userId, username: data.username, accessCode: code }, data.history || [], data.bondValue, data.milestones)
       }
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Terjadi kesalahan') }
     finally { setBusy(false) }
@@ -169,6 +169,9 @@ export default function App() {
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null)
   const [updateReady, setUpdateReady] = useState(false)
   const [speakingIndex, setSpeakingIndex] = useState<number | null>(null)
+  const [milestones, setMilestones] = useState<Milestone[]>([])
+  const [timelineOpen, setTimelineOpen] = useState(false)
+  const [feedback, setFeedback] = useState<Record<number, 1 | -1>>({})
   const endRef = useRef<HTMLDivElement>(null)
   const currentAudio = useRef<HTMLAudioElement | null>(null)
   const requestTimers = useRef<number[]>([])
@@ -188,6 +191,13 @@ export default function App() {
     }
   }, [])
   useEffect(() => () => requestTimers.current.forEach(window.clearTimeout), [])
+  useEffect(() => {
+    if (!session) return
+    getRelationship(session.userId).then(data => {
+      setMilestones(data.milestones || [])
+      setBond(data.bond); setBondValue(data.bondValue)
+    }).catch(() => {})
+  }, [session?.userId])
 
   const avatarExpression = useMemo(() => moodImage[mood] || 'tenang', [mood])
   const canBlink = blinkExpressions.has(avatarExpression)
@@ -218,8 +228,9 @@ export default function App() {
     return () => timers.forEach(window.clearTimeout)
   }, [avatarExpression, canBlink])
 
-  function ready(next: Session, restored: Message[] = [], restoredBond = 0) {
+  function ready(next: Session, restored: Message[] = [], restoredBond = 0, restoredMilestones: Milestone[] = []) {
     saveSession(next); setSession(next); setMessages(restored); setError('')
+    setMilestones(restoredMilestones)
     if (restoredBond > 0) {
       const restoredName = bondNameFromValue(restoredBond)
       setBondValue(restoredBond); setBond(restoredName)
@@ -243,9 +254,10 @@ export default function App() {
     try {
       const result = await sendChat(session.userId, next)
       if (!result.reply?.trim()) throw new Error('Yuki mengirim balasan kosong. Coba lagi.')
-      setMessages([...next, { role: 'assistant', content: result.reply, comics: result.comics || [] }])
+      setMessages([...next, { role: 'assistant', content: result.reply, comics: result.comics || [], messageId: result.messageId }])
       setMood(result.mood || 'tenang'); setBond(result.bond || bond)
       setBondValue(result.bondValue || 0); setFeeling(result.feeling || feeling)
+      if (result.milestones) setMilestones(result.milestones)
       localStorage.setItem(SESSION_KEYS.mood, result.mood || 'tenang')
       localStorage.setItem(SESSION_KEYS.bond, result.bond || bond)
       localStorage.setItem(SESSION_KEYS.bondValue, String(result.bondValue || 0))
@@ -258,6 +270,31 @@ export default function App() {
       requestTimers.current.forEach(window.clearTimeout); requestTimers.current = []
       setBusy(false); if (!failed) setConnection(navigator.onLine ? 'idle' : 'offline')
     }
+  }
+
+  useEffect(() => {
+    if (!session || busy || messages.length < 2 || document.hidden) return
+    const timer = window.setTimeout(async () => {
+      if (document.hidden || !navigator.onLine) return
+      setBusy(true); setConnection('thinking')
+      try {
+        const result = await sendChat(session.userId, messages, true)
+        if (result.reply?.trim()) {
+          setMessages(current => [...current, { role: 'assistant', content: result.reply, messageId: result.messageId }])
+          setMood(result.mood || 'tenang'); setFeeling(result.feeling || feeling)
+          if (result.milestones) setMilestones(result.milestones)
+        }
+      } catch { /* sapaan idle tidak boleh mengganggu chat utama */ }
+      finally { setBusy(false); setConnection(navigator.onLine ? 'idle' : 'offline') }
+    }, 120_000)
+    return () => window.clearTimeout(timer)
+  }, [messages, session, busy])
+
+  async function rateMessage(index: number, message: Message, rating: 1 | -1) {
+    if (!session || feedback[index]) return
+    setFeedback(current => ({ ...current, [index]: rating }))
+    try { await sendFeedback(session.userId, message.messageId, rating) }
+    catch { setFeedback(current => { const next = { ...current }; delete next[index]; return next }) }
   }
 
   async function installApp() {
@@ -305,18 +342,24 @@ export default function App() {
           <button onClick={() => setSettingsOpen(!settingsOpen)} aria-label="Pengaturan"><Settings size={17} /></button>
         </div>
         {settingsOpen && <div className="settings-card">
+          <button onClick={() => { setTimelineOpen(true); setSettingsOpen(false) }}><Heart size={15} /><span><b>Perjalanan hubungan</b><small>{milestones.length} momen tersimpan</small></span></button>
           {installPrompt && <button onClick={installApp}><Download size={15} /><span><b>Pasang aplikasi Yuki</b><small>Tambahkan ke layar utama</small></span></button>}
           <button onClick={() => navigator.clipboard.writeText(session?.accessCode || '')}><Copy size={15} /><span><b>Salin kunci ingatan</b><small>{session?.accessCode || 'Belum tersedia'}</small></span></button>
           <button className="danger" onClick={reset}><RotateCcw size={15} /><span><b>Mulai hubungan baru</b><small>Hapus sesi dari perangkat ini</small></span></button>
         </div>}
       </header>
 
+      {timelineOpen && <div className="timeline-overlay" onClick={() => setTimelineOpen(false)}><section className="timeline-card" onClick={event => event.stopPropagation()}>
+        <header><div><small>Relationship archive</small><h2>Perjalanan kalian</h2></div><button onClick={() => setTimelineOpen(false)}><X size={17}/></button></header>
+        <div className="timeline-list">{milestones.map((item, index) => <article key={`${item.kind}-${index}`}><i/><div><strong>{item.title}</strong><span>{item.detail || `Terbuka pada bond ${Math.round(item.bondValue)}`}</span></div></article>)}</div>
+      </section></div>}
+
       <div className="messages" aria-live="polite">
         {messages.length === 0 && <div className="empty-state"><span>01</span><h2>Yuki menunggumu bicara.</h2><p>Mulai dari hal sederhana. Jangan berharap dia langsung ramah.</p></div>}
         {messages.map((message, index) => <article className={`message ${message.role}`} key={`${index}-${message.content.slice(0, 12)}`}>
           {message.role === 'assistant' && <div className="message-avatar">Y</div>}
           <div className="message-content"><MessageBody message={message} /></div>
-          {message.role === 'assistant' && <button className={`speak ${speakingIndex === index ? 'active' : ''}`} onClick={() => play(message.content, index)} aria-label="Putar suara"><Volume2 size={14} /></button>}
+          {message.role === 'assistant' && <div className="message-tools"><button className={`speak ${speakingIndex === index ? 'active' : ''}`} onClick={() => play(message.content, index)} aria-label="Putar suara"><Volume2 size={14} /></button><button className={feedback[index] === 1 ? 'selected' : ''} onClick={() => rateMessage(index, message, 1)} aria-label="Balasan cocok"><ThumbsUp size={12}/></button><button className={feedback[index] === -1 ? 'selected negative' : ''} onClick={() => rateMessage(index, message, -1)} aria-label="Balasan kurang cocok"><ThumbsDown size={12}/></button></div>}
         </article>)}
         {busy && <><div className={`request-status ${connection}`}>{connection === 'slow' || connection === 'retrying' ? <RefreshCw className="spin" size={12} /> : <LoaderCircle className="spin" size={12} />}<span>{connectionLabel[connection]}</span></div><article className="message assistant"><div className="message-avatar">Y</div><div className="message-content typing"><i/><i/><i/></div></article></>}
         {connection === 'offline' && !busy && <div className="request-status offline"><WifiOff size={12}/><span>Kamu offline. Pesan yang belum dikirim tetap aman.</span></div>}
@@ -330,6 +373,7 @@ export default function App() {
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit() } }} />
         <button disabled={busy || !input.trim()} aria-label="Kirim pesan">{busy ? <LoaderCircle className="spin" size={19}/> : <Send size={19}/>}</button>
       </form>
+      <div className="activities" aria-label="Aktivitas bersama"><Sparkles size={12}/>{['Cari komik bareng', 'Pertanyaan hari ini', 'Kuis anime singkat', 'Bahas daftar favorit kita'].map(label => <button key={label} onClick={() => setInput(label)}>{label}</button>)}</div>
     </section>
 
     <aside className="character-panel">

@@ -13,6 +13,15 @@ export interface Message {
   role: Role
   content: string
   comics?: ComicRecommendation[]
+  messageId?: number
+}
+
+export interface Milestone {
+  kind: string
+  title: string
+  detail?: string
+  bondValue: number
+  createdAt: string
 }
 
 export interface ChatResponse {
@@ -22,6 +31,8 @@ export interface ChatResponse {
   bond: string
   bondValue: number
   feeling: string
+  messageId?: number
+  milestones?: Milestone[]
   comics?: ComicRecommendation[]
 }
 

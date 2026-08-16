@@ -1,4 +1,4 @@
-import type { ChatResponse, Message } from './types'
+import type { ChatResponse, Message, Milestone } from './types'
 
 async function parse<T>(response: Response): Promise<T> {
   const data = await response.json()
@@ -22,21 +22,31 @@ async function request<T>(url: string, init: RequestInit, timeoutMs = 30_000): P
 }
 
 export async function register(username: string) {
-  return request<{ userId: string; accessCode: string; welcome?: string }>('/api/register', {
+  return request<{ userId: string; accessCode: string; welcome?: string; milestones?: Milestone[] }>('/api/register', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username }),
   })
 }
 
 export async function restore(accessCode: string) {
-  return request<{ userId: string; username: string; history: Message[]; bondValue?: number }>('/api/login-code', {
+  return request<{ userId: string; username: string; history: Message[]; bondValue?: number; milestones?: Milestone[] }>('/api/login-code', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessCode }),
   })
 }
 
-export async function sendChat(userId: string, messages: Message[]) {
+export async function sendChat(userId: string, messages: Message[], isIdle = false) {
   return request<ChatResponse>('/api/chat', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, messages }),
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, messages, isIdle }),
   }, 125_000)
+}
+
+export async function sendFeedback(userId: string, messageId: number | undefined, rating: 1 | -1) {
+  return request<{ ok: true }>('/api/feedback', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, messageId, rating }),
+  })
+}
+
+export async function getRelationship(userId: string) {
+  return request<{ bond: string; bondValue: number; milestones: Milestone[] }>(`/api/relationship/${encodeURIComponent(userId)}`, { method: 'GET' })
 }
 
 export async function speak(text: string) {

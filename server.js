@@ -7,7 +7,8 @@ import { Emotion } from './lib/emotion.js'
 import {
   loadMemory, addFacts, addEvent, buildMemoryContext, recallMemory, saveEmotion,
   registerUser, getUserByAccessCode, saveChatMessage, getChatHistory,
-  countChatMessages, summarizeAndTrimHistory, captureStructuredMemory
+  countChatMessages, summarizeAndTrimHistory, captureStructuredMemory,
+  recordConversationEvent, syncBondMilestones, saveResponseFeedback
 } from './lib/memory.js'
 import { responseTarget, shouldInitiate, validateCharacterReply } from './lib/character-quality.js'
 import { warmupEmbedder } from './lib/semantic.js'
@@ -104,7 +105,8 @@ app.post('/api/register', rateLimit({ max: 10 }), async (req, res) => {
     const result = await registerUser(cleanName)
     const welcome = `*menatapmu sebentar, masih agak menjaga jarak*\n\nJadi namamu ${cleanName}? Aku Yuki. Salam kenal. Untuk sekarang kita kenalan dulu saja—jangan langsung merasa sudah dekat.\n\nKalau nanti kita cocok, mungkin aku bisa jadi teman dekatmu... atau sesuatu yang lebih. Itu tergantung bagaimana kamu memperlakukanku.\n\nKamu datang karena butuh teman ngobrol, atau cuma penasaran?`
     saveChatMessage(result.userId, 'assistant', welcome)
-    res.json({ ...result, welcome })
+    const milestones = syncBondMilestones(result.userId, 0)
+    res.json({ ...result, welcome, milestones })
   } catch (e) {
     console.error(e)
     res.status(500).json({ error: String(e.message || e) })
@@ -129,7 +131,8 @@ app.post('/api/login-code', rateLimit({ max: 15 }), async (req, res) => {
       userId: user.userId,
       username: user.username,
       history,
-      bondValue: emotion.bond
+      bondValue: emotion.bond,
+      milestones: syncBondMilestones(user.userId, emotion.bond)
     })
   } catch (e) {
     console.error(e)
@@ -304,6 +307,7 @@ app.post('/api/chat', rateLimit({ max: 30 }), async (req, res) => {
     }
 
     // 5) simpan (per user)
+    let messageId = null
     try {
       emotion.updateFromLLMMood(mood)
       saveEmotion(userId, emotion.serialize())
@@ -316,7 +320,7 @@ app.post('/api/chat', rateLimit({ max: 30 }), async (req, res) => {
       } else if (userText) {
         saveChatMessage(userId, 'user', userText)
       }
-      saveChatMessage(userId, 'assistant', reply)
+      messageId = saveChatMessage(userId, 'assistant', reply)
     } catch (err) {
       console.error('[server] Gagal menyimpan ke chat_history:', err)
     }
@@ -335,7 +339,10 @@ app.post('/api/chat', rateLimit({ max: 30 }), async (req, res) => {
         .catch(() => {})
     }
     if (!isIdle) {
-      try { captureStructuredMemory(userId, userText) } catch (err) { console.error('[memory] structured:', err.message) }
+      try {
+        captureStructuredMemory(userId, userText)
+        recordConversationEvent(userId, userText, emotion.bond)
+      } catch (err) { console.error('[memory] structured:', err.message) }
     }
     // catat momen emosional yang kuat
     if (['sayang/manja', 'sedih', 'kesal', 'cemas', 'kecewa'].includes(mood)) {
@@ -345,8 +352,10 @@ app.post('/api/chat', rateLimit({ max: 30 }), async (req, res) => {
       }).catch(() => {})
     }
 
+    const milestones = syncBondMilestones(userId, emotion.bond)
     res.json({
       reply, model, mood, bond: bond.name, bondValue: emotion.bond, feeling: emotion.feeling(),
+      messageId, milestones,
       comics: comicResults.map(({ title, url, type, chapter, score, image }) => ({ title, url, type, chapter, score, image }))
     })
   } catch (e) {
@@ -402,4 +411,20 @@ app.post('/api/tts', rateLimit({ max: 20 }), async (req, res) => {
 const PORT = process.env.PORT || 3000
 app.listen(PORT, () => {
   console.log(`✨ AI Anime Chat jalan di http://localhost:${PORT}`)
+})
+
+app.get('/api/relationship/:userId', rateLimit({ max: 30 }), async (req, res) => {
+  try {
+    const emotion = await getEmotion(req.params.userId)
+    res.json({ bond: emotion.bondLevel().name, bondValue: emotion.bond, milestones: syncBondMilestones(req.params.userId, emotion.bond) })
+  } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
+})
+
+app.post('/api/feedback', rateLimit({ max: 40 }), (req, res) => {
+  try {
+    const { userId, messageId, rating, reason = '' } = req.body || {}
+    if (!userId || ![-1, 1].includes(Number(rating))) return res.status(400).json({ error: 'Feedback tidak valid.' })
+    saveResponseFeedback(userId, messageId, Number(rating), reason)
+    res.json({ ok: true })
+  } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
 })
