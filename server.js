@@ -82,7 +82,7 @@ const turnCounters = new Map() // userId -> turnCount
 
 // Y-3: Deteksi topik serius yang butuh override empati penuh
 function isSeriousTopic(text = '') {
-  return /(meninggal|mati |kanker|sakit parah|kecelakaan|bunuh diri|depresi berat|putus asa|tidak sanggup|gak sanggup|mau nyerah|hilang harapan|gak mau hidup|nangis terus|hancur banget|trauma)/i.test(text)
+  return /(meninggal|mati |kanker|sakit parah|kecelakaan|bunuh diri|depresi berat|putus asa|tidak sanggup|gak sanggup|mau nyerah|hilang harapan|gak mau hidup|nangis terus|hancur banget|trauma|aku takut|lagi takut|cemas|khawatir|gugup|deg-degan|panik|butuh ditemani|temani aku)/i.test(text)
 }
 
 async function getEmotion(userId) {
