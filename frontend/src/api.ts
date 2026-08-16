@@ -22,7 +22,7 @@ async function request<T>(url: string, init: RequestInit, timeoutMs = 30_000): P
 }
 
 export async function register(username: string) {
-  return request<{ userId: string; accessCode: string }>('/api/register', {
+  return request<{ userId: string; accessCode: string; welcome?: string }>('/api/register', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username }),
   })
 }

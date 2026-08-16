@@ -100,8 +100,11 @@ app.post('/api/register', rateLimit({ max: 10 }), async (req, res) => {
     if (!username || !username.trim() || username.trim().length > 50) {
       return res.status(400).json({ error: 'Nama harus berisi 1-50 karakter.' })
     }
-    const result = await registerUser(username.trim())
-    res.json(result)
+    const cleanName = username.trim()
+    const result = await registerUser(cleanName)
+    const welcome = `*menatapmu sebentar, masih agak menjaga jarak*\n\nJadi namamu ${cleanName}? Aku Yuki. Salam kenal. Untuk sekarang kita kenalan dulu saja—jangan langsung merasa sudah dekat.\n\nKalau nanti kita cocok, mungkin aku bisa jadi teman dekatmu... atau sesuatu yang lebih. Itu tergantung bagaimana kamu memperlakukanku.\n\nKamu datang karena butuh teman ngobrol, atau cuma penasaran?`
+    saveChatMessage(result.userId, 'assistant', welcome)
+    res.json({ ...result, welcome })
   } catch (e) {
     console.error(e)
     res.status(500).json({ error: String(e.message || e) })

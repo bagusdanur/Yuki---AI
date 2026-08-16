@@ -118,7 +118,10 @@ function Onboarding({ onReady }: { onReady: (session: Session, history?: Message
     try {
       if (mode === 'register') {
         const data = await register(value.trim())
-        onReady({ userId: data.userId, username: value.trim(), accessCode: data.accessCode })
+        const introduction: Message[] = data.welcome
+          ? [{ role: 'assistant', content: data.welcome }]
+          : []
+        onReady({ userId: data.userId, username: value.trim(), accessCode: data.accessCode }, introduction)
       } else {
         const code = value.trim().toUpperCase()
         const data = await restore(code)
@@ -187,17 +190,18 @@ export default function App() {
   useEffect(() => () => requestTimers.current.forEach(window.clearTimeout), [])
 
   const avatarExpression = useMemo(() => moodImage[mood] || 'tenang', [mood])
-  const avatar = `/expressions/${avatarExpression}${blinking && blinkExpressions.has(avatarExpression) ? '_blink' : ''}.png`
+  const canBlink = blinkExpressions.has(avatarExpression)
+  const avatar = `/expressions/${avatarExpression}${blinking && canBlink ? '_blink' : ''}.png`
 
   useEffect(() => {
     const paths = [`/expressions/${avatarExpression}.png`]
-    if (blinkExpressions.has(avatarExpression)) paths.push(`/expressions/${avatarExpression}_blink.png`)
+    if (canBlink) paths.push(`/expressions/${avatarExpression}_blink.png`)
     paths.forEach(src => { const image = new Image(); image.src = src })
-  }, [avatarExpression])
+  }, [avatarExpression, canBlink])
 
   useEffect(() => {
     setBlinking(false)
-    if (!blinkExpressions.has(avatarExpression) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    if (!canBlink) return
     const timers: number[] = []
     const later = (callback: () => void, delay: number) => { const id = window.setTimeout(callback, delay); timers.push(id) }
     const schedule = () => later(() => {
@@ -209,10 +213,10 @@ export default function App() {
           later(() => { setBlinking(true); later(() => { setBlinking(false); schedule() }, 95) }, 115)
         } else schedule()
       }, 110)
-    }, 3_200 + Math.random() * 4_800)
+    }, 2_400 + Math.random() * 3_600)
     schedule()
     return () => timers.forEach(window.clearTimeout)
-  }, [avatarExpression])
+  }, [avatarExpression, canBlink])
 
   function ready(next: Session, restored: Message[] = [], restoredBond = 0) {
     saveSession(next); setSession(next); setMessages(restored); setError('')
