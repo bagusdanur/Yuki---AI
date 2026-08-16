@@ -24,7 +24,31 @@ function worthRemembering(text = '') {
 }
 
 const app = express()
-app.use(express.json())
+app.use(express.json({ limit: '64kb' }))
+
+const rateBuckets = new Map()
+function rateLimit({ windowMs = 60_000, max = 30 } = {}) {
+  return (req, res, next) => {
+    const key = `${req.ip}:${req.path}`
+    const now = Date.now()
+    const bucket = rateBuckets.get(key)
+    if (!bucket || now >= bucket.resetAt) {
+      rateBuckets.set(key, { count: 1, resetAt: now + windowMs })
+      return next()
+    }
+    bucket.count += 1
+    if (bucket.count > max) {
+      res.set('Retry-After', String(Math.ceil((bucket.resetAt - now) / 1000)))
+      return res.status(429).json({ error: 'Terlalu banyak permintaan. Tunggu sebentar lalu coba lagi.' })
+    }
+    next()
+  }
+}
+
+setInterval(() => {
+  const now = Date.now()
+  for (const [key, bucket] of rateBuckets) if (now >= bucket.resetAt) rateBuckets.delete(key)
+}, 5 * 60_000).unref()
 
 // CORS biar widget bisa di-embed dari domain lain (mis. ryukomik.my.id)
 const ALLOW = (process.env.WIDGET_ALLOW_ORIGINS || '*').split(',').map((s) => s.trim())
@@ -69,11 +93,11 @@ async function getEmotion(userId) {
 }
 
 // Endpoint untuk mendaftar user baru (Onboarding)
-app.post('/api/register', async (req, res) => {
+app.post('/api/register', rateLimit({ max: 10 }), async (req, res) => {
   try {
     const { username } = req.body || {}
-    if (!username || !username.trim()) {
-      return res.status(400).json({ error: 'Nama tidak boleh kosong.' })
+    if (!username || !username.trim() || username.trim().length > 50) {
+      return res.status(400).json({ error: 'Nama harus berisi 1-50 karakter.' })
     }
     const result = await registerUser(username.trim())
     res.json(result)
@@ -84,7 +108,7 @@ app.post('/api/register', async (req, res) => {
 })
 
 // Endpoint untuk memulihkan akun via Kode Akses
-app.post('/api/login-code', async (req, res) => {
+app.post('/api/login-code', rateLimit({ max: 15 }), async (req, res) => {
   try {
     const { accessCode } = req.body || {}
     if (!accessCode || !accessCode.trim()) {
@@ -110,21 +134,33 @@ app.post('/api/login-code', async (req, res) => {
 })
 
 // Endpoint chat -> balasan dari Qwen/DeepSeek (dengan emosi + kedekatan + memori)
-app.post('/api/chat', async (req, res) => {
+app.post('/api/chat', rateLimit({ max: 30 }), async (req, res) => {
   try {
     const { messages, adult, userId = 'anon', isIdle = false } = req.body || {}
-    const userText = messages?.[messages.length - 1]?.content || ''
+    if (!Array.isArray(messages) || messages.length === 0 || messages.length > 50) {
+      return res.status(400).json({ error: 'Riwayat pesan tidak valid.' })
+    }
+    const sanitizedMessages = messages
+      .filter((message) => message && ['user', 'assistant'].includes(message.role) && typeof message.content === 'string')
+      .map((message) => ({ role: message.role, content: message.content.trim().slice(0, 4000) }))
+      .filter((message) => message.content)
+    if (!sanitizedMessages.length) return res.status(400).json({ error: 'Pesan tidak boleh kosong.' })
+    const userText = sanitizedMessages[sanitizedMessages.length - 1].content
+    if (!isIdle && sanitizedMessages[sanitizedMessages.length - 1].role !== 'user') {
+      return res.status(400).json({ error: 'Pesan terakhir harus berasal dari pengguna.' })
+    }
+
+    const emotion = await getEmotion(userId)
 
     // Y-5: Hitung giliran percakapan untuk pertanyaan balik proaktif
-    const _turns = isIdle ? (turnCounters.get(userId) || 0) : (turnCounters.get(userId) || 0) + 1
+    const persistedTurns = Number.isFinite(emotion.interactions) ? emotion.interactions : 0
+    const previousTurns = turnCounters.get(userId) ?? persistedTurns
+    const _turns = isIdle ? previousTurns : previousTurns + 1
     if (!isIdle) turnCounters.set(userId, _turns)
     const shouldAskQuestion = !isIdle && _turns > 0 && _turns % 3 === 0
 
     // Y-3: Deteksi topik serius untuk override empati
     const isSerious = !isIdle && isSeriousTopic(userText)
-
-    // 0) ambil emosi & bond MILIK user ini (per userId)
-    const emotion = await getEmotion(userId)
 
     // 1) mesin emosi (keyword) -> update KEDEKATAN (bond) + fallback ekspresi
     // Jika isIdle true, jalankan peluruhan emosi pasif tanpa memicu reaksi baru
@@ -149,7 +185,8 @@ app.post('/api/chat', async (req, res) => {
     }
 
     // Perbaiki bug loop balas diri sendiri: sisipkan pesan user tiruan agar API LLM menerima giliran user
-    const messagesToSend = [...(messages || [])]
+    // Ringkasan memori membawa konteks lama; hanya 18 pesan terbaru dikirim mentah.
+    const messagesToSend = sanitizedMessages.slice(-18)
     if (isIdle) {
       messagesToSend.push({ role: 'user', content: '[terdiam]' })
     }
@@ -250,7 +287,7 @@ app.post('/api/chat', async (req, res) => {
     if (!isIdle) {
       try {
         const msgCount = countChatMessages(userId)
-        if (msgCount > 45) summarizeAndTrimHistory(userId).catch(() => {})
+        if (msgCount > 36) summarizeAndTrimHistory(userId).catch(() => {})
       } catch {}
     }
 
@@ -303,10 +340,13 @@ app.get('/api/comic-cover', async (req, res) => {
 })
 
 // Endpoint TTS -> audio dari teks
-app.post('/api/tts', async (req, res) => {
+app.post('/api/tts', rateLimit({ max: 20 }), async (req, res) => {
   try {
     const { text, mood } = req.body
-    const { buffer, mime } = await synthesize(text || '', mood)
+    if (typeof text !== 'string' || !text.trim() || text.length > 2000) {
+      return res.status(400).json({ error: 'Teks suara harus berisi 1-2000 karakter.' })
+    }
+    const { buffer, mime } = await synthesize(text.trim(), mood)
     res.set('Content-Type', mime)
     res.send(buffer)
   } catch (e) {

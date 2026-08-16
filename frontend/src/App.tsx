@@ -129,14 +129,20 @@ export default function App() {
   }
 
   async function play(text: string, index: number) {
-    if (currentAudio.current) { currentAudio.current.pause(); currentAudio.current = null }
+    if (currentAudio.current) {
+      currentAudio.current.pause()
+      if (currentAudio.current.src.startsWith('blob:')) URL.revokeObjectURL(currentAudio.current.src)
+      currentAudio.current = null
+    }
     if (speakingIndex === index) { setSpeakingIndex(null); return }
     setSpeakingIndex(index)
     try {
       const audio = new Audio(await speak(text))
+      const objectUrl = audio.src
       currentAudio.current = audio
-      audio.onended = () => setSpeakingIndex(null)
-      audio.onerror = () => setSpeakingIndex(null)
+      const cleanup = () => { URL.revokeObjectURL(objectUrl); setSpeakingIndex(null) }
+      audio.onended = cleanup
+      audio.onerror = cleanup
       await audio.play()
     } catch { setSpeakingIndex(null); setError('Suara Yuki sedang tidak tersedia.') }
   }
