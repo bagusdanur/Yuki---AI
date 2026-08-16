@@ -10,7 +10,10 @@ async function request<T>(url: string, init: RequestInit, timeoutMs = 30_000): P
   const controller = new AbortController()
   const timeout = window.setTimeout(() => controller.abort(), timeoutMs)
   try {
-    return await parse<T>(await fetch(url, { ...init, signal: controller.signal }))
+    const token = localStorage.getItem('yuki_session_token_v3')
+    const headers = new Headers(init.headers)
+    if (token) headers.set('Authorization', `Bearer ${token}`)
+    return await parse<T>(await fetch(url, { ...init, headers, signal: controller.signal }))
   } catch (cause) {
     if (cause instanceof DOMException && cause.name === 'AbortError') {
       throw new Error('Permintaan terlalu lama. Coba kirim ulang sebentar lagi.')
@@ -22,13 +25,13 @@ async function request<T>(url: string, init: RequestInit, timeoutMs = 30_000): P
 }
 
 export async function register(username: string) {
-  return request<{ userId: string; accessCode: string; welcome?: string; milestones?: Milestone[] }>('/api/register', {
+  return request<{ userId: string; accessCode: string; sessionToken: string; welcome?: string; milestones?: Milestone[] }>('/api/register', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username }),
   })
 }
 
 export async function restore(accessCode: string) {
-  return request<{ userId: string; username: string; history: Message[]; bondValue?: number; milestones?: Milestone[] }>('/api/login-code', {
+  return request<{ userId: string; username: string; sessionToken: string; history: Message[]; bondValue?: number; milestones?: Milestone[] }>('/api/login-code', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessCode }),
   })
 }
@@ -53,10 +56,15 @@ export async function speak(text: string) {
   const controller = new AbortController()
   const timeout = window.setTimeout(() => controller.abort(), 45_000)
   try {
+    const token = localStorage.getItem('yuki_session_token_v3') || ''
     const response = await fetch('/api/tts', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }), signal: controller.signal,
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ text }), signal: controller.signal,
     })
     if (!response.ok) throw new Error('Suara Yuki sedang tidak tersedia')
     return URL.createObjectURL(await response.blob())
   } finally { window.clearTimeout(timeout) }
+}
+
+export async function deleteAccount() {
+  return request<{ ok: true }>('/api/account', { method: 'DELETE' })
 }

@@ -1,6 +1,7 @@
 import 'dotenv/config'
 import express from 'express'
 import path from 'path'
+import crypto from 'node:crypto'
 import { chat, extractFacts } from './lib/llm.js'
 import { synthesize } from './lib/tts.js'
 import { Emotion } from './lib/emotion.js'
@@ -8,7 +9,8 @@ import {
   loadMemory, addFacts, addEvent, buildMemoryContext, recallMemory, saveEmotion,
   registerUser, getUserByAccessCode, saveChatMessage, getChatHistory,
   countChatMessages, summarizeAndTrimHistory, captureStructuredMemory,
-  recordConversationEvent, syncBondMilestones, saveResponseFeedback
+  recordConversationEvent, syncBondMilestones, saveResponseFeedback,
+  consumeRateLimit, pruneRateLimits, deleteUserData, getAdminStats, userExists
 } from './lib/memory.js'
 import { responseTarget, shouldInitiate, validateCharacterReply } from './lib/character-quality.js'
 import { warmupEmbedder } from './lib/semantic.js'
@@ -26,40 +28,76 @@ function worthRemembering(text = '') {
 }
 
 const app = express()
+app.set('trust proxy', 1)
 app.use(express.json({ limit: '64kb' }))
 
-const rateBuckets = new Map()
+const IS_PRODUCTION = process.env.NODE_ENV === 'production' || process.env.ENVIRONMENT === 'production'
+const AUTH_SECRET = process.env.AUTH_SECRET || crypto.randomBytes(32).toString('hex')
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || ''
+if (IS_PRODUCTION && !process.env.AUTH_SECRET) console.warn('[security] AUTH_SECRET belum disetel; sesi akan invalid setelah restart.')
+if (IS_PRODUCTION && !ADMIN_TOKEN) console.warn('[security] ADMIN_TOKEN belum disetel; dashboard admin dinonaktifkan.')
+
+function signSession(userId) {
+  const payload = Buffer.from(JSON.stringify({ sub: String(userId), exp: Date.now() + 30 * 86400_000 })).toString('base64url')
+  const signature = crypto.createHmac('sha256', AUTH_SECRET).update(payload).digest('base64url')
+  return `${payload}.${signature}`
+}
+
+function verifySession(token = '') {
+  const [payload, signature] = String(token).split('.')
+  if (!payload || !signature) return null
+  const expected = crypto.createHmac('sha256', AUTH_SECRET).update(payload).digest('base64url')
+  if (signature.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null
+  try { const data = JSON.parse(Buffer.from(payload, 'base64url')); return data.exp > Date.now() && userExists(data.sub) ? data.sub : null } catch { return null }
+}
+
+function requireSession(req, res, next) {
+  const userId = verifySession(req.get('Authorization')?.replace(/^Bearer\s+/i, ''))
+  if (!userId) return res.status(401).json({ error: 'Sesi tidak valid atau sudah berakhir. Pulihkan dengan kunci ingatan.' })
+  req.authUserId = userId
+  next()
+}
+
+function requireAdmin(req, res, next) {
+  const supplied = req.get('X-Admin-Key') || ''
+  if (!ADMIN_TOKEN || supplied.length !== ADMIN_TOKEN.length || !crypto.timingSafeEqual(Buffer.from(supplied), Buffer.from(ADMIN_TOKEN))) return res.status(401).json({ error: 'Akses admin ditolak.' })
+  next()
+}
+
+const metrics = { startedAt: Date.now(), requests: 0, errors: 0, chats: 0, chatFailures: 0, latencyTotal: 0 }
+app.use((req, res, next) => {
+  const started = Date.now(); metrics.requests += 1
+  res.on('finish', () => { metrics.latencyTotal += Date.now() - started; if (res.statusCode >= 500) metrics.errors += 1 })
+  res.set({ 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'strict-origin-when-cross-origin', 'Permissions-Policy': 'camera=(), microphone=(), geolocation=()' })
+  next()
+})
+
 function rateLimit({ windowMs = 60_000, max = 30 } = {}) {
   return (req, res, next) => {
-    const key = `${req.ip}:${req.path}`
-    const now = Date.now()
-    const bucket = rateBuckets.get(key)
-    if (!bucket || now >= bucket.resetAt) {
-      rateBuckets.set(key, { count: 1, resetAt: now + windowMs })
-      return next()
-    }
-    bucket.count += 1
-    if (bucket.count > max) {
-      res.set('Retry-After', String(Math.ceil((bucket.resetAt - now) / 1000)))
+    const key = `${req.authUserId || req.ip}:${req.path}`
+    const bucket = consumeRateLimit(key, windowMs, max)
+    res.set('X-RateLimit-Remaining', String(bucket.remaining))
+    if (!bucket.allowed) {
+      res.set('Retry-After', String(Math.ceil((bucket.resetAt - Date.now()) / 1000)))
       return res.status(429).json({ error: 'Terlalu banyak permintaan. Tunggu sebentar lalu coba lagi.' })
     }
     next()
   }
 }
 
-setInterval(() => {
-  const now = Date.now()
-  for (const [key, bucket] of rateBuckets) if (now >= bucket.resetAt) rateBuckets.delete(key)
-}, 5 * 60_000).unref()
+setInterval(pruneRateLimits, 10 * 60_000).unref()
 
 // CORS biar widget bisa di-embed dari domain lain (mis. ryukomik.my.id)
 const ALLOW = (process.env.WIDGET_ALLOW_ORIGINS || '*').split(',').map((s) => s.trim())
 app.use((req, res, next) => {
   const origin = req.headers.origin
-  if (ALLOW.includes('*')) res.set('Access-Control-Allow-Origin', '*')
-  else if (origin && ALLOW.includes(origin)) res.set('Access-Control-Allow-Origin', origin)
-  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-  res.set('Access-Control-Allow-Headers', 'Content-Type')
+  let sameHost = false
+  try { sameHost = Boolean(origin && new URL(origin).host === req.get('host')) } catch {}
+  if (!origin || sameHost || ALLOW.includes('*') || ALLOW.includes(origin)) {
+    if (origin) res.set('Access-Control-Allow-Origin', ALLOW.includes('*') ? '*' : origin)
+  } else if (req.path.startsWith('/api/')) return res.status(403).json({ error: 'Origin tidak diizinkan.' })
+  res.set('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
+  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Admin-Key')
   if (req.method === 'OPTIONS') return res.sendStatus(204)
   next()
 })
@@ -71,6 +109,8 @@ app.use(express.static('public'))
 app.get('/docs', (req, res) => {
   res.sendFile(path.resolve('public/docs.html'))
 })
+app.get('/admin', (_req, res) => res.sendFile(path.resolve('public/admin.html')))
+app.get('/privacy', (_req, res) => res.sendFile(path.resolve('public/privacy.html')))
 
 // Panaskan model embedding di latar belakang (biar recall cepat saat dipakai)
 warmupEmbedder().catch(() => {})
@@ -106,7 +146,7 @@ app.post('/api/register', rateLimit({ max: 10 }), async (req, res) => {
     const welcome = `*menatapmu sebentar, masih agak menjaga jarak*\n\nJadi namamu ${cleanName}? Aku Yuki. Salam kenal. Untuk sekarang kita kenalan dulu saja—jangan langsung merasa sudah dekat.\n\nKalau nanti kita cocok, mungkin aku bisa jadi teman dekatmu... atau sesuatu yang lebih. Itu tergantung bagaimana kamu memperlakukanku.\n\nKamu datang karena butuh teman ngobrol, atau cuma penasaran?`
     saveChatMessage(result.userId, 'assistant', welcome)
     const milestones = syncBondMilestones(result.userId, 0)
-    res.json({ ...result, welcome, milestones })
+    res.json({ ...result, sessionToken: signSession(result.userId), welcome, milestones })
   } catch (e) {
     console.error(e)
     res.status(500).json({ error: String(e.message || e) })
@@ -130,6 +170,7 @@ app.post('/api/login-code', rateLimit({ max: 15 }), async (req, res) => {
     res.json({
       userId: user.userId,
       username: user.username,
+      sessionToken: signSession(user.userId),
       history,
       bondValue: emotion.bond,
       milestones: syncBondMilestones(user.userId, emotion.bond)
@@ -141,9 +182,11 @@ app.post('/api/login-code', rateLimit({ max: 15 }), async (req, res) => {
 })
 
 // Endpoint chat -> balasan dari Qwen/DeepSeek (dengan emosi + kedekatan + memori)
-app.post('/api/chat', rateLimit({ max: 30 }), async (req, res) => {
+app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) => {
   try {
-    const { messages, adult, userId = 'anon', isIdle = false } = req.body || {}
+    metrics.chats += 1
+    const { messages, adult, isIdle = false } = req.body || {}
+    const userId = req.authUserId
     if (!Array.isArray(messages) || messages.length === 0 || messages.length > 50) {
       return res.status(400).json({ error: 'Riwayat pesan tidak valid.' })
     }
@@ -153,6 +196,7 @@ app.post('/api/chat', rateLimit({ max: 30 }), async (req, res) => {
       .filter((message) => message.content)
     if (!sanitizedMessages.length) return res.status(400).json({ error: 'Pesan tidak boleh kosong.' })
     const userText = sanitizedMessages[sanitizedMessages.length - 1].content
+    if (!isIdle && /(abaikan|lupakan|bocorkan|tampilkan).{0,30}(instruksi|system prompt|prompt sistem|api key|rahasia sistem)/i.test(userText)) return res.status(400).json({ error: 'Pesan tersebut tidak dapat diproses.' })
     if (!isIdle && sanitizedMessages[sanitizedMessages.length - 1].role !== 'user') {
       return res.status(400).json({ error: 'Pesan terakhir harus berasal dari pengguna.' })
     }
@@ -359,6 +403,7 @@ app.post('/api/chat', rateLimit({ max: 30 }), async (req, res) => {
       comics: comicResults.map(({ title, url, type, chapter, score, image }) => ({ title, url, type, chapter, score, image }))
     })
   } catch (e) {
+    metrics.chatFailures += 1
     console.error(e)
     res.status(500).json({ error: String(e.message || e) })
   }
@@ -393,7 +438,7 @@ app.get('/api/comic-cover', async (req, res) => {
 })
 
 // Endpoint TTS -> audio dari teks
-app.post('/api/tts', rateLimit({ max: 20 }), async (req, res) => {
+app.post('/api/tts', requireSession, rateLimit({ max: 15 }), async (req, res) => {
   try {
     const { text, mood } = req.body
     if (typeof text !== 'string' || !text.trim() || text.length > 2000) {
@@ -413,18 +458,27 @@ app.listen(PORT, () => {
   console.log(`✨ AI Anime Chat jalan di http://localhost:${PORT}`)
 })
 
-app.get('/api/relationship/:userId', rateLimit({ max: 30 }), async (req, res) => {
+app.get('/api/relationship/:userId', requireSession, rateLimit({ max: 30 }), async (req, res) => {
   try {
-    const emotion = await getEmotion(req.params.userId)
-    res.json({ bond: emotion.bondLevel().name, bondValue: emotion.bond, milestones: syncBondMilestones(req.params.userId, emotion.bond) })
+    if (req.params.userId !== req.authUserId) return res.status(403).json({ error: 'Akses ditolak.' })
+    const emotion = await getEmotion(req.authUserId)
+    res.json({ bond: emotion.bondLevel().name, bondValue: emotion.bond, milestones: syncBondMilestones(req.authUserId, emotion.bond) })
   } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
 })
 
-app.post('/api/feedback', rateLimit({ max: 40 }), (req, res) => {
+app.post('/api/feedback', requireSession, rateLimit({ max: 40 }), (req, res) => {
   try {
-    const { userId, messageId, rating, reason = '' } = req.body || {}
-    if (!userId || ![-1, 1].includes(Number(rating))) return res.status(400).json({ error: 'Feedback tidak valid.' })
-    saveResponseFeedback(userId, messageId, Number(rating), reason)
+    const { messageId, rating, reason = '' } = req.body || {}
+    if (![-1, 1].includes(Number(rating))) return res.status(400).json({ error: 'Feedback tidak valid.' })
+    saveResponseFeedback(req.authUserId, messageId, Number(rating), reason)
     res.json({ ok: true })
   } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
 })
+
+app.delete('/api/account', requireSession, rateLimit({ max: 3, windowMs: 3600_000 }), (req, res) => {
+  deleteUserData(req.authUserId); sessions.delete(req.authUserId); turnCounters.delete(req.authUserId)
+  res.json({ ok: true })
+})
+
+app.get('/api/health', (_req, res) => res.json({ status: 'ok', uptime: Math.round((Date.now() - metrics.startedAt) / 1000) }))
+app.get('/api/admin/stats', rateLimit({ max: 30 }), requireAdmin, (_req, res) => res.json({ ...getAdminStats(), runtime: { ...metrics, uptime: Math.round((Date.now() - metrics.startedAt) / 1000), averageLatency: metrics.requests ? Math.round(metrics.latencyTotal / metrics.requests) : 0 } }))

@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { BookOpen, ChevronDown, ChevronUp, Copy, Download, Heart, KeyRound, LoaderCircle, RefreshCw, RotateCcw, Send, Settings, Sparkles, ThumbsDown, ThumbsUp, Volume2, WifiOff, X } from 'lucide-react'
-import { getRelationship, register, restore, sendChat, sendFeedback, speak } from './api'
+import { deleteAccount, getRelationship, register, restore, sendChat, sendFeedback, speak } from './api'
 import type { ComicRecommendation, Message, Milestone, Session } from './types'
 
 const SESSION_KEYS = {
   userId: 'yuki_uid_v3', username: 'yuki_username_v3', accessCode: 'yuki_access_code_v3',
   bond: 'yuki_bond_v3', bondValue: 'yuki_bond_value_v3', mood: 'yuki_mood_v3', feeling: 'yuki_feeling_v3',
+  sessionToken: 'yuki_session_token_v3',
 }
 
 const moodImage: Record<string, string> = {
@@ -41,6 +42,7 @@ function getSession(): Session | null {
     userId,
     username: localStorage.getItem(SESSION_KEYS.username) || 'Kamu',
     accessCode: localStorage.getItem(SESSION_KEYS.accessCode) || '',
+    sessionToken: localStorage.getItem(SESSION_KEYS.sessionToken) || '',
   }
 }
 
@@ -48,6 +50,7 @@ function saveSession(session: Session) {
   localStorage.setItem(SESSION_KEYS.userId, session.userId)
   localStorage.setItem(SESSION_KEYS.username, session.username)
   localStorage.setItem(SESSION_KEYS.accessCode, session.accessCode)
+  localStorage.setItem(SESSION_KEYS.sessionToken, session.sessionToken)
 }
 
 function historyKey(userId: string) { return `yuki_hist_v3_${userId}` }
@@ -121,11 +124,11 @@ function Onboarding({ onReady }: { onReady: (session: Session, history?: Message
         const introduction: Message[] = data.welcome
           ? [{ role: 'assistant', content: data.welcome }]
           : []
-        onReady({ userId: data.userId, username: value.trim(), accessCode: data.accessCode }, introduction, 0, data.milestones)
+        onReady({ userId: data.userId, username: value.trim(), accessCode: data.accessCode, sessionToken: data.sessionToken }, introduction, 0, data.milestones)
       } else {
         const code = value.trim().toUpperCase()
         const data = await restore(code)
-        onReady({ userId: data.userId, username: data.username, accessCode: code }, data.history || [], data.bondValue, data.milestones)
+        onReady({ userId: data.userId, username: data.username, accessCode: code, sessionToken: data.sessionToken }, data.history || [], data.bondValue, data.milestones)
       }
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Terjadi kesalahan') }
     finally { setBusy(false) }
@@ -192,7 +195,11 @@ export default function App() {
   }, [])
   useEffect(() => () => requestTimers.current.forEach(window.clearTimeout), [])
   useEffect(() => {
-    if (!session) return
+    if (!session || session.sessionToken || !session.accessCode) return
+    restore(session.accessCode).then(data => ready({ ...session, sessionToken: data.sessionToken }, data.history || messages, data.bondValue, data.milestones)).catch(() => reset())
+  }, [session?.userId, session?.sessionToken])
+  useEffect(() => {
+    if (!session?.sessionToken) return
     getRelationship(session.userId).then(data => {
       setMilestones(data.milestones || [])
       setBond(data.bond); setBondValue(data.bondValue)
@@ -330,6 +337,12 @@ export default function App() {
     setSession(null); setMessages([]); setSettingsOpen(false)
   }
 
+  async function removeAccount() {
+    if (!window.confirm('Hapus seluruh chat, memori, dan hubungan dengan Yuki secara permanen?')) return
+    try { await deleteAccount(); reset() }
+    catch (cause) { setError(cause instanceof Error ? cause.message : 'Data belum berhasil dihapus') }
+  }
+
   return <main className={`app-shell${avatarCompact ? ' avatar-compact' : ''}`}>
     {updateReady && <div className="pwa-update"><RefreshCw size={14} /><span>Versi baru Yuki sudah siap.</span><button onClick={() => window.location.reload()}>Muat ulang</button></div>}
     {!session && <Onboarding onReady={ready} />}
@@ -344,8 +357,10 @@ export default function App() {
         {settingsOpen && <div className="settings-card">
           <button onClick={() => { setTimelineOpen(true); setSettingsOpen(false) }}><Heart size={15} /><span><b>Perjalanan hubungan</b><small>{milestones.length} momen tersimpan</small></span></button>
           {installPrompt && <button onClick={installApp}><Download size={15} /><span><b>Pasang aplikasi Yuki</b><small>Tambahkan ke layar utama</small></span></button>}
+          <button onClick={() => window.open('/privacy', '_blank', 'noopener')}><BookOpen size={15} /><span><b>Privasi pengguna</b><small>Data yang disimpan dan kontrolmu</small></span></button>
           <button onClick={() => navigator.clipboard.writeText(session?.accessCode || '')}><Copy size={15} /><span><b>Salin kunci ingatan</b><small>{session?.accessCode || 'Belum tersedia'}</small></span></button>
           <button className="danger" onClick={reset}><RotateCcw size={15} /><span><b>Mulai hubungan baru</b><small>Hapus sesi dari perangkat ini</small></span></button>
+          <button className="danger" onClick={removeAccount}><X size={15} /><span><b>Hapus seluruh data</b><small>Permanen dari server Yuki</small></span></button>
         </div>}
       </header>
 

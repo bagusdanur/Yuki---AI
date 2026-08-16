@@ -40,4 +40,5 @@ export interface Session {
   userId: string
   username: string
   accessCode: string
+  sessionToken: string
 }

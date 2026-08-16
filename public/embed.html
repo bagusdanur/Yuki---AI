@@ -671,6 +671,7 @@
     const input = document.getElementById('input')
     const moodEl = document.getElementById('mood')
     const history = []
+    let sessionPromise = null
 
     // Migration/Reset from v2 to v3 to start fresh for all users
     try {
@@ -710,6 +711,7 @@
           localStorage.setItem('yuki_uid_v3', data.userId)
           localStorage.setItem('yuki_access_code_v3', data.accessCode)
           localStorage.setItem('yuki_username_v3', 'Teman Yuki')
+          localStorage.setItem('yuki_session_token_v3', data.sessionToken)
           
           // Pindahkan history lokal jika ada
           const oldHistKey = 'yuki_hist_v3_' + offlineId
@@ -723,6 +725,27 @@
       } catch (e) {
         console.error('Failed register widget user:', e)
       }
+    }
+
+    async function ensureWidgetSession() {
+      const token = localStorage.getItem('yuki_session_token_v3')
+      const id = localStorage.getItem('yuki_uid_v3')
+      if (token && id) return { id, token }
+      if (sessionPromise) return sessionPromise
+      sessionPromise = (async () => {
+        const code = localStorage.getItem('yuki_access_code_v3')
+        if (code) {
+          const response = await fetch(API + '/api/login-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessCode: code }) })
+          if (response.ok) {
+            const data = await response.json()
+            localStorage.setItem('yuki_uid_v3', data.userId); localStorage.setItem('yuki_session_token_v3', data.sessionToken)
+            return { id: data.userId, token: data.sessionToken }
+          }
+        }
+        await registerWidgetUserBackground(id || getUserId())
+        return { id: localStorage.getItem('yuki_uid_v3'), token: localStorage.getItem('yuki_session_token_v3') }
+      })().finally(() => { sessionPromise = null })
+      return sessionPromise
     }
 
     // Jika user ID ada tapi access code belum disiapkan, daftarkan ulang di background
@@ -961,6 +984,7 @@
         localStorage.setItem('yuki_uid_v3', data.userId)
         localStorage.setItem('yuki_access_code_v3', code)
         localStorage.setItem('yuki_username_v3', data.username)
+        localStorage.setItem('yuki_session_token_v3', data.sessionToken)
 
         history.length = 0
         chat.innerHTML = ''
@@ -989,6 +1013,7 @@
         localStorage.removeItem('yuki_uid_v3')
         localStorage.removeItem('yuki_username_v3')
         localStorage.removeItem('yuki_access_code_v3')
+        localStorage.removeItem('yuki_session_token_v3')
 
         window.location.reload()
       }
@@ -999,10 +1024,11 @@
       add(t, 'user'); history.push({ role: 'user', content: t }); saveHistory(); input.value = ''
       const ty = typing()
       try {
+        const session = await ensureWidgetSession()
         const res = await fetch(API + '/api/chat', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: history.slice(-16), userId: getUserId() })
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.token },
+          body: JSON.stringify({ messages: history.slice(-16) })
         })
         const d = await res.json(); ty.remove()
         const reply = d.reply || '(...)'

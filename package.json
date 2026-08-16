@@ -6,6 +6,8 @@
     "dev": "vite --config vite.config.ts",
     "build": "vite build --config vite.config.ts",
     "eval:character": "node scripts/eval-character.mjs",
+    "backup": "node scripts/backup-db.mjs",
+    "load:test": "node scripts/load-test.mjs",
     "start": "node server.js"
   },
   "dependencies": {
