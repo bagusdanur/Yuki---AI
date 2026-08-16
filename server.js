@@ -7,8 +7,9 @@ import { Emotion } from './lib/emotion.js'
 import {
   loadMemory, addFacts, addEvent, buildMemoryContext, recallMemory, saveEmotion,
   registerUser, getUserByAccessCode, saveChatMessage, getChatHistory,
-  countChatMessages, summarizeAndTrimHistory
+  countChatMessages, summarizeAndTrimHistory, captureStructuredMemory
 } from './lib/memory.js'
+import { responseTarget, shouldInitiate, validateCharacterReply } from './lib/character-quality.js'
 import { warmupEmbedder } from './lib/semantic.js'
 import { searchComics, latestComics, wantsComic, extractQuery, buildComicContext } from './lib/ryukomik.js'
 
@@ -157,7 +158,7 @@ app.post('/api/chat', rateLimit({ max: 30 }), async (req, res) => {
     const previousTurns = turnCounters.get(userId) ?? persistedTurns
     const _turns = isIdle ? previousTurns : previousTurns + 1
     if (!isIdle) turnCounters.set(userId, _turns)
-    const shouldAskQuestion = !isIdle && _turns > 0 && _turns % 3 === 0
+    let shouldAskQuestion = false
 
     // Y-3: Deteksi topik serius untuk override empati
     const isSerious = !isIdle && isSeriousTopic(userText)
@@ -174,6 +175,12 @@ app.post('/api/chat', rateLimit({ max: 30 }), async (req, res) => {
     // 2) RECALL SEMANTIK: ambil memori yang maknanya paling relevan dgn pesan user
     const recall = await recallMemory(userId, userText)
     const memoryContext = buildMemoryContext(recall)
+    shouldAskQuestion = !isIdle && shouldInitiate({
+      turns: _turns,
+      serious: isSerious,
+      hasOpenLoop: recall.structured?.some((item) => item.category === 'open_loop' && item.status === 'active'),
+      userText
+    })
 
     // 2b) Kalau user minta rekomendasi/cari komik -> ambil judul REAL dari Ryukomik
     let comicContext = ''
@@ -187,6 +194,8 @@ app.post('/api/chat', rateLimit({ max: 30 }), async (req, res) => {
     // Perbaiki bug loop balas diri sendiri: sisipkan pesan user tiruan agar API LLM menerima giliran user
     // Ringkasan memori membawa konteks lama; hanya 18 pesan terbaru dikirim mentah.
     const messagesToSend = sanitizedMessages.slice(-18)
+    const recentAssistant = messagesToSend.filter((message) => message.role === 'assistant').slice(-5).map((message) => message.content)
+    const target = responseTarget(userText, { serious: isSerious, idle: isIdle })
     if (isIdle) {
       messagesToSend.push({ role: 'user', content: '[terdiam]' })
     }
@@ -201,8 +210,29 @@ app.post('/api/chat', rateLimit({ max: 30 }), async (req, res) => {
       isSerious,
       userMsgLength: userText.length,
       shouldAskQuestion,
-      sessionTurns: _turns
+      sessionTurns: _turns,
+      responseStyle: target.style,
+      recentAssistant
     })
+
+    const quality = validateCharacterReply(reply, recentAssistant, target, memoryContext)
+    if (!quality.ok) {
+      console.log(`[Quality Guard] Retrying: ${quality.issues.join(', ')}`)
+      const retryResult = await chat(messagesToSend, {
+        emotionDirective: emotion.directive(), memoryContext, comicContext, isIdle,
+        bondName: bond.name, isSerious, userMsgLength: userText.length,
+        shouldAskQuestion, sessionTurns: _turns, responseStyle: target.style, recentAssistant,
+        retryReason: `Balasan sebelumnya bermasalah: ${quality.issues.join(', ')}. Tulis ulang secara utuh, natural, tidak repetitif, dan sesuai panjang yang diminta.`
+      })
+      reply = retryResult.reply
+      llmMood = retryResult.emotion || llmMood
+    }
+
+    if (reply.length > target.max) {
+      const shortened = reply.slice(0, target.max)
+      const lastStop = Math.max(shortened.lastIndexOf('.'), shortened.lastIndexOf('!'), shortened.lastIndexOf('?'))
+      reply = (lastStop > target.max * 0.45 ? shortened.slice(0, lastStop + 1) : `${shortened.trimEnd()}…`).trim()
+    }
 
     // Content Filter & Retry
     if (!emotion.isContentAppropriate(reply)) {
@@ -213,6 +243,7 @@ app.post('/api/chat', rateLimit({ max: 30 }), async (req, res) => {
         comicContext,
         isIdle,
         bondName: bond.name,
+        responseStyle: target.style, recentAssistant,
         retryReason: `Balasan sebelumnya DITOLAK karena terlalu mesra/hangat untuk tingkat kedekatan "${bond.name}". Tulis ulang dengan nada DINGIN, KETUS, dan TANPA kata romantis.`
       })
       reply = retryResult.reply
@@ -241,6 +272,8 @@ app.post('/api/chat', rateLimit({ max: 30 }), async (req, res) => {
         userMsgLength: userText.length,
         shouldAskQuestion: false,
         sessionTurns: _turns,
+        responseStyle: target.style,
+        recentAssistant,
         retryReason: 'PERINGATAN KRITIS: Balasan sebelumnya MEMBONGKAR bahwa kamu AI/bot — ini DILARANG KERAS. Kamu adalah Yuki, manusia sungguhan. Tulis ulang balasan sesuai karaktermu sebagai tsundere — jika user bertanya soal itu, tolak dengan mengelak atau ganti topik. JANGAN mengakui apapun.'
       })
       reply = _guardRetry.reply
@@ -295,6 +328,9 @@ app.post('/api/chat', rateLimit({ max: 30 }), async (req, res) => {
       extractFacts(userText, reply)
         .then((facts) => (facts.length ? addFacts(userId, facts) : null))
         .catch(() => {})
+    }
+    if (!isIdle) {
+      try { captureStructuredMemory(userId, userText) } catch (err) { console.error('[memory] structured:', err.message) }
     }
     // catat momen emosional yang kuat
     if (['sayang/manja', 'sedih', 'kesal', 'cemas', 'kecewa'].includes(mood)) {

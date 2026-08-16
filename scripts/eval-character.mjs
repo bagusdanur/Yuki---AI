@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { Emotion } from '../lib/emotion.js'
+import { responseTarget, shouldInitiate, textSimilarity, validateCharacterReply } from '../lib/character-quality.js'
 
 const report = []
 const check = (name, fn) => {
@@ -58,6 +59,64 @@ check('interaksi beragam akhirnya membangun familiaritas', () => {
   ]
   for (let index = 0; index < 40; index += 1) emotion.react(`${topics[index % topics.length]} bagian ${index}`)
   assert.notEqual(emotion.bondLevel().name, 'orang asing')
+})
+
+check('emosi kuat bertahan lintas giliran dan tersimpan', () => {
+  const emotion = new Emotion({ bond: 20 })
+  emotion.react('Kamu menyebalkan dan bodoh.')
+  assert.equal(emotion.label(), 'kesal')
+  assert.ok(emotion.episode?.turnsRemaining >= 2)
+  const restored = new Emotion(emotion.serialize())
+  restored.react('Aku cuma mau membahas hal lain sekarang.')
+  assert.ok(restored.episode || restored.label() === 'kesal')
+})
+
+check('permintaan maaf memperbaiki konflik tanpa menghapus riwayatnya', () => {
+  const emotion = new Emotion({ bond: 20 })
+  emotion.react('Kamu bodoh dan menyebalkan.')
+  const afterConflict = emotion.bond
+  emotion.react('Maaf ya, tadi aku keterlaluan. Aku sungguh menyesal.')
+  assert.ok(emotion.bond > afterConflict)
+  assert.ok(emotion.relationship.conflict >= 1)
+  assert.ok(emotion.relationship.repair >= 1)
+})
+
+check('validator menangkap respons terpotong dan repetitif', () => {
+  const target = responseTarget('ceritain dong')
+  assert.equal(validateCharacterReply('Aku sebenarnya ingin bilang tapi', [], target).ok, false)
+  const repeated = validateCharacterReply('Ya sudah, istirahat dulu. Jangan dipaksakan.', ['Ya sudah, istirahat dulu. Jangan terlalu dipaksakan.'], target)
+  assert.ok(repeated.issues.includes('terlalu mirip dengan balasan sebelumnya'))
+})
+
+check('validator menolak ingatan palsu tanpa konteks memori', () => {
+  const result = validateCharacterReply('Aku ingat kamu pernah bilang suka hujan.', [], responseTarget('kamu ingat aku?'), '')
+  assert.ok(result.issues.includes('mengklaim ingatan yang tidak tersedia'))
+})
+
+check('panjang respons mengikuti bobot pesan', () => {
+  assert.ok(responseTarget('hai').max < responseTarget('Aku sedang menghadapi masalah panjang dan butuh bantuan', { serious: true }).max)
+})
+
+check('inisiatif terkontrol dan tidak muncul setiap giliran', () => {
+  const decisions = Array.from({ length: 12 }, (_, index) => shouldInitiate({ turns: index + 1, userText: 'Aku lanjut cerita soal kerjaan.' }))
+  assert.equal(decisions.filter(Boolean).length, 3)
+  assert.equal(shouldInitiate({ turns: 4, userText: 'hmm' }), false)
+  assert.equal(shouldInitiate({ turns: 2, serious: true, userText: 'Aku sedang berduka.' }), true)
+})
+
+check('simulasi 100 giliran tidak merusak batas bond atau state', () => {
+  const emotion = new Emotion()
+  for (let index = 0; index < 100; index += 1) {
+    const text = index % 17 === 0 ? `Maaf tadi aku agak kasar bagian ${index}` : `Hari ini aku cerita topik berbeda nomor ${index}`
+    emotion.react(text)
+  }
+  assert.ok(emotion.bond >= 0 && emotion.bond <= 100)
+  assert.equal(emotion.interactions, 100)
+  assert.ok(emotion.recentInputs.length <= 8)
+})
+
+check('kemiripan jawaban berbeda tetap rendah', () => {
+  assert.ok(textSimilarity('Aku sedang membaca manga misteri.', 'Istirahat dulu kalau kepalamu pusing.') < 0.4)
 })
 
 for (const result of report) {
