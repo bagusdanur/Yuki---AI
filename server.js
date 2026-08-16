@@ -2,6 +2,7 @@ import 'dotenv/config'
 import express from 'express'
 import path from 'path'
 import crypto from 'node:crypto'
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { chat, extractFacts } from './lib/llm.js'
 import { synthesize } from './lib/tts.js'
 import { Emotion } from './lib/emotion.js'
@@ -34,6 +35,8 @@ app.use(express.json({ limit: '64kb' }))
 const IS_PRODUCTION = process.env.NODE_ENV === 'production' || process.env.ENVIRONMENT === 'production'
 const AUTH_SECRET = process.env.AUTH_SECRET || crypto.randomBytes(32).toString('hex')
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || ''
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || ADMIN_TOKEN
+const ADMIN_PASSWORD_FILE = path.resolve(process.env.ADMIN_PASSWORD_FILE || './.runtime-secrets/admin-password.json')
 if (IS_PRODUCTION && !process.env.AUTH_SECRET) console.warn('[security] AUTH_SECRET belum disetel; sesi akan invalid setelah restart.')
 if (IS_PRODUCTION && !ADMIN_TOKEN) console.warn('[security] ADMIN_TOKEN belum disetel; dashboard admin dinonaktifkan.')
 
@@ -58,9 +61,45 @@ function requireSession(req, res, next) {
   next()
 }
 
+function signAdminSession() {
+  const payload = Buffer.from(JSON.stringify({ role: 'admin', exp: Date.now() + 12 * 3600_000 })).toString('base64url')
+  const signature = crypto.createHmac('sha256', `${AUTH_SECRET}:admin`).update(payload).digest('base64url')
+  return `${payload}.${signature}`
+}
+
+function verifyAdminSession(token = '') {
+  const [payload, signature] = String(token).split('.')
+  if (!payload || !signature) return false
+  const expected = crypto.createHmac('sha256', `${AUTH_SECRET}:admin`).update(payload).digest('base64url')
+  if (signature.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return false
+  try { const data = JSON.parse(Buffer.from(payload, 'base64url')); return data.role === 'admin' && data.exp > Date.now() } catch { return false }
+}
+
+function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
+  return { salt, hash: crypto.scryptSync(password, salt, 64).toString('hex') }
+}
+
+function verifyAdminPassword(password = '') {
+  if (existsSync(ADMIN_PASSWORD_FILE)) {
+    try {
+      const record = JSON.parse(readFileSync(ADMIN_PASSWORD_FILE, 'utf8'))
+      const candidate = hashPassword(String(password), record.salt).hash
+      return candidate.length === record.hash.length && crypto.timingSafeEqual(Buffer.from(candidate), Buffer.from(record.hash))
+    } catch { return false }
+  }
+  return Boolean(ADMIN_PASSWORD) && password.length === ADMIN_PASSWORD.length && crypto.timingSafeEqual(Buffer.from(password), Buffer.from(ADMIN_PASSWORD))
+}
+
+function storeAdminPassword(password) {
+  mkdirSync(path.dirname(ADMIN_PASSWORD_FILE), { recursive: true })
+  const temporary = `${ADMIN_PASSWORD_FILE}.tmp`
+  writeFileSync(temporary, JSON.stringify(hashPassword(password)), { mode: 0o600 })
+  renameSync(temporary, ADMIN_PASSWORD_FILE)
+}
+
 function requireAdmin(req, res, next) {
-  const supplied = req.get('X-Admin-Key') || ''
-  if (!ADMIN_TOKEN || supplied.length !== ADMIN_TOKEN.length || !crypto.timingSafeEqual(Buffer.from(supplied), Buffer.from(ADMIN_TOKEN))) return res.status(401).json({ error: 'Akses admin ditolak.' })
+  const token = req.get('Authorization')?.replace(/^Bearer\s+/i, '') || ''
+  if (!verifyAdminSession(token)) return res.status(401).json({ error: 'Sesi admin tidak valid atau berakhir.' })
   next()
 }
 
@@ -481,4 +520,14 @@ app.delete('/api/account', requireSession, rateLimit({ max: 3, windowMs: 3600_00
 })
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', uptime: Math.round((Date.now() - metrics.startedAt) / 1000) }))
+app.post('/api/admin/login', rateLimit({ max: 5, windowMs: 15 * 60_000 }), (req, res) => {
+  if (!verifyAdminPassword(String(req.body?.password || ''))) return res.status(401).json({ error: 'Password admin salah.' })
+  res.json({ sessionToken: signAdminSession(), expiresIn: 12 * 3600 })
+})
 app.get('/api/admin/stats', rateLimit({ max: 30 }), requireAdmin, (_req, res) => res.json({ ...getAdminStats(), runtime: { ...metrics, uptime: Math.round((Date.now() - metrics.startedAt) / 1000), averageLatency: metrics.requests ? Math.round(metrics.latencyTotal / metrics.requests) : 0 } }))
+app.post('/api/admin/password', rateLimit({ max: 5, windowMs: 15 * 60_000 }), requireAdmin, (req, res) => {
+  const password = String(req.body?.password || '')
+  if (password.length < 10 || password.length > 128) return res.status(400).json({ error: 'Password harus 10-128 karakter.' })
+  storeAdminPassword(password)
+  res.json({ ok: true, sessionToken: signAdminSession() })
+})

@@ -4,14 +4,15 @@
 <body>
   <main>
     <header><div><small>YUKI / OPERATIONS</small><h1>Production overview</h1></div><div class="status"><i></i><span id="health">checking</span></div></header>
-    <section id="login" class="login"><label>Admin access token</label><div><input id="key" type="password" autocomplete="current-password" placeholder="Masukkan token"><button id="connect">Connect</button></div><p>Token hanya disimpan pada session tab ini.</p></section>
+    <section id="login" class="login"><label>Password admin</label><div><input id="key" type="password" autocomplete="current-password" placeholder="Masukkan password"><button id="connect">Masuk</button></div><p>Sesi login berlaku 12 jam pada tab ini.</p></section>
     <section id="dashboard" hidden>
-      <div class="toolbar"><span id="updated">Belum diperbarui</span><button id="refresh">Refresh</button><button id="logout">Lock</button></div>
+      <div class="toolbar"><span id="updated">Belum diperbarui</span><button id="change-password">Ganti password</button><button id="refresh">Refresh</button><button id="logout">Lock</button></div>
       <div class="cards">
         <article><span>Total users</span><b id="users">0</b></article><article><span>Active 24h</span><b id="active">0</b></article><article><span>Messages</span><b id="messages">0</b></article><article><span>Average bond</span><b id="bond">0</b></article><article><span>Positive feedback</span><b id="positive">0</b></article><article><span>Negative feedback</span><b id="negative">0</b></article>
       </div>
       <section class="runtime"><h2>Runtime</h2><dl><div><dt>Uptime</dt><dd id="uptime">-</dd></div><div><dt>Requests</dt><dd id="requests">-</dd></div><div><dt>Chat failures</dt><dd id="failures">-</dd></div><div><dt>Average latency</dt><dd id="latency">-</dd></div></dl></section>
       <section class="table"><div class="section-title"><h2>Recent users</h2><span>20 terbaru</span></div><table><thead><tr><th>User</th><th>Messages</th><th>Last active</th></tr></thead><tbody id="recent"></tbody></table></section>
+      <section id="password-panel" class="login password-panel" hidden><label>Password baru</label><div><input id="new-password" type="password" autocomplete="new-password" placeholder="Minimal 10 karakter"><button id="save-password">Simpan</button></div><p id="password-status">Gunakan password unik yang tidak dipakai di layanan lain.</p></section>
     </section>
     <p id="error" class="error"></p>
   </main><script src="/admin.js" defer></script>
