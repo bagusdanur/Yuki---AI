@@ -1221,15 +1221,15 @@
       <div class="subtitle">Mencegah Hilangnya Kenangan dengan Yuki</div>
 
       <p>
-        Di <strong>YUKI 3.0</strong>, Kunci Ingatan memulihkan percakapan, tingkat hubungan, state emosi, dan memori bertingkat dari server. Memori dibedakan menjadi profil, preferensi, orang penting, momen emosional, serta urusan yang belum selesai.
+        Di <strong>YUKI 3.0</strong>, Kunci Ingatan memulihkan percakapan, tingkat hubungan, suasana hati, dan hal-hal penting yang Yuki kenal tentangmu. Ingatannya mencakup preferensi, orang penting, momen emosional, serta cerita yang belum selesai.
       </p>
 
       <div class="card accent">
         <h3>Bagaimana Cara Kerjanya?</h3>
         <ol>
-          <li><strong>Registrasi Onboarding</strong>: Saat pertama kali membuka Yuki, kamu akan diminta memasukkan nama panggilanmu. Yuki akan otomatis membuat akun di server dan menghasilkan sebuah <strong>Kode Akses Unik</strong> (contoh: <code>YUKI-F83K-A2P9</code>).</li>
-          <li><strong>Penyimpanan Riwayat Server</strong>: Setiap pesan yang kamu kirimkan dan setiap jawaban Yuki akan direkam langsung ke server database SQLite. Yuki juga akan mengingat fakta tentang namamu sejak awal percakapan.</li>
-          <li><strong>Pemulihan Ingatan (Restore)</strong>: Jika kamu menggunakan perangkat baru atau data browser terhapus, cukup buka menu utama dan pilih <strong>"Pulihkan Ingatan"</strong>, lalu masukkan Kode Akses milikmu. Yuki akan langsung menarik kembali semua ingatan dan riwayat obrolan kalian dari server!</li>
+          <li><strong>Kenalan Pertama</strong>: Saat pertama membuka Yuki, masukkan nama panggilanmu. Kamu akan memperoleh <strong>Kunci Ingatan</strong> unik, misalnya <code>YUKI-F83K-A2P9</code>.</li>
+          <li><strong>Ingatan Otomatis</strong>: Percakapan, perkembangan hubungan, dan detail penting akan tersimpan otomatis agar sikap Yuki tetap konsisten.</li>
+          <li><strong>Pulihkan Ingatan</strong>: Di perangkat baru, pilih <strong>"Pulihkan Ingatan"</strong> lalu masukkan kuncimu untuk melanjutkan hubungan dan percakapan sebelumnya.</li>
         </ol>
       </div>
 
@@ -1243,7 +1243,7 @@
       
       <div class="info-box">
         <p>
-          <strong>Quality Guard YUKI 3.0:</strong> respons kosong, repetitif, terlalu panjang, terpotong, membocorkan instruksi, atau mengklaim ingatan yang tidak tersedia akan ditolak dan dibuat ulang secara otomatis.
+          <strong>Percakapan YUKI 3.0:</strong> balasan dibuat lebih utuh, tidak mudah terpotong, tidak berulang-ulang, dan tetap sesuai dengan hal yang benar-benar Yuki ingat tentangmu.
         </p>
       </div>
     </section>
@@ -1251,16 +1251,15 @@
     <section id="versi-3">
       <div class="version-chip">SYSTEM NOTES / 3.0</div>
       <h2>Apa yang Baru di Yuki 3.0?</h2>
-      <div class="subtitle">Character intelligence tanpa mengorbankan kecepatan</div>
+      <div class="subtitle">Percakapan yang lebih alami, konsisten, dan personal</div>
       <div class="persona-grid v3-grid">
-        <div class="p-item"><div class="p-label">MEMORI</div><div class="p-val">Profil, preferensi, relasi penting, kejadian emosional, ringkasan lama, dan open loop disimpan terpisah.</div></div>
-        <div class="p-item"><div class="p-label">EMOSI</div><div class="p-val">Mood memiliki penyebab, intensitas, durasi per giliran, serta peluruhan menuju baseline hubungan.</div></div>
-        <div class="p-item"><div class="p-label">RELASI</div><div class="p-val">Interaksi positif, konflik, dan upaya memperbaiki hubungan dinilai berbeda. Spam tidak dapat farming bond.</div></div>
-        <div class="p-item"><div class="p-label">QUALITY GUARD</div><div class="p-val">Respons diperiksa dari repetisi, kepotongan, panjang, kebocoran internal, dan klaim memori palsu.</div></div>
-        <div class="p-item"><div class="p-label">PROVIDER</div><div class="p-val">9Router menjadi provider utama. Request gagal atau terpotong diulang sekali sebelum berpindah otomatis ke AgentRouter.</div></div>
-        <div class="p-item"><div class="p-label">MOBILE</div><div class="p-val">Viewport karakter dapat dikecilkan saat keyboard terbuka, ekspresi memakai transisi, dan composer mendukung safe area.</div></div>
+        <div class="p-item"><div class="p-label">MEMORI</div><div class="p-val">Yuki dapat mengingat kesukaanmu, orang-orang penting, momen emosional, dan cerita yang ingin kamu lanjutkan nanti.</div></div>
+        <div class="p-item"><div class="p-label">EMOSI</div><div class="p-val">Perasaannya tidak langsung berubah setiap pesan. Rasa kesal, sedih, malu, atau senang akan mereda secara alami.</div></div>
+        <div class="p-item"><div class="p-label">RELASI</div><div class="p-val">Perhatian yang tulus, konflik, dan permintaan maaf memberi dampak berbeda pada hubungan kalian.</div></div>
+        <div class="p-item"><div class="p-label">KUALITAS CHAT</div><div class="p-val">Balasan lebih utuh, bervariasi, tidak mudah terpotong, dan tidak mengarang kenangan yang belum pernah terjadi.</div></div>
+        <div class="p-item"><div class="p-label">KEANDALAN</div><div class="p-val">Jika balasan mengalami gangguan, Yuki akan mencoba memulihkannya agar percakapan dapat terus berjalan.</div></div>
+        <div class="p-item"><div class="p-label">PONSEL</div><div class="p-val">Tampilan Yuki menyesuaikan saat keyboard terbuka, avatar dapat dikecilkan, dan ekspresi berganti dengan lebih halus.</div></div>
       </div>
-      <div class="info-box"><p><strong>Privasi:</strong> endpoint model hanya diakses melalui localhost VPS. Dokumentasi dan frontend tidak menyimpan API key provider.</p></div>
     </section>
 
   </main>
