@@ -138,7 +138,7 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   .identity span { font-size: 8px; }
   .header-actions { gap: 6px; }
   .header-actions button { width: 36px; height: 36px; }
-  .header-actions a { display: none; }
+  .header-actions a, .header-actions button { width: 36px; height: 36px; }
   .messages { gap: 14px; padding: 15px 10px 22px; }
   .message { max-width: 96%; gap: 7px; }
   .message-avatar { width: 27px; height: 27px; }

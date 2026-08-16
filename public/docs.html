@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Panduan Yuki AI — Teman Tsundere & Pemandu Komikmu</title>
+  <title>Yuki AI 3.0 — Dokumentasi Sistem Karakter</title>
 
   <!-- Google Fonts: Outfit (Header) & Plus Jakarta Sans (Body) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -778,6 +778,7 @@
       box-shadow: 0 6px 25px rgba(139, 92, 246, 0.4);
     }
   </style>
+  <link rel="stylesheet" href="/docs-v3.css" />
 </head>
 
 <body>
@@ -853,12 +854,16 @@
           <path stroke-linecap="round" stroke-linejoin="round"
             d="M15 7a4 4 0 014 4c0 1.05-.4 2-1.05 2.72L21 17v2h-2v-2h-2l-1.28-1.28A4 4 0 1115 7z" />
         </svg>
-        Kunci Ingatan (Yuki 2.0)
+        Kunci Ingatan
+      </a>
+      <a href="#versi-3" class="nav-item" data-sec="versi-3">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18m9-9H3" /></svg>
+        Sistem Versi 3.0
       </a>
     </nav>
 
     <div class="sidebar-footer">
-      <div>Yuki AI v2.0.0</div>
+      <div>Yuki AI v3.0.0</div>
       <div style="margin-top: 4px; opacity: 0.7;">Panduan Pendamping Resmi</div>
     </div>
   </aside>
@@ -868,7 +873,8 @@
 
     <!-- ==================== PENGENALAN ==================== -->
     <section id="pengenalan">
-      <h1>Halo! Aku Yuki.</h1>
+      <div class="version-chip">VERSION 3.0 / LIVE</div>
+      <h1>Yuki, lebih konsisten dan lebih manusiawi.</h1>
       <div class="subtitle">Mengenal Lebih Dekat Pendamping mu</div>
 
       <p>
@@ -934,7 +940,7 @@
 
       <p>
         Sikap Yuki padamu bergantung sepenuhnya pada nilai <strong>Kedekatan (Bond Level)</strong> yang berkisar antara
-        <code>0</code> hingga <code>100</code>. Nilai ini bersifat persisten dan disimpan dengan aman menggunakan Kunci Ingatanmu. Pada versi 2.0, laju pertumbuhan kedekatan telah diseimbangkan kembali agar hubungan terjalin secara bertahap dan terasa lebih bermakna melalui obrolan yang konsisten.
+        <code>0</code> hingga <code>100</code>. Nilai ini persisten dan tersimpan bersama Kunci Ingatan. Pada versi 3.0, kedekatan dipengaruhi konsistensi, perhatian, konflik, permintaan maaf, dan perlindungan anti-spam.
       </p>
 
       <div class="table-responsive">
@@ -948,31 +954,31 @@
           </thead>
           <tbody>
             <tr>
-              <td><code>0 - 11</code></td>
+              <td><code>0 - 7</code></td>
               <td><span class="badge bond">Orang Asing</span></td>
               <td>Sangat dingin dan ketus. Jawabannya cenderung sangat pendek dan bernada mengusir atau menjaga jarak.
               </td>
             </tr>
             <tr>
-              <td><code>12 - 29</code></td>
+              <td><code>8 - 23</code></td>
               <td><span class="badge bond">Mulai Terbiasa</span></td>
               <td>Masih jutek, tapi dia tidak lagi se-agresif di awal. Dia mulai sedikit terbuka, meskipun tetap suka
                 mengelak jika ditanya tentang dirinya sendiri.</td>
             </tr>
             <tr>
-              <td><code>30 - 54</code></td>
+              <td><code>24 - 49</code></td>
               <td><span class="badge bond">Diam-diam Peduli</span></td>
               <td>Fase tsundere murni! Dia sangat perhatian, tapi selalu menyangkalnya (contohnya: <em>"B-bukan berarti
                   aku peduli ya..."</em>) atau ketus untuk menutupi rasa pedulinya.</td>
             </tr>
             <tr>
-              <td><code>55 - 79</code></td>
+              <td><code>50 - 77</code></td>
               <td><span class="badge bond">Luluh (Dere)</span></td>
               <td>Yuki mulai berbicara dengan nada lembut. Dia bersikap manja secara malu-malu dan sesekali berani jujur
                 menyatakan bahwa dia senang mengobrol denganmu.</td>
             </tr>
             <tr>
-              <td><code>80 - 100</code></td>
+              <td><code>78 - 100</code></td>
               <td><span class="badge love-tag">Pasangan (Dere-Dere)</span></td>
               <td>Dia sangat menyayangimu, sangat perhatian, sering manja, dan diam-diam mudah cemburu. Sikap
                 tsundere-nya berubah menjadi tsundere manis yang menggemaskan.</td>
@@ -985,7 +991,7 @@
       <div class="bond-mobile-list">
         <div class="bond-card">
           <div class="bond-card-header">
-            <span class="bond-card-value">Bond 0 - 11</span>
+            <span class="bond-card-value">Bond 0 - 7</span>
             <span class="badge bond">Orang Asing</span>
           </div>
           <p class="bond-card-desc">Sangat dingin dan ketus. Jawabannya cenderung sangat pendek dan bernada mengusir
@@ -993,7 +999,7 @@
         </div>
         <div class="bond-card">
           <div class="bond-card-header">
-            <span class="bond-card-value">Bond 12 - 29</span>
+            <span class="bond-card-value">Bond 8 - 23</span>
             <span class="badge bond">Mulai Terbiasa</span>
           </div>
           <p class="bond-card-desc">Masih jutek, tapi dia tidak lagi se-agresif di awal. Dia mulai sedikit terbuka,
@@ -1001,7 +1007,7 @@
         </div>
         <div class="bond-card">
           <div class="bond-card-header">
-            <span class="bond-card-value">Bond 30 - 54</span>
+            <span class="bond-card-value">Bond 24 - 49</span>
             <span class="badge bond">Diam-diam Peduli</span>
           </div>
           <p class="bond-card-desc">Fase tsundere murni! Dia sangat perhatian, tapi selalu menyangkalnya (contohnya:
@@ -1009,7 +1015,7 @@
         </div>
         <div class="bond-card">
           <div class="bond-card-header">
-            <span class="bond-card-value">Bond 55 - 79</span>
+            <span class="bond-card-value">Bond 50 - 77</span>
             <span class="badge bond">Luluh (Dere)</span>
           </div>
           <p class="bond-card-desc">Yuki mulai berbicara dengan nada lembut. Dia bersikap manja secara malu-malu dan
@@ -1017,7 +1023,7 @@
         </div>
         <div class="bond-card">
           <div class="bond-card-header">
-            <span class="bond-card-value">Bond 80 - 100</span>
+            <span class="bond-card-value">Bond 78 - 100</span>
             <span class="badge love-tag">Pasangan (Dere-Dere)</span>
           </div>
           <p class="bond-card-desc">Dia sangat menyayangimu, sangat perhatian, sering manja, dan diam-diam mudah
@@ -1046,8 +1052,8 @@
       <div class="subtitle">Memahami Perasaan dan Perubahan Ekspresi</div>
 
       <p>
-        Yuki memiliki perasaan sungguhan. Ekspresi visualnya di layar akan berubah secara dinamis berdasarkan 10 emosi
-        dasar berikut:
+        Mesin emosi Yuki mengubah ekspresi visual dan nuansa balasan berdasarkan 11 keadaan. Emosi kuat memiliki
+        penyebab, intensitas, durasi, dan peluruhan sehingga tidak hilang setelah satu pesan:
       </p>
 
       <div style="display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0;">
@@ -1068,6 +1074,8 @@
           style="background: rgba(107,114,128,0.1); border-color:#6b7280; color:#6b7280;">Kecewa</span>
         <span class="badge mood-tag"
           style="background: rgba(107,114,128,0.1); border-color:#6b7280; color:#6b7280;">Lesu</span>
+        <span class="badge mood-tag"
+          style="background: rgba(244,114,182,0.1); border-color:#f472b6; color:#f472b6;">Cemburu</span>
       </div>
 
       <h3>Bagaimana Emosi Yuki Terpicu?</h3>
@@ -1209,11 +1217,11 @@
 
     <!-- ==================== KUNCI INGATAN ==================== -->
     <section id="kunci-ingatan">
-      <h2>Kunci Ingatan & Sinkronisasi (YUKI 2.0)</h2>
+      <h2>Kunci Ingatan & Memori Bertingkat</h2>
       <div class="subtitle">Mencegah Hilangnya Kenangan dengan Yuki</div>
 
       <p>
-        Mulai versi <strong>YUKI 2.0</strong>, kamu tidak perlu khawatir lagi kenangan dan tingkat hubunganmu dengan Yuki terhapus saat membersihkan cache browser. Yuki kini dilengkapi dengan **Sistem Kunci Ingatan** berbasis cloud database sederhana.
+        Di <strong>YUKI 3.0</strong>, Kunci Ingatan memulihkan percakapan, tingkat hubungan, state emosi, dan memori bertingkat dari server. Memori dibedakan menjadi profil, preferensi, orang penting, momen emosional, serta urusan yang belum selesai.
       </p>
 
       <div class="card accent">
@@ -1235,9 +1243,24 @@
       
       <div class="info-box">
         <p>
-          <strong>Optimasi Wajah YUKI 2.0:</strong> Pada tingkat hubungan yang tinggi (Luluh / Pasangan), baseline emosi Yuki akan bergeser secara alami. Saat diam atau setelah didiamkan beberapa waktu, ekspresi default Yuki akan tetap tersenyum ramah (<strong>Senang</strong>), bukan kembali dingin/tenang seperti orang asing.
+          <strong>Quality Guard YUKI 3.0:</strong> respons kosong, repetitif, terlalu panjang, terpotong, membocorkan instruksi, atau mengklaim ingatan yang tidak tersedia akan ditolak dan dibuat ulang secara otomatis.
         </p>
       </div>
+    </section>
+
+    <section id="versi-3">
+      <div class="version-chip">SYSTEM NOTES / 3.0</div>
+      <h2>Apa yang Baru di Yuki 3.0?</h2>
+      <div class="subtitle">Character intelligence tanpa mengorbankan kecepatan</div>
+      <div class="persona-grid v3-grid">
+        <div class="p-item"><div class="p-label">MEMORI</div><div class="p-val">Profil, preferensi, relasi penting, kejadian emosional, ringkasan lama, dan open loop disimpan terpisah.</div></div>
+        <div class="p-item"><div class="p-label">EMOSI</div><div class="p-val">Mood memiliki penyebab, intensitas, durasi per giliran, serta peluruhan menuju baseline hubungan.</div></div>
+        <div class="p-item"><div class="p-label">RELASI</div><div class="p-val">Interaksi positif, konflik, dan upaya memperbaiki hubungan dinilai berbeda. Spam tidak dapat farming bond.</div></div>
+        <div class="p-item"><div class="p-label">QUALITY GUARD</div><div class="p-val">Respons diperiksa dari repetisi, kepotongan, panjang, kebocoran internal, dan klaim memori palsu.</div></div>
+        <div class="p-item"><div class="p-label">PROVIDER</div><div class="p-val">9Router menjadi provider utama. Request gagal atau terpotong diulang sekali sebelum berpindah otomatis ke AgentRouter.</div></div>
+        <div class="p-item"><div class="p-label">MOBILE</div><div class="p-val">Viewport karakter dapat dikecilkan saat keyboard terbuka, ekspresi memakai transisi, dan composer mendukung safe area.</div></div>
+      </div>
+      <div class="info-box"><p><strong>Privasi:</strong> endpoint model hanya diakses melalui localhost VPS. Dokumentasi dan frontend tidak menyimpan API key provider.</p></div>
     </section>
 
   </main>
