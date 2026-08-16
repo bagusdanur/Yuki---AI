@@ -84,6 +84,7 @@ check('permintaan maaf memperbaiki konflik tanpa menghapus riwayatnya', () => {
 check('validator menangkap respons terpotong dan repetitif', () => {
   const target = responseTarget('ceritain dong')
   assert.equal(validateCharacterReply('Aku sebenarnya ingin bilang tapi', [], target).ok, false)
+  assert.equal(validateCharacterReply('Jangan sampai gugup dan malah', [], target).ok, false)
   const repeated = validateCharacterReply('Ya sudah, istirahat dulu. Jangan dipaksakan.', ['Ya sudah, istirahat dulu. Jangan terlalu dipaksakan.'], target)
   assert.ok(repeated.issues.includes('terlalu mirip dengan balasan sebelumnya'))
 })
