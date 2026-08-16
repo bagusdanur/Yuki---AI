@@ -23,7 +23,7 @@ async function load() {
     $('positive').textContent = fmt(data.feedbackPositive); $('negative').textContent = fmt(data.feedbackNegative)
     $('uptime').textContent = `${fmt(data.runtime.uptime / 3600)} jam`; $('requests').textContent = fmt(data.runtime.requests)
     $('failures').textContent = fmt(data.runtime.chatFailures); $('latency').textContent = `${fmt(data.runtime.averageLatency)} ms`
-    $('recent').innerHTML = data.recent.map(item => `<tr><td>${escapeHtml(item.username || 'Tanpa nama')}</td><td>${fmt(item.messages)}</td><td>${item.lastActive ? new Date(`${item.lastActive}Z`).toLocaleString('id-ID') : '-'}</td></tr>`).join('')
+    $('recent').innerHTML = data.recent.map((item, index) => userRow(item, index)).join('')
     $('updated').textContent = `Diperbarui ${new Date().toLocaleTimeString('id-ID')}`
     clearTimeout(timer); timer = setTimeout(load, 30_000)
   } catch (cause) {
@@ -33,6 +33,17 @@ async function load() {
 }
 
 function escapeHtml(value) { const node = document.createElement('span'); node.textContent = value; return node.innerHTML }
+function initials(name = '') { return name.trim().split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase() || '?' }
+function activity(dateText) {
+  if (!dateText) return { relative: 'Belum aktif', exact: '-', state: 'offline', label: 'Belum ada' }
+  const date = new Date(`${dateText}Z`), minutes = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60_000))
+  const relative = minutes < 1 ? 'Baru saja' : minutes < 60 ? `${minutes} menit lalu` : minutes < 1440 ? `${Math.floor(minutes / 60)} jam lalu` : `${Math.floor(minutes / 1440)} hari lalu`
+  return { relative, exact: date.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }), state: minutes < 1440 ? 'active' : 'offline', label: minutes < 60 ? 'Online baru-baru ini' : minutes < 1440 ? 'Aktif hari ini' : 'Tidak aktif' }
+}
+function userRow(item, index) {
+  const name = escapeHtml(item.username || 'Tanpa nama'), presence = activity(item.lastActive)
+  return `<tr><td data-label="#"><span class="rank">${String(index + 1).padStart(2, '0')}</span></td><td data-label="User"><div class="user-cell"><span class="user-avatar">${escapeHtml(initials(item.username))}</span><div><strong>${name}</strong><small>YUKI USER</small></div></div></td><td data-label="Messages"><span class="message-count">${fmt(item.messages)} <small>pesan</small></span></td><td data-label="Last active"><div class="last-active"><strong>${presence.relative}</strong><small>${presence.exact}</small></div></td><td data-label="Status"><span class="presence ${presence.state}"><i></i>${presence.label}</span></td></tr>`
+}
 
 $('connect').onclick = async () => {
   error.textContent = ''
