@@ -1,0 +1,303 @@
+:root {
+  --bg: #08090c;
+  --bg2: #0d0f14;
+  --card: #0d0f14;
+  --line: #252832;
+  --ink: #f2f0eb;
+  --muted: #8f929c;
+  --bot: #151820;
+  --accent1: #a8a5ff;
+  --accent2: #8c87ff;
+}
+
+* { scrollbar-color: #363a45 transparent; }
+
+body {
+  min-height: 100dvh;
+  padding: 24px;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background:
+    linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px),
+    #08090c;
+  background-size: 44px 44px;
+}
+
+body::before {
+  content: "YUKI / CHARACTER INTERFACE";
+  position: fixed;
+  top: 20px;
+  left: 24px;
+  color: #555963;
+  font: 700 10px/1 ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .18em;
+  pointer-events: none;
+}
+
+.app {
+  width: min(1220px, 100%);
+  max-width: none;
+  height: min(820px, calc(100dvh - 82px));
+  min-height: 620px;
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(360px, .82fr);
+  border: 1px solid #292c34;
+  border-radius: 10px;
+  background: #0d0f14;
+  box-shadow: 0 32px 100px rgba(0,0,0,.56);
+}
+
+.side { background: #0d0f14; }
+
+.top {
+  min-height: 78px;
+  padding: 0 24px;
+  gap: 14px;
+  border-bottom: 1px solid #252832;
+  background: #0d0f14;
+}
+
+.brand-mark {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  border: 1px solid #373a45;
+  border-radius: 6px;
+  color: #0b0c10;
+  background: #a8a5ff;
+  font: 800 14px/1 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.who h1 { color: #f7f5f1; font-size: 15px; font-weight: 720; letter-spacing: -.01em; }
+.who p {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 5px;
+  color: #858995;
+  font: 600 10px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.who p::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #62d79a;
+  box-shadow: 0 0 0 3px rgba(98,215,154,.1);
+}
+
+.gear {
+  width: 38px;
+  height: 38px;
+  border: 1px solid #292d37;
+  border-radius: 7px;
+  background: #13161d;
+  color: #9296a2;
+  transition: border-color .16s, color .16s, transform .16s;
+}
+.gear:hover { color: #f4f2ec; border-color: #565a69; background: #171a22; transform: translateY(-1px); }
+
+.menu {
+  top: 68px;
+  right: 22px;
+  min-width: 230px;
+  padding: 12px;
+  border: 1px solid #30343e;
+  border-radius: 8px;
+  background: #13161d;
+  box-shadow: 0 20px 55px rgba(0,0,0,.48);
+}
+
+.chat {
+  gap: 20px;
+  padding: 30px 28px 38px;
+  background:
+    linear-gradient(90deg, transparent 0, transparent 27px, rgba(168,165,255,.08) 27px, rgba(168,165,255,.08) 28px, transparent 28px),
+    #0a0c11;
+}
+.chat:empty::before {
+  content: "Mulai percakapan dengan Yuki";
+  margin: auto;
+  color: #555965;
+  font: 600 11px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.row { max-width: 82%; gap: 11px; }
+.row.bot { align-items: flex-start; }
+.ava-sm {
+  width: 31px;
+  height: 31px;
+  margin-top: 3px;
+  border: 1px solid #4b4f5d;
+  border-radius: 6px;
+  color: #d8d6ff;
+  background: #202332;
+  font: 750 11px/1 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+.bubble { padding: 14px 16px; border-radius: 7px; font-size: 14px; line-height: 1.65; letter-spacing: -.005em; }
+.bot .bubble {
+  border: 1px solid #272b35;
+  border-left: 2px solid #8581ea;
+  border-radius: 4px 8px 8px 4px;
+  color: #e8e7e2;
+  background: #151820;
+  box-shadow: 0 12px 30px rgba(0,0,0,.14);
+}
+.user .bubble {
+  border: 1px solid #aaa7ff;
+  border-radius: 8px 4px 4px 8px;
+  color: #111218;
+  background: #a8a5ff;
+  font-weight: 620;
+}
+.bubble .act {
+  display: block;
+  margin: 0 0 8px;
+  color: #9b9eac;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 13px;
+}
+.play {
+  width: 30px;
+  height: 30px;
+  margin-top: 4px;
+  border: 1px solid #292d37;
+  border-radius: 6px;
+  background: transparent;
+  color: #6f7380;
+}
+.play:hover { color: #d9d7ff; background: #171a22; }
+.play.playing { color: #111218; background: #a8a5ff; }
+
+.bar {
+  min-height: 84px;
+  padding: 16px 20px;
+  gap: 10px;
+  border-top: 1px solid #252832;
+  background: #0d0f14;
+}
+.bar::before { content: "01"; color: #676b76; font: 700 10px/1 ui-monospace, SFMono-Regular, Consolas, monospace; }
+.bar input {
+  height: 50px;
+  padding: 0 16px;
+  border: 1px solid #30343e;
+  border-radius: 7px;
+  background: #11141a;
+  color: #f2f0eb;
+  font-size: 14px;
+}
+.bar input:focus { border-color: #8885e8; background: #11141a; box-shadow: 0 0 0 3px rgba(168,165,255,.08); }
+.send {
+  width: 50px;
+  height: 50px;
+  border: 1px solid #aaa7ff;
+  border-radius: 7px;
+  color: #111218;
+  background: #a8a5ff;
+  transition: transform .16s, background .16s;
+}
+.send:hover { background: #bbb9ff; transform: translateY(-1px); }
+
+.stage {
+  width: auto;
+  min-width: 0;
+  padding: 18px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  border-left: 1px solid #252832;
+  background: #11141a;
+}
+.stage-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 28px;
+  color: #747884;
+  font: 700 9px/1 ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.stage-label span:last-child { color: #a8a5ff; }
+.frame {
+  border: 1px solid #343846;
+  border-radius: 6px;
+  background:
+    linear-gradient(rgba(168,165,255,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168,165,255,.035) 1px, transparent 1px),
+    #172033;
+  background-size: 32px 32px;
+  box-shadow: inset 0 0 90px rgba(3,5,10,.48);
+}
+.frame::before {
+  content: "LIVE / 001";
+  position: absolute;
+  top: 15px;
+  left: 16px;
+  z-index: 4;
+  color: rgba(236,235,255,.55);
+  font: 700 9px/1 ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .14em;
+}
+.frame::after { height: 38%; background: linear-gradient(to top, rgba(7,10,18,.78), transparent); }
+.frame .glow { width: 82%; height: 42%; bottom: 2%; background: rgba(124,120,225,.18); filter: blur(42px); animation: none; }
+.char { inset: 5% 0 0; height: 95%; }
+.nameplate { padding: 30px 16px 15px; background: linear-gradient(to top, rgba(8,10,16,.94), transparent); }
+.np-name { font-size: 15px; letter-spacing: -.01em; }
+.dot { width: 7px; height: 7px; border: 0; }
+.pill {
+  padding: 7px 10px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 5px;
+  color: #c5c6ce;
+  background: rgba(12,15,22,.72);
+  font: 600 10px/1 ui-monospace, SFMono-Regular, Consolas, monospace;
+  backdrop-filter: blur(10px);
+}
+.micon { color: #aaa7ff; }
+
+.modal { backdrop-filter: blur(12px); background: rgba(4,5,8,.78); }
+.modal-content { border: 1px solid #343846; border-radius: 10px; background: #12151c; box-shadow: 0 35px 90px rgba(0,0,0,.65); }
+
+@media (max-width: 880px) {
+  body { padding: 12px; align-items: stretch; }
+  body::before { display: none; }
+  .app {
+    height: calc(100dvh - 24px);
+    min-height: 0;
+    margin: 0;
+    grid-template-columns: 1fr;
+    grid-template-rows: 190px minmax(0, 1fr);
+    border-radius: 8px;
+  }
+  .stage { grid-row: 1; grid-template-rows: 0 minmax(0, 1fr); padding: 10px; border-left: 0; border-bottom: 1px solid #252832; }
+  .stage-label { overflow: hidden; min-height: 0; opacity: 0; }
+  .frame { min-height: 0; }
+  .char { inset: 0; width: 54%; height: 100%; margin-left: auto; object-position: bottom right; }
+  .nameplate { right: auto; width: 54%; padding: 30px 14px 12px; }
+  .side { grid-row: 2; min-height: 0; }
+  .top { min-height: 64px; padding: 0 14px; }
+  .brand-mark { width: 32px; height: 32px; }
+  .chat { padding: 20px 14px 26px; background: #0a0c11; }
+  .row { max-width: 94%; }
+  .bar { min-height: 72px; padding: 10px 12px; }
+  .bar::before { display: none; }
+  .bar input, .send { height: 48px; }
+  .send { width: 48px; }
+}
+
+@media (max-width: 520px) {
+  .app { grid-template-rows: 150px minmax(0, 1fr); }
+  .top .gear:first-child { display: none !important; }
+  .row { max-width: 100%; }
+  .bubble { font-size: 13.5px; padding: 12px 13px; }
+  .play { display: none; }
+  .char { width: 58%; }
+  .nameplate { width: 60%; }
+}

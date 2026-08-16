@@ -901,15 +901,17 @@
       transform: scale(1.02);
     }
   </style>
+  <link rel="stylesheet" href="/redesign.css" />
 </head>
 
 <body>
   <div class="app">
     <section class="side">
       <div class="top">
+        <div class="brand-mark" aria-hidden="true">Y</div>
         <div class="who">
           <h1 id="name">Yuki</h1>
-          <p>Asisten baca komik · online</p>
+          <p>Character chat / online</p>
         </div>
         <div style="display: flex; gap: 8px;">
           <a href="/docs" target="_blank" class="gear" title="Dokumentasi" style="text-decoration: none; display: grid; place-items: center;"><i data-lucide="book-open"></i></a>
@@ -931,6 +933,7 @@
       </form>
     </section>
     <aside class="stage">
+      <div class="stage-label"><span>Character viewport</span><span>Session active</span></div>
       <div class="frame">
         <div class="glow"></div>
         <canvas id="particles"
