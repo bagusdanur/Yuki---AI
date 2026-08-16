@@ -101,22 +101,44 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 .text-button { width: 100%; margin-top: 15px; border: 0; color: #8d90a0; background: transparent; font-size: 12px; }.text-button:hover { color: #cfccff; }
 
 @media (max-width: 900px) {
-  .app-shell { width: calc(100% - 20px); height: calc(100dvh - 20px); min-height: 0; margin: 10px; grid-template-columns: 1fr; grid-template-rows: 180px minmax(0, 1fr); }
-  .chat-panel { grid-row: 2; grid-template-rows: 64px minmax(0, 1fr) 72px; border-right: 0; }
+  .app-shell { width: calc(100% - 20px); height: calc(100dvh - 20px); min-height: 0; margin: 10px; grid-template-columns: 1fr; grid-template-rows: clamp(210px, 30dvh, 260px) minmax(0, 1fr); }
+  .chat-panel { grid-row: 2; grid-template-rows: 60px minmax(0, 1fr) 70px; border-right: 0; }
   .character-panel { grid-row: 1; padding: 9px; grid-template-rows: minmax(0, 1fr); border-bottom: 1px solid #292c35; }
   .panel-meta, .status-strip, .feeling { display: none; }
   .character-frame { border-radius: 6px; }
-  .character { inset: 0 0 0 auto; width: 55%; height: 100%; object-position: bottom right; }
-  .character-footer { right: auto; width: 54%; padding: 45px 12px 11px; }
+  .character { inset: -9% 0 auto; width: 100%; height: 156%; object-position: center top; animation: none; }
+  .character-footer { padding: 54px 12px 11px; }
   .chat-header { padding: 0 14px; }.monogram { width: 32px; height: 32px; }
-  .messages { padding: 20px 14px 30px; background: #090b10; }.message { max-width: 94%; }
-  .composer { padding: 10px 12px; }.composer-index { display: none; }.composer textarea, .composer > button { height: 48px; }.composer > button { width: 48px; }
+  .messages { padding: 18px 14px 26px; background: #090b10; }.message { max-width: 94%; }
+  .composer { padding: 10px 12px; padding-bottom: max(10px, env(safe-area-inset-bottom)); }.composer-index { display: none; }.composer textarea, .composer > button { height: 48px; }.composer > button { width: 48px; }
 }
 
 @media (max-width: 520px) {
-  .app-shell { width: 100%; height: 100dvh; margin: 0; grid-template-rows: 142px minmax(0, 1fr); border: 0; border-radius: 0; }
+  .app-shell { width: 100%; height: 100svh; height: 100dvh; margin: 0; grid-template-rows: clamp(205px, 32dvh, 245px) minmax(0, 1fr); border: 0; border-radius: 0; }
+  .character-panel { padding: max(7px, env(safe-area-inset-top)) 7px 7px; }
+  .character-frame { border-radius: 0 0 8px 8px; }
+  .character { inset: -8% 0 auto; width: 100%; height: 158%; object-position: center top; }
+  .character-glow { left: 20%; right: 20%; bottom: -12%; height: 70%; }
+  .character-footer { padding: 58px 12px 11px; }
+  .character-footer strong { font-size: 14px; }
+  .mood-pill { max-width: 58%; padding: 6px 8px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .frame-code { top: 12px; left: 12px; font-size: 8px; }
+  .chat-panel { grid-template-rows: 56px minmax(0, 1fr) calc(68px + env(safe-area-inset-bottom)); }
+  .chat-header { gap: 10px; padding: 0 12px; }
+  .identity { gap: 4px; }
+  .identity strong { font-size: 14px; }
+  .identity span { font-size: 8px; }
+  .header-actions { gap: 6px; }
+  .header-actions button { width: 36px; height: 36px; }
   .header-actions a { display: none; }
-  .message { max-width: 100%; }.message-content { padding: 11px 12px; font-size: 13.5px; }.speak { display: none; }
-  .character { width: 60%; }.character-footer { width: 62%; }.mood-pill { display: none; }
+  .messages { gap: 14px; padding: 15px 10px 22px; }
+  .message { max-width: 96%; gap: 7px; }
+  .message-avatar { width: 27px; height: 27px; }
+  .message-content { padding: 10px 11px; font-size: 13.5px; line-height: 1.58; }
+  .message-content .action { margin-bottom: 7px; font-size: 12.5px; }
+  .speak { display: none; }
+  .composer { gap: 8px; padding: 9px 10px; padding-bottom: max(9px, env(safe-area-inset-bottom)); }
+  .composer textarea { padding: 13px 12px; font-size: 16px; }
+  .composer > button { width: 46px; height: 46px; }
   .onboarding { padding: 28px 22px; }
 }
