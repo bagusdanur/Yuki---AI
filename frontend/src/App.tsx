@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { BookOpen, ChevronDown, ChevronUp, Copy, KeyRound, LoaderCircle, RotateCcw, Send, Settings, Volume2, X } from 'lucide-react'
 import { register, restore, sendChat, speak } from './api'
-import type { Message, Session } from './types'
+import type { ComicRecommendation, Message, Session } from './types'
 
 const SESSION_KEYS = {
   userId: 'yuki_uid_v3', username: 'yuki_username_v3', accessCode: 'yuki_access_code_v3',
@@ -37,11 +37,51 @@ function loadHistory(userId?: string): Message[] {
   catch { return [] }
 }
 
-function MessageBody({ text }: { text: string }) {
-  const parts = text.split(/(\*[^*]+\*)/g).filter(Boolean)
-  return <>{parts.map((part, index) => part.startsWith('*') && part.endsWith('*')
-    ? <em className="action" key={index}>{part.slice(1, -1)}</em>
-    : <span key={index}>{part}</span>)}</>
+function legacyComics(text: string) {
+  const normalized = text.replace(/\*\s*\n([^\n*]+)\n\s*\*/g, '**$1**')
+  const comics: ComicRecommendation[] = []
+  const clean = normalized.replace(/\*\*([^*\n]+)\*\*\s*\n([^\n]+)\s*\n\[Link\]\s*\n?\((https?:\/\/ryukomik\.my\.id\/[^\s)]+)\)/gi, (_block, title, meta, rawUrl) => {
+    try {
+      const parsed = new URL(rawUrl)
+      const image = parsed.searchParams.get('img') || ''
+      parsed.searchParams.delete('img')
+      const [type = '', chapter = ''] = String(meta).split(/\s*[·•]\s*/)
+      comics.push({ title: String(title).trim(), type, chapter, image, url: parsed.toString() })
+    } catch { /* abaikan markup lama yang tidak valid */ }
+    return ''
+  })
+  return { clean: clean.trim(), comics }
+}
+
+function cleanComicText(text: string, comics: ComicRecommendation[]) {
+  if (!comics.length) return text
+  const positions = comics.map(comic => text.toLowerCase().indexOf(comic.title.toLowerCase())).filter(index => index >= 0)
+  if (positions.length) return text.slice(0, Math.min(...positions)).replace(/[\s*:_-]+$/g, '').trim()
+  return text.replace(/\[?link\]?\s*\(?\s*https?:\/\/ryukomik\.my\.id[^\s)]*(?:\s*img=[^\s)]*)?\s*\)?/gi, '').replace(/^\s*\*\s*$/gm, '').trim()
+}
+
+function ComicCard({ comic }: { comic: ComicRecommendation }) {
+  const meta = [comic.type, comic.chapter, comic.score ? `★ ${comic.score}` : ''].filter(Boolean).join(' · ')
+  return <a className="comic-card" href={comic.url} target="_blank" rel="noreferrer">
+    <div className="comic-cover">
+      {comic.image ? <img src={comic.image} alt="" loading="lazy" referrerPolicy="no-referrer" /> : <BookOpen size={20} />}
+    </div>
+    <div className="comic-details"><strong>{comic.title}</strong><span>{meta || 'Baca di Ryukomik'}</span></div>
+    <span className="comic-open">BACA</span>
+  </a>
+}
+
+function MessageBody({ message }: { message: Message }) {
+  const legacy = legacyComics(message.content)
+  const comics = message.comics?.length ? message.comics : legacy.comics
+  const text = cleanComicText(message.comics?.length ? message.content : legacy.clean, comics)
+  const parts = text.split(/(\*[^*\n]{2,100}\*)/g).filter(Boolean)
+  return <>
+    {parts.map((part, index) => part.startsWith('*') && part.endsWith('*')
+      ? <em className="action" key={index}>{part.slice(1, -1).trim()}</em>
+      : <span key={index}>{part.replace(/^\s*\*\s*$/gm, '')}</span>)}
+    {comics.length > 0 && <div className="comic-list">{comics.map(comic => <ComicCard comic={comic} key={comic.url} />)}</div>}
+  </>
 }
 
 function Onboarding({ onReady }: { onReady: (session: Session, history?: Message[]) => void }) {
@@ -128,7 +168,7 @@ export default function App() {
     try {
       const result = await sendChat(session.userId, next)
       if (!result.reply?.trim()) throw new Error('Yuki mengirim balasan kosong. Coba lagi.')
-      setMessages([...next, { role: 'assistant', content: result.reply }])
+      setMessages([...next, { role: 'assistant', content: result.reply, comics: result.comics || [] }])
       setMood(result.mood || 'tenang'); setBond(result.bond || bond)
       setBondValue(result.bondValue || 0); setFeeling(result.feeling || feeling)
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Yuki sedang tidak bisa menjawab') }
@@ -181,7 +221,7 @@ export default function App() {
         {messages.length === 0 && <div className="empty-state"><span>01</span><h2>Yuki menunggumu bicara.</h2><p>Mulai dari hal sederhana. Jangan berharap dia langsung ramah.</p></div>}
         {messages.map((message, index) => <article className={`message ${message.role}`} key={`${index}-${message.content.slice(0, 12)}`}>
           {message.role === 'assistant' && <div className="message-avatar">Y</div>}
-          <div className="message-content"><MessageBody text={message.content} /></div>
+          <div className="message-content"><MessageBody message={message} /></div>
           {message.role === 'assistant' && <button className={`speak ${speakingIndex === index ? 'active' : ''}`} onClick={() => play(message.content, index)} aria-label="Putar suara"><Volume2 size={14} /></button>}
         </article>)}
         {busy && <article className="message assistant"><div className="message-avatar">Y</div><div className="message-content typing"><i/><i/><i/></div></article>}

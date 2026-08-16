@@ -184,10 +184,12 @@ app.post('/api/chat', rateLimit({ max: 30 }), async (req, res) => {
 
     // 2b) Kalau user minta rekomendasi/cari komik -> ambil judul REAL dari Ryukomik
     let comicContext = ''
+    let comicResults = []
     if (!isIdle && wantsComic(userText)) {
       const q = extractQuery(userText)
       const results = q ? await searchComics(q, { adult }) : await latestComics()
       const list = results.length ? results : await latestComics()
+      comicResults = list.slice(0, 6)
       comicContext = buildComicContext(list, { query: q })
     }
 
@@ -340,7 +342,10 @@ app.post('/api/chat', rateLimit({ max: 30 }), async (req, res) => {
       }).catch(() => {})
     }
 
-    res.json({ reply, model, mood, bond: bond.name, bondValue: emotion.bond, feeling: emotion.feeling() })
+    res.json({
+      reply, model, mood, bond: bond.name, bondValue: emotion.bond, feeling: emotion.feeling(),
+      comics: comicResults.map(({ title, url, type, chapter, score, image }) => ({ title, url, type, chapter, score, image }))
+    })
   } catch (e) {
     console.error(e)
     res.status(500).json({ error: String(e.message || e) })

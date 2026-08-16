@@ -50,6 +50,16 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 .message-content { min-width: 0; padding: 13px 15px; overflow-wrap: anywhere; white-space: pre-wrap; border: 1px solid #292d36; border-left: 2px solid #8581ea; border-radius: 4px 8px 8px 4px; color: #e9e7e2; background: #151820; font-size: 14px; line-height: 1.65; }
 .message.user .message-content { border: 1px solid #aaa7ff; border-radius: 8px 4px 4px 8px; color: #121318; background: #aaa7ff; font-weight: 620; }
 .message-content .action { display: block; margin: 0 0 8px; color: #9fa1ac; font-family: Georgia, "Times New Roman", serif; font-size: 13px; line-height: 1.5; }
+.message-content .action::before { content: "// "; color: #8581ea; font-family: ui-monospace, monospace; font-size: 9px; font-style: normal; }
+.comic-list { width: min(430px, 72vw); margin-top: 12px; display: grid; gap: 8px; white-space: normal; }
+.comic-card { min-width: 0; min-height: 76px; display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; gap: 11px; align-items: center; overflow: hidden; border: 1px solid #343846; border-radius: 7px; color: inherit; background: #0d1016; text-decoration: none; transition: border-color .18s, background .18s; }
+.comic-card:hover { border-color: #69669b; background: #111520; }
+.comic-cover { width: 58px; height: 76px; display: grid; place-items: center; overflow: hidden; color: #7774c8; background: #191c28; }
+.comic-cover img { width: 100%; height: 100%; object-fit: cover; }
+.comic-details { min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+.comic-details strong { overflow: hidden; color: #eceae5; font-size: 12.5px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.comic-details span { overflow: hidden; color: #747884; font: 700 8px/1.3 ui-monospace, monospace; letter-spacing: .04em; text-overflow: ellipsis; white-space: nowrap; }
+.comic-open { margin-right: 11px; padding: 6px 7px; border: 1px solid #34374a; border-radius: 4px; color: #aaa7ff; font: 800 8px/1 ui-monospace, monospace; letter-spacing: .08em; }
 .speak { width: 30px; height: 30px; flex: 0 0 auto; margin-top: 4px; display: grid; place-items: center; border: 1px solid #292d36; border-radius: 6px; color: #707480; background: transparent; }
 .speak:hover, .speak.active { color: #dcdafe; border-color: #595d6c; background: #181b22; }
 .typing { min-width: 64px; display: flex; gap: 5px; align-items: center; }
@@ -144,6 +154,10 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   .message-avatar { width: 27px; height: 27px; }
   .message-content { padding: 10px 11px; font-size: 13.5px; line-height: 1.58; }
   .message-content .action { margin-bottom: 7px; font-size: 12.5px; }
+  .comic-list { width: min(100%, 320px); }
+  .comic-card { grid-template-columns: 52px minmax(0, 1fr); min-height: 68px; }
+  .comic-cover { width: 52px; height: 68px; }
+  .comic-open { display: none; }
   .speak { display: none; }
   .composer { gap: 8px; padding: 9px 10px; padding-bottom: max(9px, env(safe-area-inset-bottom)); }
   .composer textarea { padding: 13px 12px; font-size: 16px; }
