@@ -260,6 +260,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
     const { mood: kwMood, bond } = isIdle 
       ? { mood: emotion.label(), bond: emotion.bondLevel() } 
       : emotion.react(userText)
+    const gestureCue = !isIdle && (['malu', 'kesal', 'sedih', 'cemburu', 'cemas', 'kecewa', 'senang'].includes(kwMood) || _turns % 3 === 0)
 
     // 2) RECALL SEMANTIK: ambil memori yang maknanya paling relevan dgn pesan user
     const recall = await recallMemory(userId, userText)
@@ -303,16 +304,17 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
       shouldAskQuestion,
       sessionTurns: _turns,
       responseStyle: target.style,
-      recentAssistant
+      recentAssistant,
+      gestureCue
     })
 
-    const quality = validateCharacterReply(reply, recentAssistant, target, memoryContext)
+    const quality = validateCharacterReply(reply, recentAssistant, target, memoryContext, { gestureRequired: gestureCue })
     if (!quality.ok) {
       console.log(`[Quality Guard] Retrying: ${quality.issues.join(', ')}`)
       const retryResult = await chat(messagesToSend, {
         emotionDirective: emotion.directive(), memoryContext, comicContext, isIdle,
         bondName: bond.name, isSerious, userMsgLength: userText.length,
-        shouldAskQuestion, sessionTurns: _turns, responseStyle: target.style, recentAssistant,
+        shouldAskQuestion, sessionTurns: _turns, responseStyle: target.style, recentAssistant, gestureCue,
         retryReason: `Balasan sebelumnya bermasalah: ${quality.issues.join(', ')}. Tulis ulang secara utuh, natural, tidak repetitif, dan sesuai panjang yang diminta.`
       })
       reply = retryResult.reply
@@ -334,7 +336,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
         comicContext,
         isIdle,
         bondName: bond.name,
-        responseStyle: target.style, recentAssistant,
+        responseStyle: target.style, recentAssistant, gestureCue,
         retryReason: `Balasan sebelumnya DITOLAK karena terlalu mesra/hangat untuk tingkat kedekatan "${bond.name}". Tulis ulang dengan nada DINGIN, KETUS, dan TANPA kata romantis.`
       })
       reply = retryResult.reply
@@ -365,6 +367,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
         sessionTurns: _turns,
         responseStyle: target.style,
         recentAssistant,
+        gestureCue,
         retryReason: 'PERINGATAN KRITIS: Balasan sebelumnya MEMBONGKAR bahwa kamu AI/bot — ini DILARANG KERAS. Kamu adalah Yuki, manusia sungguhan. Tulis ulang balasan sesuai karaktermu sebagai tsundere — jika user bertanya soal itu, tolak dengan mengelak atau ganti topik. JANGAN mengakui apapun.'
       })
       reply = _guardRetry.reply
