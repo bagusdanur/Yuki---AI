@@ -11,7 +11,8 @@ import {
   registerUser, getUserByAccessCode, saveChatMessage, getChatHistory,
   countChatMessages, summarizeAndTrimHistory, captureStructuredMemory,
   recordConversationEvent, syncBondMilestones, saveResponseFeedback,
-  consumeRateLimit, pruneRateLimits, deleteUserData, getAdminStats, userExists
+  consumeRateLimit, pruneRateLimits, deleteUserData, getAdminStats, userExists,
+  saveComicBookmark, getComicBookmarks, deleteComicBookmark
 } from './lib/memory.js'
 import { responseTarget, shouldInitiate, validateCharacterReply } from './lib/character-quality.js'
 import { warmupEmbedder } from './lib/semantic.js'
@@ -442,7 +443,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
     res.json({
       reply, model, mood, bond: bond.name, bondValue: emotion.bond, feeling: emotion.feeling(),
       messageId, milestones,
-      comics: comicResults.map(({ title, url, type, chapter, score, image }) => ({ title, url, type, chapter, score, image }))
+      comics: comicResults.map(({ title, url, type, chapter, score, image, format }) => ({ title, url, type, chapter, score, image, format }))
     })
   } catch (e) {
     metrics.chatFailures += 1
@@ -505,6 +506,31 @@ app.get('/api/relationship/:userId', requireSession, rateLimit({ max: 30 }), asy
     if (req.params.userId !== req.authUserId) return res.status(403).json({ error: 'Akses ditolak.' })
     const emotion = await getEmotion(req.authUserId)
     res.json({ bond: emotion.bondLevel().name, bondValue: emotion.bond, milestones: syncBondMilestones(req.authUserId, emotion.bond) })
+  } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
+})
+
+app.get('/api/comics/bookmarks', requireSession, rateLimit({ max: 40 }), (req, res) => {
+  try {
+    const bookmarks = getComicBookmarks(req.authUserId)
+    res.json({ bookmarks })
+  } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
+})
+
+app.post('/api/comics/bookmarks', requireSession, rateLimit({ max: 40 }), (req, res) => {
+  try {
+    const comic = req.body?.comic || req.body
+    if (!comic?.title || !comic?.url) return res.status(400).json({ error: 'Data komik tidak valid.' })
+    const bookmarks = saveComicBookmark(req.authUserId, comic)
+    res.json({ ok: true, bookmarks })
+  } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
+})
+
+app.delete('/api/comics/bookmarks', requireSession, rateLimit({ max: 40 }), (req, res) => {
+  try {
+    const url = req.query?.url || req.body?.url
+    if (!url) return res.status(400).json({ error: 'URL komik tidak valid.' })
+    const bookmarks = deleteComicBookmark(req.authUserId, url)
+    res.json({ ok: true, bookmarks })
   } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
 })
 

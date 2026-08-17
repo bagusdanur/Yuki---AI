@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { BookOpen, ChevronDown, ChevronUp, Copy, Download, Heart, KeyRound, LoaderCircle, RefreshCw, RotateCcw, Send, Settings, Sparkles, ThumbsDown, ThumbsUp, Volume2, WifiOff, X } from 'lucide-react'
-import { deleteAccount, getRelationship, register, restore, sendChat, sendFeedback, speak } from './api'
-import type { ComicRecommendation, Message, Milestone, Session } from './types'
+import { Bookmark, BookOpen, ChevronDown, ChevronUp, Copy, Download, Heart, KeyRound, LoaderCircle, RefreshCw, RotateCcw, Send, Settings, Sparkles, ThumbsDown, ThumbsUp, Volume2, WifiOff, X } from 'lucide-react'
+import { addBookmark, deleteAccount, getBookmarks, getRelationship, register, removeBookmark, restore, sendChat, sendFeedback, speak } from './api'
+import type { BookmarkedComic, ComicRecommendation, Message, Milestone, Session } from './types'
 
 const SESSION_KEYS = {
   userId: 'yuki_uid_v3', username: 'yuki_username_v3', accessCode: 'yuki_access_code_v3',
@@ -84,27 +84,69 @@ function cleanComicText(text: string, comics: ComicRecommendation[]) {
   return text.replace(/\[?link\]?\s*\(?\s*https?:\/\/ryukomik\.my\.id[^\s)]*(?:\s*img=[^\s)]*)?\s*\)?/gi, '').replace(/^\s*\*\s*$/gm, '').trim()
 }
 
-function ComicCard({ comic }: { comic: ComicRecommendation }) {
+function ComicCard({ comic, isBookmarked, onToggleBookmark }: {
+  comic: ComicRecommendation
+  isBookmarked: boolean
+  onToggleBookmark: (comic: ComicRecommendation) => void
+}) {
   const meta = [comic.type, comic.chapter, comic.score ? `★ ${comic.score}` : ''].filter(Boolean).join(' · ')
-  return <a className="comic-card" href={comic.url} target="_blank" rel="noreferrer">
-    <div className="comic-cover">
-      {comic.image ? <img src={comic.image} alt="" loading="lazy" referrerPolicy="no-referrer" /> : <BookOpen size={20} />}
+  return (
+    <div className="comic-card">
+      <div className="comic-cover">
+        {comic.image ? <img src={comic.image} alt="" loading="lazy" referrerPolicy="no-referrer" /> : <BookOpen size={20} />}
+      </div>
+      <div className="comic-details">
+        <div className="comic-title-row">
+          {comic.format && <span className="comic-format-tag">{comic.format}</span>}
+          <strong>{comic.title}</strong>
+        </div>
+        <span>{meta || 'Baca di Ryukomik'}</span>
+      </div>
+      <div className="comic-card-actions">
+        <button
+          type="button"
+          className={`comic-bookmark-btn ${isBookmarked ? 'saved' : ''}`}
+          onClick={() => onToggleBookmark(comic)}
+          aria-label={isBookmarked ? 'Hapus bookmark komik' : 'Simpan komik'}
+          title={isBookmarked ? 'Tersimpan' : 'Simpan komik'}
+        >
+          <Bookmark size={13} fill={isBookmarked ? 'currentColor' : 'none'} />
+        </button>
+        <a className="comic-open" href={comic.url} target="_blank" rel="noreferrer">
+          BACA
+        </a>
+      </div>
     </div>
-    <div className="comic-details"><strong>{comic.title}</strong><span>{meta || 'Baca di Ryukomik'}</span></div>
-    <span className="comic-open">BACA</span>
-  </a>
+  )
 }
 
-function MessageBody({ message }: { message: Message }) {
+function MessageBody({ message, bookmarks, onToggleBookmark }: {
+  message: Message
+  bookmarks: BookmarkedComic[]
+  onToggleBookmark: (comic: ComicRecommendation) => void
+}) {
   const legacy = legacyComics(message.content)
   const comics = message.comics?.length ? message.comics : legacy.comics
   const text = cleanComicText(message.comics?.length ? message.content : legacy.clean, comics)
   const parts = text.split(/(\*[^*\n]{2,100}\*)/g).filter(Boolean)
+  const bookmarkedUrls = new Set(bookmarks.map(b => b.url))
+
   return <>
     {parts.map((part, index) => part.startsWith('*') && part.endsWith('*')
       ? <em className="action" key={index}>{part.slice(1, -1).trim()}</em>
       : <span key={index}>{part.replace(/^\s*\*\s*$/gm, '')}</span>)}
-    {comics.length > 0 && <div className="comic-list">{comics.map(comic => <ComicCard comic={comic} key={comic.url} />)}</div>}
+    {comics.length > 0 && (
+      <div className="comic-list">
+        {comics.map(comic => (
+          <ComicCard
+            comic={comic}
+            isBookmarked={bookmarkedUrls.has(comic.url)}
+            onToggleBookmark={onToggleBookmark}
+            key={comic.url}
+          />
+        ))}
+      </div>
+    )}
   </>
 }
 
@@ -174,6 +216,8 @@ export default function App() {
   const [speakingIndex, setSpeakingIndex] = useState<number | null>(null)
   const [milestones, setMilestones] = useState<Milestone[]>([])
   const [timelineOpen, setTimelineOpen] = useState(false)
+  const [bookmarks, setBookmarks] = useState<BookmarkedComic[]>([])
+  const [bookmarksOpen, setBookmarksOpen] = useState(false)
   const [feedback, setFeedback] = useState<Record<number, 1 | -1>>({})
   const endRef = useRef<HTMLDivElement>(null)
   const currentAudio = useRef<HTMLAudioElement | null>(null)
@@ -204,7 +248,8 @@ export default function App() {
       setMilestones(data.milestones || [])
       setBond(data.bond); setBondValue(data.bondValue)
     }).catch(() => {})
-  }, [session?.userId])
+    getBookmarks().then(data => setBookmarks(data.bookmarks || [])).catch(() => {})
+  }, [session?.userId, session?.sessionToken])
 
   const avatarExpression = useMemo(() => moodImage[mood] || 'tenang', [mood])
   const canBlink = blinkExpressions.has(avatarExpression)
@@ -242,6 +287,22 @@ export default function App() {
       const restoredName = bondNameFromValue(restoredBond)
       setBondValue(restoredBond); setBond(restoredName)
       localStorage.setItem(SESSION_KEYS.bondValue, String(restoredBond)); localStorage.setItem(SESSION_KEYS.bond, restoredName)
+    }
+  }
+
+  async function handleToggleBookmark(comic: ComicRecommendation) {
+    if (!session) return
+    const isSaved = bookmarks.some(b => b.url === comic.url)
+    try {
+      if (isSaved) {
+        const res = await removeBookmark(comic.url)
+        setBookmarks(res.bookmarks || [])
+      } else {
+        const res = await addBookmark(comic)
+        setBookmarks(res.bookmarks || [])
+      }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Gagal memperbarui bookmark')
     }
   }
 
@@ -334,7 +395,7 @@ export default function App() {
     if (!session) return
     localStorage.removeItem(historyKey(session.userId))
     Object.values(SESSION_KEYS).forEach(key => localStorage.removeItem(key))
-    setSession(null); setMessages([]); setSettingsOpen(false)
+    setSession(null); setMessages([]); setBookmarks([]); setSettingsOpen(false)
   }
 
   async function removeAccount() {
@@ -355,6 +416,7 @@ export default function App() {
           <button onClick={() => setSettingsOpen(!settingsOpen)} aria-label="Pengaturan"><Settings size={17} /></button>
         </div>
         {settingsOpen && <div className="settings-card">
+          <button onClick={() => { setBookmarksOpen(true); setSettingsOpen(false) }}><Bookmark size={15} /><span><b>Komik tersimpan</b><small>{bookmarks.length} judul tersimpan</small></span></button>
           <button onClick={() => { setTimelineOpen(true); setSettingsOpen(false) }}><Heart size={15} /><span><b>Perjalanan hubungan</b><small>{milestones.length} momen tersimpan</small></span></button>
           {installPrompt && <button onClick={installApp}><Download size={15} /><span><b>Pasang aplikasi Yuki</b><small>Tambahkan ke layar utama</small></span></button>}
           <button onClick={() => window.open('/privacy', '_blank', 'noopener')}><BookOpen size={15} /><span><b>Privasi pengguna</b><small>Data yang disimpan dan kontrolmu</small></span></button>
@@ -369,12 +431,35 @@ export default function App() {
         <div className="timeline-list">{milestones.map((item, index) => <article key={`${item.kind}-${index}`}><i/><div><strong>{item.title}</strong><span>{item.detail || `Terbuka pada bond ${Math.round(item.bondValue)}`}</span></div></article>)}</div>
       </section></div>}
 
+      {bookmarksOpen && <div className="timeline-overlay" onClick={() => setBookmarksOpen(false)}><section className="timeline-card bookmarks-modal" onClick={event => event.stopPropagation()}>
+        <header><div><small>Ryukomik archive</small><h2>Komik Tersimpan</h2></div><button onClick={() => setBookmarksOpen(false)}><X size={17}/></button></header>
+        <div className="bookmarks-list">
+          {bookmarks.length === 0 && <div className="empty-bookmarks"><span>01</span><h3>Belum ada komik tersimpan.</h3><p>Tekan tombol bookmark pada kartu komik di chat untuk menyimpan ke daftar bacaanmu.</p></div>}
+          {bookmarks.map((comic) => <div className="bookmark-item" key={comic.url}>
+            <div className="bookmark-cover">
+              {comic.image ? <img src={comic.image} alt="" loading="lazy" referrerPolicy="no-referrer" /> : <BookOpen size={16} />}
+            </div>
+            <div className="bookmark-info">
+              <div className="bookmark-title-row">
+                {comic.format && <span className="comic-format-tag">{comic.format}</span>}
+                <strong>{comic.title}</strong>
+              </div>
+              <span>{[comic.type, comic.chapter, comic.score ? `★ ${comic.score}` : ''].filter(Boolean).join(' · ')}</span>
+            </div>
+            <div className="bookmark-actions">
+              <a className="comic-open" href={comic.url} target="_blank" rel="noreferrer">BACA</a>
+              <button type="button" className="bookmark-delete" onClick={() => removeBookmark(comic.url).then(d => setBookmarks(d.bookmarks || []))} aria-label="Hapus dari daftar simpan"><X size={13} /></button>
+            </div>
+          </div>)}
+        </div>
+      </section></div>}
+
       <div className="messages" aria-live="polite">
         {messages.length === 0 && <div className="empty-state"><span>01</span><h2>Yuki menunggumu bicara.</h2><p>Mulai dari hal sederhana. Jangan berharap dia langsung ramah.</p></div>}
         {messages.map((message, index) => <article className={`message ${message.role}`} key={`${index}-${message.content.slice(0, 12)}`}>
           {message.role === 'assistant' && <div className="message-avatar">Y</div>}
-          <div className="message-content"><MessageBody message={message} /></div>
-          {message.role === 'assistant' && <div className="message-tools"><button className={`speak ${speakingIndex === index ? 'active' : ''}`} onClick={() => play(message.content, index)} aria-label="Putar suara"><Volume2 size={14} /></button><button className={feedback[index] === 1 ? 'selected' : ''} onClick={() => rateMessage(index, message, 1)} aria-label="Balasan cocok"><ThumbsUp size={12}/></button><button className={feedback[index] === -1 ? 'selected negative' : ''} onClick={() => rateMessage(index, message, -1)} aria-label="Balasan kurang cocok"><ThumbsDown size={12}/></button></div>}
+          <div className="message-content"><MessageBody message={message} bookmarks={bookmarks} onToggleBookmark={handleToggleBookmark} /></div>
+          {message.role === 'assistant' && <div className="message-tools"><button className={`speak ${speakingIndex === index ? 'active' : ''}`} onClick={() => play(message.content, index)} aria-label="Putar suara">{speakingIndex === index ? <span className="audio-bars" aria-hidden="true"><i/><i/><i/></span> : <Volume2 size={14} />}</button><button className={feedback[index] === 1 ? 'selected' : ''} onClick={() => rateMessage(index, message, 1)} aria-label="Balasan cocok"><ThumbsUp size={12}/></button><button className={feedback[index] === -1 ? 'selected negative' : ''} onClick={() => rateMessage(index, message, -1)} aria-label="Balasan kurang cocok"><ThumbsDown size={12}/></button></div>}
         </article>)}
         {busy && <><div className={`request-status ${connection}`}>{connection === 'slow' || connection === 'retrying' ? <RefreshCw className="spin" size={12} /> : <LoaderCircle className="spin" size={12} />}<span>{connectionLabel[connection]}</span></div><article className="message assistant"><div className="message-avatar">Y</div><div className="message-content typing"><i/><i/><i/></div></article></>}
         {connection === 'offline' && !busy && <div className="request-status offline"><WifiOff size={12}/><span>Kamu offline. Pesan yang belum dikirim tetap aman.</span></div>}
@@ -388,7 +473,7 @@ export default function App() {
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit() } }} />
         <button disabled={busy || !input.trim()} aria-label="Kirim pesan">{busy ? <LoaderCircle className="spin" size={19}/> : <Send size={19}/>}</button>
       </form>
-      <div className="activities" aria-label="Aktivitas bersama"><Sparkles size={12}/>{['Cari komik bareng', 'Pertanyaan hari ini', 'Kuis anime singkat', 'Bahas daftar favorit kita'].map(label => <button key={label} onClick={() => setInput(label)}>{label}</button>)}</div>
+      <div className="activities" aria-label="Aktivitas bersama"><Sparkles size={12}/>{['Rekomendasi Manhwa Aksi', 'Manga Romance Manis', 'Komik Isekai Seru', 'Update Chapter Terbaru'].map(label => <button key={label} onClick={() => setInput(label)}>{label}</button>)}</div>
     </section>
 
     <aside className="character-panel">

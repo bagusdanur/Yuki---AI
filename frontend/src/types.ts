@@ -3,11 +3,15 @@ export type Role = 'user' | 'assistant'
 export interface ComicRecommendation {
   title: string
   url: string
+  format?: 'MANHWA' | 'MANGA' | 'MANHUA' | 'KOMIK' | string
   type?: string
   chapter?: string
   score?: string
   image?: string
+  createdAt?: string
 }
+
+export type BookmarkedComic = ComicRecommendation
 
 export interface Message {
   role: Role

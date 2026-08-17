@@ -1,4 +1,4 @@
-import type { ChatResponse, Message, Milestone } from './types'
+import type { BookmarkedComic, ChatResponse, ComicRecommendation, Message, Milestone } from './types'
 
 async function parse<T>(response: Response): Promise<T> {
   const data = await response.json()
@@ -63,6 +63,22 @@ export async function speak(text: string) {
     if (!response.ok) throw new Error('Suara Yuki sedang tidak tersedia')
     return URL.createObjectURL(await response.blob())
   } finally { window.clearTimeout(timeout) }
+}
+
+export async function getBookmarks() {
+  return request<{ bookmarks: BookmarkedComic[] }>('/api/comics/bookmarks', { method: 'GET' })
+}
+
+export async function addBookmark(comic: ComicRecommendation) {
+  return request<{ ok: true; bookmarks: BookmarkedComic[] }>('/api/comics/bookmarks', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ comic }),
+  })
+}
+
+export async function removeBookmark(url: string) {
+  return request<{ ok: true; bookmarks: BookmarkedComic[] }>(`/api/comics/bookmarks?url=${encodeURIComponent(url)}`, {
+    method: 'DELETE',
+  })
 }
 
 export async function deleteAccount() {
