@@ -353,6 +353,10 @@ function CodexArtifactModal({ artifact, onClose }: { artifact: ArtifactItem; onC
 function cleanMessageContent(text: string) {
   if (!text) return ''
   let clean = text
+  clean = clean.replace(/:::(?:thought|thinking)\s*[\s\S]*?(?::::|$)/gi, '')
+  clean = clean.replace(/:::(?:thought|thinking)?/gi, '')
+  clean = clean.replace(/<(?:thinking|think|thought)>[\s\S]*?<\/(?:thinking|think|thought)>/gi, '')
+  clean = clean.replace(/<\/?(?:thinking|think|thought)>/gi, '')
   clean = clean.replace(/```(?:json)?\s*\{[\s\S]*?"(?:name|tool)":\s*"(?:html-canvas-builder|build_interactive_artifact)"[\s\S]*?```/gi, '')
   clean = clean.replace(/```(?:html|xml)?\s*\n\s*(?:<!DOCTYPE|<html)[\s\S]*?(?:```|$)/gi, '')
   clean = clean.replace(/<tool_call>[\s\S]*?<\/tool_call>/gi, '')
@@ -369,7 +373,7 @@ function MessageBody({ message, bookmarks, onToggleBookmark, onOpenArtifact }: {
   const comics = message.comics?.length ? message.comics : legacy.comics
   const rawText = message.comics?.length ? message.content : legacy.clean
   const textWithoutComics = cleanComicText(rawText, comics)
-  const text = message.artifacts?.length ? cleanMessageContent(textWithoutComics) : textWithoutComics
+  const text = cleanMessageContent(textWithoutComics)
   const parts = text.split(/(\*[^*\n]{2,100}\*)/g).filter(Boolean)
   const bookmarkedUrls = new Set(bookmarks.map(b => b.url))
 
