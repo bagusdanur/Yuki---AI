@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Bookmark, BookOpen, Bot, Check, ChevronDown, ChevronUp, Code2, Copy, Download,
   Gamepad2, Globe, Heart, KeyRound, ListTodo, LoaderCircle, Maximize2, MessageSquare,
-  Minimize2, Play, Radio, RefreshCw, RotateCcw, Send, Settings, Sparkles, Star,
+  Minimize2, Play, Radio, RefreshCw, RotateCcw, Save, Send, Settings, Sparkles, Star,
   Terminal, ThumbsDown, ThumbsUp, Volume2, WifiOff, Wrench, X, Zap
 } from 'lucide-react'
 import {
@@ -221,73 +221,73 @@ function getContextualAgentPhases(query = ''): string[] {
   // 1. Bug Fix / Perbaikan / Debugging
   if (/bug|perbaiki|rusak|error|tembus|loncat|kurang|fix|salah|gagal|benerin|kok gini|gak jalan/i.test(q)) {
     return [
-      '🔍 Menganalisis laporan bug & memeriksa basis kode sebelumnya...',
-      '🛠️ Menemukan akar masalah & menyusun patch perbaikan...',
-      '💾 Menguji runtime patch & memperbarui memori Self-Improvement...',
-      '✨ Mengompilasi kode yang sudah diperbaiki ke Live Sandbox Viewer...'
+      'Menganalisis laporan bug & memeriksa basis kode sebelumnya...',
+      'Menemukan akar masalah & menyusun patch perbaikan...',
+      'Menguji runtime patch & memperbarui memori Self-Improvement...',
+      'Mengompilasi kode yang sudah diperbaiki ke Live Sandbox Viewer...'
     ]
   }
 
   // 2. Game / Platformer / Retro / Canvas / Web Widget
   if (/game|platformer|retro|canvas|tetris|snake|pong|shooter|kalkulator|widget|animasi|mini[- ]?game/i.test(q)) {
     return [
-      '🎮 Merancang arsitektur game 2D & sistem fisika canvas...',
-      '🕹️ Menyusun kontrol keyboard + touch sentuh mobile & game loop 60 FPS...',
-      '🎵 Mengintegrasikan Web Audio synthesizer & rintangan level...',
-      '🚀 Mengompilasi Live Sandbox Game Artifact...'
+      'Merancang arsitektur game 2D & sistem fisika canvas...',
+      'Menyusun kontrol keyboard + touch mobile & game loop 60 FPS...',
+      'Mengintegrasikan Web Audio synthesizer & rintangan level...',
+      'Mengompilasi Live Sandbox Game Artifact...'
     ]
   }
 
   // 3. Ryukomik / Manga / Manhwa / Komik
   if (/komik|manga|manhwa|manhua|ryukomik|chapter|baca komik/i.test(q)) {
     return [
-      '📖 Menghubungkan ke API Ryukomik & query database komik...',
-      '🔍 Memfilter update chapter terbaru, rating, & link baca langsung...',
-      '✨ Menyusun kartu rekomendasi komik & daftar chapter...'
+      'Menghubungkan ke API Ryukomik & query database komik...',
+      'Memfilter update chapter terbaru, rating, & link baca langsung...',
+      'Menyusun kartu rekomendasi komik & daftar chapter...'
     ]
   }
 
   // 4. Jadwal / Pengingat / Scheduler
   if (/ingatkan|jadwal|jadwalkan|schedule|remind|alarm|besok|menit lagi|setiap/i.test(q)) {
     return [
-      '⏰ Memparsing jadwal waktu (WIB) & mengecek jadwal aktif...',
-      '💾 Mendaftarkan tugas ke SQLite Persistent Task Scheduler...',
-      '🔔 Menyiapkan konfirmasi pengingat otomatis...'
+      'Memparsing jadwal waktu (WIB) & mengecek jadwal aktif...',
+      'Mendaftarkan tugas ke SQLite Persistent Task Scheduler...',
+      'Menyiapkan konfirmasi pengingat otomatis...'
     ]
   }
 
   // 5. Browser / Web Search / Riset
   if (/cari|browsing|browse|search|riset|berita|harga|artikel|web|url|link|http/i.test(q)) {
     return [
-      '🌐 Menjalankan Headless Browser & mengekstrak konten web...',
-      '📊 Menganalisis data temuan & memvalidasi fakta sumber...',
-      '📝 Menyusun intisari ringkasan riset...'
+      'Menjalankan Headless Browser & mengekstrak konten web...',
+      'Menganalisis data temuan & memvalidasi fakta sumber...',
+      'Menyusun intisari ringkasan riset...'
     ]
   }
 
   // 6. Subagent Delegation
   if (/delegasi|subagent|paralel|bagi tugas|kompleks/i.test(q)) {
     return [
-      '🤖 Membagi task kompleks menjadi subagent paralel...',
-      '⚡ Menjalankan child workers & mengagregasi output...',
-      '📑 Mengonsolidasikan laporan multi-aspek...'
+      'Membagi task kompleks menjadi subagent paralel...',
+      'Menjalankan child workers & mengagregasi output...',
+      'Mengonsolidasikan laporan multi-aspek...'
     ]
   }
 
   // 7. Coding & Algorithms
   if (/kode|code|javascript|python|function|script|regex|algoritma|api|database|sql/i.test(q)) {
     return [
-      '🧠 Menganalisis logika algoritma & sintaks kode...',
-      '⚡ Menjalankan uji eksekusi di sandbox VM terisolasi...',
-      '✨ Menyusun balasan teknis & optimasi performa...'
+      'Menganalisis logika algoritma & sintaks kode...',
+      'Menjalankan uji eksekusi di sandbox VM terisolasi...',
+      'Menyusun balasan teknis & optimasi performa...'
     ]
   }
 
   // 8. General Default
   return [
-    '🧠 Menganalisis instruksi tugas & memilih skill yang relevan...',
-    '⚡ Menjalankan Yuki ReAct Reasoning Loop & eksekusi tools...',
-    '✨ Menyusun balasan terstruktur & ringkasan hasil...'
+    'Menganalisis instruksi tugas & memilih skill yang relevan...',
+    'Menjalankan Yuki ReAct Reasoning Loop & eksekusi tools...',
+    'Menyusun balasan terstruktur & ringkasan hasil...'
   ]
 }
 
@@ -688,13 +688,13 @@ function cleanMessageContent(text: string) {
 }
 
 function HermesSelfImprovementCard({ text }: { text: string }) {
-  const match = text.match(/💾\s*Self-improvement(?:\s*review)?:\s*(?:Memory updated\s*—\s*)?([\s\S]*)/i)
+  const match = text.match(/(?:💾\s*)?Self-improvement(?:\s*review)?:\s*(?:Memory updated\s*—\s*)?([\s\S]*)/i)
   const detail = match ? match[1].trim() : text.replace(/💾/g, '').trim()
 
   return (
     <div className="hermes-si-card">
       <div className="hermes-si-top">
-        <span className="hermes-si-icon">💾</span>
+        <Save size={13} className="hermes-si-svg" />
         <span className="hermes-si-title">Self-improvement review: Memory updated</span>
       </div>
       {detail && detail !== 'Memory updated' && (
