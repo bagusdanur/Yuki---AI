@@ -1,4 +1,4 @@
-// scripts/test-models.mjs
+import 'dotenv/config'
 import OpenAI from 'openai'
 import { buildAgentSystemPrompt } from '../lib/agent/persona.js'
 import { getAvailableTools, initSkills } from '../lib/agent/skills-engine.js'
