@@ -1,8 +1,26 @@
 import type { BookmarkedComic, ChatMode, ChatResponse, ComicRecommendation, Message, Milestone, SkillInfo } from './types'
 
 async function parse<T>(response: Response): Promise<T> {
-  const data = await response.json()
-  if (!response.ok) throw new Error(data.error || `Request gagal (${response.status})`)
+  const rawText = await response.text()
+  let data: any
+  try {
+    data = rawText ? JSON.parse(rawText) : {}
+  } catch {
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Sesi tidak valid atau telah berakhir. Muat ulang halaman untuk masuk kembali.')
+      }
+      if (response.status === 502 || response.status === 504) {
+        throw new Error('Server sedang sibuk. Silakan coba kirim ulang beberapa saat lagi.')
+      }
+      throw new Error(`Permintaan gagal (${response.status}): ${response.statusText || 'Server Error'}`)
+    }
+    throw new Error('Format balasan server tidak dapat dibaca.')
+  }
+
+  if (!response.ok) {
+    throw new Error(data?.error || `Request gagal (${response.status})`)
+  }
   return data as T
 }
 

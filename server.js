@@ -640,3 +640,17 @@ app.post('/api/admin/password', rateLimit({ max: 5, windowMs: 15 * 60_000 }), re
   storeAdminPassword(password)
   res.json({ ok: true, sessionToken: signAdminSession() })
 })
+
+// 404 Handler untuk endpoint API yang tidak terdaftar
+app.all('/api/*', (req, res) => {
+  res.status(404).json({ error: `Rute API "${req.path}" tidak ditemukan.` })
+})
+
+// Global Error Handler — Selalu kembalikan respon JSON rapi, bukan HTML
+app.use((err, req, res, next) => {
+  console.error('[server error]', err.message || err)
+  if (res.headersSent) return next(err)
+  res.status(err.status || 500).json({
+    error: err.message || 'Terjadi kesalahan internal pada server.'
+  })
+})
