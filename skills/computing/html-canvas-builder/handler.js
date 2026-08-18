@@ -19,29 +19,53 @@ export async function executeBuildInteractiveArtifact(params = {}) {
   <style>
     /* Super-responsive 100% viewport fit for both Mobile and Desktop */
     * {
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
+      box-sizing: border-box !important;
+      -webkit-tap-highlight-color: transparent !important;
     }
     html, body {
-      width: 100vw !important;
-      height: 100vh !important;
+      width: 100% !important;
+      min-height: 100% !important;
       margin: 0 !important;
-      padding: 0 !important;
-      overflow: hidden !important;
+      padding: 6px !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
       background: #08090c !important;
       display: flex !important;
       flex-direction: column !important;
       align-items: center !important;
       justify-content: center !important;
-      touch-action: none !important;
+      touch-action: manipulation !important;
       user-select: none !important;
       -webkit-user-select: none !important;
     }
+    #game-wrapper, .game-wrapper, .game-container, #container, main {
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: center !important;
+      max-width: 100vw !important;
+      padding: 6px !important;
+      margin: 0 auto !important;
+      box-sizing: border-box !important;
+    }
     canvas {
       display: block !important;
-      margin: auto !important;
+      margin: 0 auto !important;
+      max-width: 95vw !important;
+      max-height: 65vh !important;
+      width: auto !important;
+      height: auto !important;
+      object-fit: contain !important;
       touch-action: none !important;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.8) !important;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.8) !important;
+    }
+    .controls {
+      display: flex !important;
+      flex-wrap: wrap !important;
+      justify-content: center !important;
+      gap: 6px !important;
+      margin-top: 8px !important;
+      max-width: 100vw !important;
     }
     /* Touch Drag Guide Indicator */
     #_yuki_touch_guide {
@@ -69,20 +93,36 @@ export async function executeBuildInteractiveArtifact(params = {}) {
 
   <script>
   (function() {
-    // 1. DYNAMIC AUTO-FIT CANVAS RESIZER (Memastikan canvas 100% pas di layar HP/PC tanpa terpotong)
+    // 1. Auto-Start Helper (Otomatis start game jika butuh tombol START)
+    function autoStartGame() {
+      var startBtns = document.querySelectorAll('#btn-start, #start-btn, #start, .btn-start, button');
+      startBtns.forEach(function(btn) {
+        var txt = (btn.innerText || btn.textContent || '').trim().toLowerCase();
+        if (txt === 'start' || txt === 'play' || txt === 'mulai' || txt === 'start game') {
+          btn.click();
+        }
+      });
+    }
+
+    setTimeout(autoStartGame, 100);
+    setTimeout(autoStartGame, 400);
+    window.addEventListener('touchstart', autoStartGame, { once: true });
+    window.addEventListener('click', autoStartGame, { once: true });
+
+    // 2. DYNAMIC AUTO-FIT CANVAS RESIZER (Memastikan canvas 100% pas di layar HP/PC tanpa terpotong)
     function autoScaleCanvas() {
-      const canvases = document.querySelectorAll('canvas');
+      var canvases = document.querySelectorAll('canvas');
       canvases.forEach(function(canvas) {
         if (!canvas.dataset.nativeW) {
-          canvas.dataset.nativeW = canvas.width || 400;
-          canvas.dataset.nativeH = canvas.height || 600;
+          canvas.dataset.nativeW = canvas.width || 300;
+          canvas.dataset.nativeH = canvas.height || 500;
         }
         var nw = parseFloat(canvas.dataset.nativeW);
         var nh = parseFloat(canvas.dataset.nativeH);
         var ratio = nw / nh;
 
-        var maxW = window.innerWidth;
-        var maxH = window.innerHeight;
+        var maxW = Math.min(window.innerWidth - 16, 480);
+        var maxH = window.innerHeight * 0.65;
 
         var targetW = maxW;
         var targetH = targetW / ratio;
@@ -94,8 +134,6 @@ export async function executeBuildInteractiveArtifact(params = {}) {
 
         canvas.style.width = Math.floor(targetW) + 'px';
         canvas.style.height = Math.floor(targetH) + 'px';
-        canvas.style.maxWidth = '100vw';
-        canvas.style.maxHeight = '100vh';
       });
     }
 
@@ -107,20 +145,21 @@ export async function executeBuildInteractiveArtifact(params = {}) {
       autoScaleCanvas();
     }
     setTimeout(autoScaleCanvas, 50);
-    setTimeout(autoScaleCanvas, 300);
-    setInterval(autoScaleCanvas, 1500);
+    setTimeout(autoScaleCanvas, 250);
 
-    // 2. PRECISION TOUCH-TO-DRAG & SWIPE ENGINE
+    // 3. PRECISION TOUCH-TO-DRAG & SWIPE ENGINE
+    var startTouchX = null;
+    var startTouchY = null;
     var lastTouchX = null;
     var lastTouchY = null;
-    var touchActive = false;
+    var touchMoved = false;
 
     function dispatchMouseEventToAll(type, clientX, clientY) {
       var canvases = document.querySelectorAll('canvas');
       canvases.forEach(function(canvas) {
         var rect = canvas.getBoundingClientRect();
-        var scaleX = canvas.width / rect.width;
-        var scaleY = canvas.height / rect.height;
+        var scaleX = canvas.width / (rect.width || 1);
+        var scaleY = canvas.height / (rect.height || 1);
         var localX = (clientX - rect.left) * scaleX;
         var localY = (clientY - rect.top) * scaleY;
 
@@ -134,7 +173,6 @@ export async function executeBuildInteractiveArtifact(params = {}) {
           view: window
         });
 
-        // Set offsetX & offsetY if writable
         try {
           Object.defineProperty(evt, 'offsetX', { value: localX });
           Object.defineProperty(evt, 'offsetY', { value: localY });
@@ -156,31 +194,39 @@ export async function executeBuildInteractiveArtifact(params = {}) {
       window.dispatchEvent(docEvt);
     }
 
+    function triggerKey(keyName, keyCodeVal) {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: keyName, code: keyName, keyCode: keyCodeVal, which: keyCodeVal, bubbles: true }));
+      setTimeout(function() {
+        window.dispatchEvent(new KeyboardEvent('keyup', { key: keyName, code: keyName, keyCode: keyCodeVal, which: keyCodeVal, bubbles: true }));
+      }, 35);
+    }
+
     function handleTouchMove(e) {
       if (!e.touches || e.touches.length === 0) return;
-      e.preventDefault(); // Prevent browser scroll
       var touch = e.touches[0];
       var currentX = touch.clientX;
       var currentY = touch.clientY;
 
-      // A. Kirim event mousemove presisi tinggi
       dispatchMouseEventToAll('mousemove', currentX, currentY);
 
-      // B. Emulasi Keyboard Panah saat jari digeser (Swipe-to-Key)
-      if (lastTouchX !== null) {
+      if (lastTouchX !== null && lastTouchY !== null) {
         var deltaX = currentX - lastTouchX;
-        if (deltaX < -2) {
-          // Geser ke kiri
-          window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', code: 'ArrowLeft', keyCode: 37, which: 37, bubbles: true }));
-          setTimeout(function() {
-            window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowLeft', code: 'ArrowLeft', keyCode: 37, which: 37, bubbles: true }));
-          }, 30);
-        } else if (deltaX > 2) {
-          // Geser ke kanan
-          window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', code: 'ArrowRight', keyCode: 39, which: 39, bubbles: true }));
-          setTimeout(function() {
-            window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', code: 'ArrowRight', keyCode: 39, which: 39, bubbles: true }));
-          }, 30);
+        var deltaY = currentY - lastTouchY;
+
+        if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
+          touchMoved = true;
+        }
+
+        // Horizontal Swipe: Left / Right
+        if (deltaX < -3) {
+          triggerKey('ArrowLeft', 37);
+        } else if (deltaX > 3) {
+          triggerKey('ArrowRight', 39);
+        }
+
+        // Vertical Swipe Down: Drop / Fast Fall
+        if (deltaY > 6) {
+          triggerKey('ArrowDown', 40);
         }
       }
 
@@ -191,18 +237,18 @@ export async function executeBuildInteractiveArtifact(params = {}) {
     function handleTouchStart(e) {
       if (!e.touches || e.touches.length === 0) return;
       var touch = e.touches[0];
+      startTouchX = touch.clientX;
+      startTouchY = touch.clientY;
       lastTouchX = touch.clientX;
       lastTouchY = touch.clientY;
-      touchActive = true;
+      touchMoved = false;
 
-      // Sembunyikan panduan sentuh setelah sentuhan pertama
       var guide = document.getElementById('_yuki_touch_guide');
       if (guide) guide.style.opacity = '0';
 
       dispatchMouseEventToAll('mousedown', touch.clientX, touch.clientY);
       dispatchMouseEventToAll('mousemove', touch.clientX, touch.clientY);
 
-      // Trigger Click & Space/Enter untuk Start Game
       var clickEvt = new MouseEvent('click', {
         clientX: touch.clientX,
         clientY: touch.clientY,
@@ -210,18 +256,24 @@ export async function executeBuildInteractiveArtifact(params = {}) {
         cancelable: true
       });
       e.target.dispatchEvent(clickEvt);
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space', keyCode: 32, which: 32, bubbles: true }));
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
     }
 
     function handleTouchEnd(e) {
-      touchActive = false;
+      dispatchMouseEventToAll('mouseup', 0, 0);
+
+      // Tap = Rotate / Jump / Action
+      if (!touchMoved && startTouchX !== null) {
+        triggerKey('ArrowUp', 38);
+        triggerKey('w', 87);
+        triggerKey(' ', 32);
+        triggerKey('Enter', 13);
+      }
+
+      startTouchX = null;
+      startTouchY = null;
       lastTouchX = null;
       lastTouchY = null;
-      dispatchMouseEventToAll('mouseup', 0, 0);
-      window.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', code: 'Space', keyCode: 32, which: 32, bubbles: true }));
-      window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowLeft', code: 'ArrowLeft', keyCode: 37, which: 37, bubbles: true }));
-      window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', code: 'ArrowRight', keyCode: 39, which: 39, bubbles: true }));
+      touchMoved = false;
     }
 
     window.addEventListener('touchstart', handleTouchStart, { passive: false });
@@ -231,6 +283,7 @@ export async function executeBuildInteractiveArtifact(params = {}) {
   })();
   </script>
   `
+
 
 
   let finalCode

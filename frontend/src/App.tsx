@@ -260,41 +260,84 @@ function prepareArtifactHtml(rawHtml = '') {
   <style id="_yuki_injected_style">
     * { box-sizing: border-box !important; -webkit-tap-highlight-color: transparent !important; }
     html, body {
-      width: 100vw !important;
-      height: 100vh !important;
+      width: 100% !important;
+      min-height: 100% !important;
       margin: 0 !important;
-      padding: 0 !important;
-      overflow: hidden !important;
+      padding: 6px !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
       background: #08090c !important;
       display: flex !important;
       flex-direction: column !important;
       align-items: center !important;
       justify-content: center !important;
-      touch-action: none !important;
+      touch-action: manipulation !important;
       user-select: none !important;
       -webkit-user-select: none !important;
     }
+    #game-wrapper, .game-wrapper, .game-container, #container, main {
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: center !important;
+      max-width: 100vw !important;
+      padding: 6px !important;
+      margin: 0 auto !important;
+      box-sizing: border-box !important;
+    }
     canvas {
       display: block !important;
-      margin: auto !important;
+      margin: 0 auto !important;
+      max-width: 95vw !important;
+      max-height: 65vh !important;
+      width: auto !important;
+      height: auto !important;
+      object-fit: contain !important;
       touch-action: none !important;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.8) !important;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.8) !important;
+    }
+    .controls {
+      display: flex !important;
+      flex-wrap: wrap !important;
+      justify-content: center !important;
+      gap: 6px !important;
+      margin-top: 8px !important;
+      max-width: 100vw !important;
     }
   </style>
   <script id="_yuki_injected_script">
   (function() {
+    // 1. Auto-Start Helper (Otomatis start game jika butuh tombol START)
+    function autoStartGame() {
+      var startBtns = document.querySelectorAll('#btn-start, #start-btn, #start, .btn-start, button');
+      startBtns.forEach(function(btn) {
+        var txt = (btn.innerText || btn.textContent || '').trim().toLowerCase();
+        if (txt === 'start' || txt === 'play' || txt === 'mulai' || txt === 'start game') {
+          btn.click();
+        }
+      });
+    }
+
+    setTimeout(autoStartGame, 100);
+    setTimeout(autoStartGame, 400);
+    window.addEventListener('touchstart', autoStartGame, { once: true });
+    window.addEventListener('click', autoStartGame, { once: true });
+
+    // 2. Dynamic Canvas Resizer
     function autoScaleCanvas() {
       var canvases = document.querySelectorAll('canvas');
       canvases.forEach(function(canvas) {
         if (!canvas.dataset.nativeW) {
-          canvas.dataset.nativeW = canvas.width || 400;
-          canvas.dataset.nativeH = canvas.height || 600;
+          canvas.dataset.nativeW = canvas.width || 300;
+          canvas.dataset.nativeH = canvas.height || 500;
         }
         var nw = parseFloat(canvas.dataset.nativeW);
         var nh = parseFloat(canvas.dataset.nativeH);
         var ratio = nw / nh;
-        var maxW = window.innerWidth;
-        var maxH = window.innerHeight;
+
+        var maxW = Math.min(window.innerWidth - 16, 480);
+        var maxH = window.innerHeight * 0.65;
+
         var targetW = maxW;
         var targetH = targetW / ratio;
         if (targetH > maxH) {
@@ -303,8 +346,6 @@ function prepareArtifactHtml(rawHtml = '') {
         }
         canvas.style.width = Math.floor(targetW) + 'px';
         canvas.style.height = Math.floor(targetH) + 'px';
-        canvas.style.maxWidth = '100vw';
-        canvas.style.maxHeight = '100vh';
       });
     }
 
@@ -317,8 +358,8 @@ function prepareArtifactHtml(rawHtml = '') {
     }
     setTimeout(autoScaleCanvas, 50);
     setTimeout(autoScaleCanvas, 250);
-    setInterval(autoScaleCanvas, 1500);
 
+    // 3. Touch Drag & Tap Controls
     var startTouchX = null;
     var startTouchY = null;
     var lastTouchX = null;
@@ -375,7 +416,6 @@ function prepareArtifactHtml(rawHtml = '') {
 
     window.addEventListener('touchmove', function(e) {
       if (!e.touches || e.touches.length === 0) return;
-      e.preventDefault();
       var touch = e.touches[0];
       var currentX = touch.clientX;
       var currentY = touch.clientY;
@@ -390,14 +430,14 @@ function prepareArtifactHtml(rawHtml = '') {
           touchMoved = true;
         }
 
-        // Horizontal Swipe: Left / Right (Tetris & Paddle games)
+        // Horizontal Swipe: Left / Right
         if (deltaX < -3) {
           triggerKey('ArrowLeft', 37);
         } else if (deltaX > 3) {
           triggerKey('ArrowRight', 39);
         }
 
-        // Vertical Swipe Down: Drop / Fast Fall (Tetris & Puzzle games)
+        // Vertical Swipe Down: Drop / Fast Fall
         if (deltaY > 6) {
           triggerKey('ArrowDown', 40);
         }
@@ -409,12 +449,12 @@ function prepareArtifactHtml(rawHtml = '') {
     window.addEventListener('touchend', function(e) {
       dispatchMouse('mouseup', 0, 0);
 
-      // Tap detection (Sentuhan cepat tanpa geser = Rotate / Action / Jump di Tetris & Runner)
+      // Tap = Rotate / Jump / Action
       if (!touchMoved && startTouchX !== null) {
-        triggerKey('ArrowUp', 38); // Rotate piece in Tetris
+        triggerKey('ArrowUp', 38);
         triggerKey('w', 87);
-        triggerKey(' ', 32);      // Space / Action
-        triggerKey('Enter', 13);  // Start
+        triggerKey(' ', 32);
+        triggerKey('Enter', 13);
       }
 
       startTouchX = null;
@@ -438,6 +478,7 @@ function prepareArtifactHtml(rawHtml = '') {
 
   return html
 }
+
 
 function CodexArtifactModal({ artifact, onClose }: { artifact: ArtifactItem; onClose: () => void }) {
   const [tab, setTab] = useState<'preview' | 'code'>('preview')
