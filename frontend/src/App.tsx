@@ -138,7 +138,7 @@ function ComicCard({ comic, isBookmarked, onToggleBookmark }: {
   )
 }
 
-function HermesThoughtCard({ thinking }: { thinking?: string }) {
+function AgentThoughtCard({ thinking }: { thinking?: string }) {
   const [open, setOpen] = useState(false)
   if (!thinking || !thinking.trim()) return null
 
@@ -152,7 +152,7 @@ function HermesThoughtCard({ thinking }: { thinking?: string }) {
       >
         <span className="hermes-thought-title">
           <Sparkles size={13} className="hermes-sparkle-icon" />
-          <span><b>Hermes Thought Process</b> (Penalaran Internal)</span>
+          <span><b>Proses Berpikir Yuki</b> (Analisis Internal)</span>
         </span>
         <span className="hermes-thought-chevron">
           {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
@@ -182,7 +182,7 @@ function AgentStepsCard({ steps }: { steps?: AgentStep[] }) {
       >
         <span className="agent-steps-title">
           <Zap size={13} className="agent-zap-icon" />
-          <span><b>Langkah Kerja Hermes Agent</b> ({steps.length} aksi)</span>
+          <span><b>Langkah Kerja Yuki Agent</b> ({steps.length} aksi)</span>
         </span>
         <span className="agent-steps-chevron">
           {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
@@ -234,7 +234,7 @@ function CodexArtifactModal({ artifact, onClose }: { artifact: ArtifactItem; onC
       <section className="timeline-card codex-artifact-modal" onClick={e => e.stopPropagation()}>
         <header className="artifact-modal-header">
           <div className="artifact-title-group">
-            <span className="artifact-badge"><Code2 size={12} /> HERMES CODEX ARTIFACT</span>
+            <span className="artifact-badge"><Code2 size={12} /> YUKI AGENT ARTIFACT</span>
             <h2>{artifact.title}</h2>
           </div>
           <div className="artifact-header-actions">
@@ -299,7 +299,7 @@ function MessageBody({ message, bookmarks, onToggleBookmark, onOpenArtifact }: {
 
   return <>
     {message.thinking && (
-      <HermesThoughtCard thinking={message.thinking} />
+      <AgentThoughtCard thinking={message.thinking} />
     )}
     {message.steps && message.steps.length > 0 && (
       <AgentStepsCard steps={message.steps} />
@@ -343,7 +343,7 @@ function SkillsCatalogModal({ skills, onClose }: { skills: SkillInfo[]; onClose:
     research: { label: 'Research & Web Browsing', icon: Globe },
     media: { label: 'Media & Ryukomik Catalog', icon: BookOpen },
     productivity: { label: 'Productivity & Planning', icon: ListTodo },
-    computing: { label: 'Computing & Codex Artifacts', icon: Terminal },
+    computing: { label: 'Computing & Live Artifacts', icon: Terminal },
     general: { label: 'General Capabilities', icon: Wrench }
   }
 
@@ -362,7 +362,7 @@ function SkillsCatalogModal({ skills, onClose }: { skills: SkillInfo[]; onClose:
       <section className="timeline-card skills-modal" onClick={e => e.stopPropagation()}>
         <header>
           <div>
-            <small>Hermes Agent / OpenCode Engine</small>
+            <small>Skills & Tools Engine</small>
             <h2>Katalog Skills Yuki Agent</h2>
           </div>
           <button onClick={onClose} aria-label="Tutup"><X size={17} /></button>
@@ -704,7 +704,7 @@ export default function App() {
           <button onClick={() => setSettingsOpen(!settingsOpen)} aria-label="Pengaturan"><Settings size={17} /></button>
         </div>
         {settingsOpen && <div className="settings-card">
-          <button onClick={() => { setSkillsModalOpen(true); setSettingsOpen(false) }}><Wrench size={15} /><span><b>Katalog Skills Agent</b><small>{skills.length || 8} skills aktif</small></span></button>
+          <button onClick={() => { setSkillsModalOpen(true); setSettingsOpen(false) }}><Wrench size={15} /><span><b>Katalog Skills Yuki Agent</b><small>{skills.length || 8} skills aktif</small></span></button>
           <button onClick={() => { setBookmarksOpen(true); setSettingsOpen(false) }}><Bookmark size={15} /><span><b>Komik tersimpan</b><small>{bookmarks.length} judul tersimpan</small></span></button>
           <button onClick={() => { setTimelineOpen(true); setSettingsOpen(false) }}><Heart size={15} /><span><b>Perjalanan hubungan</b><small>{milestones.length} momen tersimpan</small></span></button>
           {installPrompt && <button onClick={installApp}><Download size={15} /><span><b>Pasang aplikasi Yuki</b><small>Tambahkan ke layar utama</small></span></button>}
@@ -732,7 +732,7 @@ export default function App() {
             onClick={() => setChatMode('agent')}
           >
             <Zap size={13} />
-            <span>Hermes Codex</span>
+            <span>Yuki Agent</span>
           </button>
         </div>
 
@@ -741,7 +741,7 @@ export default function App() {
             type="button"
             className="skills-catalog-pill"
             onClick={() => setSkillsModalOpen(true)}
-            title="Lihat seluruh Skills aktif (Hermes/OpenCode style)"
+            title="Lihat seluruh Skills aktif Yuki Agent"
           >
             <Wrench size={12} />
             <span>{skills.length || 8} Skills</span>
@@ -788,7 +788,7 @@ export default function App() {
       <div className="messages" aria-live="polite">
         {messages.length === 0 && <div className="empty-state">
           <span>01</span>
-          <h2>{chatMode === 'agent' ? 'Yuki Hermes Codex siap mengeksekusi.' : 'Yuki menunggumu bicara.'}</h2>
+          <h2>{chatMode === 'agent' ? 'Yuki Agent siap mengeksekusi.' : 'Yuki menunggumu bicara.'}</h2>
           <p>{chatMode === 'agent'
             ? 'Minta Yuki merakit web mini-game interaktif, riset web, eksekusi kode, atau mengelola tugas.'
             : 'Mulai dari hal sederhana. Jangan berharap dia langsung ramah.'}</p>
@@ -813,7 +813,7 @@ export default function App() {
             <button className={feedback[index] === -1 ? 'selected negative' : ''} onClick={() => rateMessage(index, message, -1)} aria-label="Balasan kurang cocok"><ThumbsDown size={12}/></button>
           </div>}
         </article>)}
-        {busy && <><div className={`request-status ${connection}`}>{connection === 'slow' || connection === 'retrying' ? <RefreshCw className="spin" size={12} /> : <LoaderCircle className="spin" size={12} />}<span>{chatMode === 'agent' ? 'Hermes ReAct Engine sedang berpikir & mengeksekusi...' : connectionLabel[connection]}</span></div><article className="message assistant"><div className="message-avatar">{chatMode === 'agent' ? <Zap size={13} /> : 'Y'}</div><div className="message-content typing"><i/><i/><i/></div></article></>}
+        {busy && <><div className={`request-status ${connection}`}>{connection === 'slow' || connection === 'retrying' ? <RefreshCw className="spin" size={12} /> : <LoaderCircle className="spin" size={12} />}<span>{chatMode === 'agent' ? 'Yuki Agent sedang berpikir & mengeksekusi...' : connectionLabel[connection]}</span></div><article className="message assistant"><div className="message-avatar">{chatMode === 'agent' ? <Zap size={13} /> : 'Y'}</div><div className="message-content typing"><i/><i/><i/></div></article></>}
         {connection === 'offline' && !busy && <div className="request-status offline"><WifiOff size={12}/><span>Kamu offline. Pesan yang belum dikirim tetap aman.</span></div>}
         {error && <div className="error-banner"><span>{error}</span><button onClick={() => setError('')}><X size={14}/></button></div>}
         <div ref={endRef} />
@@ -828,7 +828,7 @@ export default function App() {
           value={input}
           onChange={e => setInput(e.target.value)}
           onFocus={() => setAvatarCompact(true)}
-          placeholder={chatMode === 'agent' ? 'Minta Hermes Codex membuat live mini-app, meriset web, atau coding...' : 'Tulis pesan untuk Yuki…'}
+          placeholder={chatMode === 'agent' ? 'Minta Yuki Agent membuat live mini-app, meriset web, atau coding...' : 'Tulis pesan untuk Yuki…'}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit() } }}
         />
         <button disabled={busy || !input.trim()} aria-label="Kirim pesan">{busy ? <LoaderCircle className="spin" size={19}/> : <Send size={19}/>}</button>
@@ -844,10 +844,10 @@ export default function App() {
     <aside className="character-panel">
       <div className="panel-meta">
         <span>Character viewport</span>
-        <b>{chatMode === 'agent' ? <span className="agent-meta-badge"><Zap size={10} /> Hermes Codex Active</span> : 'Session active'}</b>
+        <b>{chatMode === 'agent' ? <span className="agent-meta-badge"><Zap size={10} /> Yuki Agent Active</span> : 'Session active'}</b>
       </div>
       <div className="character-frame">
-        <div className="frame-code">{chatMode === 'agent' ? 'HERMES / 001' : 'LIVE / 001'}</div>
+        <div className="frame-code">{chatMode === 'agent' ? 'AGENT / 001' : 'LIVE / 001'}</div>
         <div className="mobile-bond" aria-label={`Bond ${Math.round(bondValue)} dari 100`}><span>{bond}</span><b>{Math.round(bondValue)}</b><i><u style={{ width: `${Math.max(2, bondValue)}%` }} /></i></div>
         <button className="avatar-toggle" type="button" onClick={() => setAvatarCompact(value => !value)}
           aria-label={avatarCompact ? 'Perbesar avatar Yuki' : 'Kecilkan avatar Yuki'} aria-expanded={!avatarCompact}>
