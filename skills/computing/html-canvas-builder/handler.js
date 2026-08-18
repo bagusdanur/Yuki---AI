@@ -321,7 +321,7 @@ export async function executeBuildInteractiveArtifact(params = {}) {
 
 
 
-  const artifactId = `art_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+  const artifactId = String(params.id || `art_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`)
 
   // Simpan file ke public/artifacts di server agar bisa langsung diakses / diunduh
   try {
@@ -334,19 +334,119 @@ export async function executeBuildInteractiveArtifact(params = {}) {
     console.warn('[artifact] Gagal menyimpan file ke disk:', err.message)
   }
 
+  // Simpan ke SQLite persistent workspace jika ada userId di context
+  let savedRecord = { id: artifactId, title: cleanTitle, type: cleanType, content: finalCode, version: 1 }
+  if (context?.userId) {
+    try {
+      const { saveUserArtifact } = await import('../../../lib/memory.js')
+      savedRecord = saveUserArtifact(context.userId, {
+        id: artifactId,
+        title: cleanTitle,
+        type: cleanType,
+        content: finalCode,
+        patch_note: 'Initial build'
+      }) || savedRecord
+    } catch (err) {
+      console.warn('[artifact] Gagal simpan ke database:', err.message)
+    }
+  }
+
   return {
     success: true,
-    message: `Artifact "${cleanTitle}" berhasil dirakit dan siap dirender di Live Preview.`,
+    message: `Artifact "${cleanTitle}" (v${savedRecord.version || 1}) berhasil dirakit dan siap dirender di Live Preview.`,
     artifact: {
-      id: artifactId,
-      title: cleanTitle,
+      id: savedRecord.id || artifactId,
+      title: savedRecord.title || cleanTitle,
       type: cleanType,
       content: finalCode,
+      version: savedRecord.version || 1,
       url: `/artifacts/${artifactId}.html`
     }
   }
 }
 
-export default {
-  build_interactive_artifact: executeBuildInteractiveArtifact
+export async function executeGetActiveArtifact(params = {}, context = {}) {
+  const userId = context?.userId || params?.userId
+  if (!userId) {
+    return { success: false, error: 'User ID tidak ditemukan dalam konteks.' }
+  }
+
+  try {
+    const { getLatestUserArtifact } = await import('../../../lib/memory.js')
+    const active = getLatestUserArtifact(userId)
+    if (!active) {
+      return {
+        success: true,
+        has_active_artifact: false,
+        message: 'Belum ada file artifact yang dibuat oleh user dalam sesi ini.'
+      }
+    }
+
+    return {
+      success: true,
+      has_active_artifact: true,
+      artifact: {
+        id: active.id,
+        title: active.title,
+        type: active.type,
+        version: active.version,
+        patch_note: active.patch_note,
+        updated_at: active.updated_at,
+        content: active.content
+      },
+      message: `Artifact aktif ditemukan: "${active.title}" (Versi ${active.version}). Gunakan kode ini sebagai basis modifikasi/penambahan level.`
+    }
+  } catch (err) {
+    return { success: false, error: `Gagal membaca artifact aktif: ${err.message}` }
+  }
 }
+
+export async function executeReadArtifactFile(params = {}, context = {}) {
+  const userId = context?.userId || params?.userId
+  const artifactId = params?.id
+  if (!userId || !artifactId) {
+    return { success: false, error: 'Parameter "id" dan user ID harus disertakan.' }
+  }
+
+  try {
+    const { getUserArtifactById } = await import('../../../lib/memory.js')
+    const art = getUserArtifactById(userId, artifactId)
+    if (!art) {
+      return { success: false, error: `Artifact dengan ID "${artifactId}" tidak ditemukan.` }
+    }
+
+    return {
+      success: true,
+      artifact: art,
+      message: `File artifact "${art.title}" (v${art.version}) berhasil dibaca.`
+    }
+  } catch (err) {
+    return { success: false, error: `Gagal membaca file artifact: ${err.message}` }
+  }
+}
+
+export async function executeUpdateInteractiveArtifact(params = {}, context = {}) {
+  const { id, title, html_content, code, content, patch_note, summary } = params
+  const rawCode = html_content || code || content
+  if (!rawCode) {
+    return { success: false, error: 'Parameter "html_content" atau "code" yang diperbarui tidak boleh kosong.' }
+  }
+
+  // Gunakan executeBuildInteractiveArtifact untuk memproses injeksi engine & penyimpanan
+  const buildResult = await executeBuildInteractiveArtifact({
+    id,
+    title: title || 'Updated Canvas App',
+    html_content: rawCode,
+    patch_note: patch_note || summary || 'Incremental update / level extension'
+  }, context)
+
+  return buildResult
+}
+
+export default {
+  build_interactive_artifact: executeBuildInteractiveArtifact,
+  get_active_artifact: executeGetActiveArtifact,
+  read_artifact_file: executeReadArtifactFile,
+  update_interactive_artifact: executeUpdateInteractiveArtifact
+}
+
