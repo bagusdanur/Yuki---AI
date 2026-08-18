@@ -1,4 +1,4 @@
-import type { BookmarkedComic, ChatResponse, ComicRecommendation, Message, Milestone } from './types'
+import type { BookmarkedComic, ChatMode, ChatResponse, ComicRecommendation, Message, Milestone, SkillInfo } from './types'
 
 async function parse<T>(response: Response): Promise<T> {
   const data = await response.json()
@@ -36,10 +36,14 @@ export async function restore(accessCode: string) {
   })
 }
 
-export async function sendChat(userId: string, messages: Message[], isIdle = false) {
+export async function sendChat(userId: string, messages: Message[], isIdle = false, mode: ChatMode = 'companion') {
   return request<ChatResponse>('/api/chat', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, messages, isIdle }),
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, messages, isIdle, mode }),
   }, 125_000)
+}
+
+export async function getSkills() {
+  return request<{ skills: SkillInfo[] }>('/api/agent/skills', { method: 'GET' })
 }
 
 export async function sendFeedback(userId: string, messageId: number | undefined, rating: 1 | -1) {

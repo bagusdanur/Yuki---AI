@@ -17,6 +17,8 @@ import {
 import { responseTarget, shouldInitiate, validateCharacterReply } from './lib/character-quality.js'
 import { warmupEmbedder } from './lib/semantic.js'
 import { searchComics, latestComics, wantsComic, extractQuery, buildComicContext } from './lib/ryukomik.js'
+import { initSkills, listSkills } from './lib/agent/skills-engine.js'
+import { runAgent } from './lib/agent/runner.js'
 
 // Hemat DeepSeek: cuma ekstrak fakta kalau pesan kemungkinan berisi info personal
 // (mayoritas chat biasa nggak perlu -> menghemat ~1 panggilan LLM tiap giliran).
@@ -145,15 +147,27 @@ app.use((req, res, next) => {
 app.use(express.static('dist'))
 app.use(express.static('public'))
 
+
 // Rute Dokumentasi Yuki AI
 app.get('/docs', (req, res) => {
   res.sendFile(path.resolve('public/docs.html'))
 })
-app.get('/admin', (_req, res) => res.sendFile(path.resolve('public/admin.html')))
-app.get('/privacy', (_req, res) => res.sendFile(path.resolve('public/privacy.html')))
 
 // Panaskan model embedding di latar belakang (biar recall cepat saat dipakai)
 warmupEmbedder().catch(() => {})
+
+// Inisialisasi Hermes/OpenCode Skills Engine
+initSkills().catch((err) => console.error('[skills-engine] Inisialisasi gagal:', err.message))
+
+// Endpoint Katalog Skills Yuki Agent (Hermes/OpenCode Style)
+app.get('/api/agent/skills', requireSession, rateLimit({ max: 40 }), async (_req, res) => {
+  try {
+    const skills = await listSkills()
+    res.json({ skills })
+  } catch (err) {
+    res.status(500).json({ error: String(err.message || err) })
+  }
+})
 
 // Emosi & bond TERPISAH per user (di-cache di RAM, persist ke SQLite per user)
 const sessions = new Map() // userId -> Emotion
@@ -161,6 +175,8 @@ const sessions = new Map() // userId -> Emotion
 // Y-5: Turn counter per user — untuk pertanyaan balik proaktif setiap 3 giliran
 const turnCounters = new Map() // userId -> turnCount
 
+app.get('/admin', (_req, res) => res.sendFile(path.resolve('public/admin.html')))
+app.get('/privacy', (_req, res) => res.sendFile(path.resolve('public/privacy.html')))
 // Y-3: Deteksi topik serius yang butuh override empati penuh
 function isSeriousTopic(text = '') {
   return /(meninggal|mati |kanker|sakit parah|kecelakaan|bunuh diri|depresi berat|putus asa|tidak sanggup|gak sanggup|mau nyerah|hilang harapan|gak mau hidup|nangis terus|hancur banget|trauma|aku takut|lagi takut|cemas|khawatir|gugup|deg-degan|panik|butuh ditemani|temani aku)/i.test(text)
@@ -173,6 +189,7 @@ async function getEmotion(userId) {
   sessions.set(userId, emo)
   return emo
 }
+
 
 // Endpoint untuk mendaftar user baru (Onboarding)
 app.post('/api/register', rateLimit({ max: 10 }), async (req, res) => {
@@ -221,11 +238,11 @@ app.post('/api/login-code', rateLimit({ max: 15 }), async (req, res) => {
   }
 })
 
-// Endpoint chat -> balasan dari Qwen/DeepSeek (dengan emosi + kedekatan + memori)
+// Endpoint chat -> balasan dari Qwen/DeepSeek (dengan emosi + kedekatan + memori + agent skills)
 app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) => {
   try {
     metrics.chats += 1
-    const { messages, adult, isIdle = false } = req.body || {}
+    const { messages, adult, isIdle = false, mode = 'companion' } = req.body || {}
     const userId = req.authUserId
     if (!Array.isArray(messages) || messages.length === 0 || messages.length > 50) {
       return res.status(400).json({ error: 'Riwayat pesan tidak valid.' })
@@ -266,6 +283,58 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
     // 2) RECALL SEMANTIK: ambil memori yang maknanya paling relevan dgn pesan user
     const recall = await recallMemory(userId, userText)
     const memoryContext = buildMemoryContext(recall)
+
+    // === MODE AGENT AI (Hermes / OpenCode Skills ReAct Loop) ===
+    if (mode === 'agent' && !isIdle) {
+      const messagesToSend = sanitizedMessages.slice(-18)
+      const agentResult = await runAgent({
+        userId,
+        messages: messagesToSend,
+        memoryContext,
+        bondName: bond.name
+      })
+
+      let agentMood = agentResult.mood || kwMood
+      const allowed = emotion.allowedEmotions()
+      if (!allowed.includes(agentMood)) {
+        agentMood = 'tenang'
+      }
+
+      try {
+        emotion.updateFromLLMMood(agentMood)
+        saveEmotion(userId, emotion.serialize())
+      } catch {}
+
+      let messageId = null
+      try {
+        saveChatMessage(userId, 'user', userText)
+        messageId = saveChatMessage(userId, 'assistant', agentResult.reply)
+      } catch (err) {
+        console.error('[server] Gagal simpan chat history agent:', err)
+      }
+
+      if (worthRemembering(userText)) {
+        extractFacts(userText, agentResult.reply)
+          .then((facts) => (facts.length ? addFacts(userId, facts) : null))
+          .catch(() => {})
+      }
+
+      const milestones = syncBondMilestones(userId, emotion.bond)
+      return res.json({
+        reply: agentResult.reply,
+        model: agentResult.model,
+        mood: agentMood,
+        bond: bond.name,
+        bondValue: emotion.bond,
+        feeling: emotion.feeling(),
+        mode: 'agent',
+        steps: agentResult.steps || [],
+        comics: agentResult.comics || [],
+        messageId,
+        milestones
+      })
+    }
+
     shouldAskQuestion = !isIdle && shouldInitiate({
       turns: _turns,
       serious: isSerious,
@@ -283,6 +352,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
       comicResults = list.slice(0, 6)
       comicContext = buildComicContext(list, { query: q })
     }
+
 
     // Perbaiki bug loop balas diri sendiri: sisipkan pesan user tiruan agar API LLM menerima giliran user
     // Ringkasan memori membawa konteks lama; hanya 18 pesan terbaru dikirim mentah.

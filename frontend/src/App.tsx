@@ -1,12 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Bookmark, BookOpen, ChevronDown, ChevronUp, Copy, Download, Heart, KeyRound, LoaderCircle, RefreshCw, RotateCcw, Send, Settings, Sparkles, ThumbsDown, ThumbsUp, Volume2, WifiOff, X } from 'lucide-react'
-import { addBookmark, deleteAccount, getBookmarks, getRelationship, register, removeBookmark, restore, sendChat, sendFeedback, speak } from './api'
-import type { BookmarkedComic, ComicRecommendation, Message, Milestone, Session } from './types'
+import {
+  Bookmark, BookOpen, ChevronDown, ChevronUp, Copy, Download, Heart,
+  KeyRound, LoaderCircle, MessageSquare, RefreshCw, RotateCcw, Send,
+  Settings, Sparkles, ThumbsDown, ThumbsUp, Volume2, WifiOff, Wrench, X, Zap
+} from 'lucide-react'
+import {
+  addBookmark, deleteAccount, getBookmarks, getRelationship,
+  getSkills, register, removeBookmark, restore, sendChat, sendFeedback, speak
+} from './api'
+import type {
+  AgentStep, BookmarkedComic, ChatMode, ComicRecommendation,
+  Message, Milestone, Session, SkillInfo
+} from './types'
 
 const SESSION_KEYS = {
   userId: 'yuki_uid_v3', username: 'yuki_username_v3', accessCode: 'yuki_access_code_v3',
   bond: 'yuki_bond_v3', bondValue: 'yuki_bond_value_v3', mood: 'yuki_mood_v3', feeling: 'yuki_feeling_v3',
-  sessionToken: 'yuki_session_token_v3',
+  sessionToken: 'yuki_session_token_v3', mode: 'yuki_mode_v3'
 }
 
 const moodImage: Record<string, string> = {
@@ -71,7 +81,7 @@ function legacyComics(text: string) {
       parsed.searchParams.delete('img')
       const [type = '', chapter = ''] = String(meta).split(/\s*[·•]\s*/)
       comics.push({ title: String(title).trim(), type, chapter, image, url: parsed.toString() })
-    } catch { /* abaikan markup lama yang tidak valid */ }
+    } catch { /* abaikan markup lama */ }
     return ''
   })
   return { clean: clean.trim(), comics }
@@ -120,6 +130,46 @@ function ComicCard({ comic, isBookmarked, onToggleBookmark }: {
   )
 }
 
+function AgentStepsCard({ steps }: { steps?: AgentStep[] }) {
+  const [open, setOpen] = useState(false)
+  if (!steps || steps.length === 0) return null
+
+  return (
+    <div className="agent-steps-card">
+      <button
+        type="button"
+        className="agent-steps-toggle"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+      >
+        <span className="agent-steps-title">
+          <Zap size={13} className="agent-zap-icon" />
+          <span><b>Langkah Kerja Agent</b> ({steps.length} aksi)</span>
+        </span>
+        <span className="agent-steps-chevron">
+          {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+        </span>
+      </button>
+
+      {open && (
+        <div className="agent-steps-list">
+          {steps.map((step, idx) => (
+            <div className={`agent-step-item ${step.status || 'done'}`} key={step.id || idx}>
+              <div className="agent-step-header">
+                <span className="agent-step-badge">{step.skillTitle || step.tool}</span>
+                <span className="agent-step-desc">{step.title}</span>
+                {step.durationMs !== undefined && (
+                  <span className="agent-step-time">{step.durationMs}ms</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function MessageBody({ message, bookmarks, onToggleBookmark }: {
   message: Message
   bookmarks: BookmarkedComic[]
@@ -132,6 +182,9 @@ function MessageBody({ message, bookmarks, onToggleBookmark }: {
   const bookmarkedUrls = new Set(bookmarks.map(b => b.url))
 
   return <>
+    {message.steps && message.steps.length > 0 && (
+      <AgentStepsCard steps={message.steps} />
+    )}
     {parts.map((part, index) => part.startsWith('*') && part.endsWith('*')
       ? <em className="action" key={index}>{part.slice(1, -1).trim()}</em>
       : <span key={index}>{part.replace(/^\s*\*\s*$/gm, '')}</span>)}
@@ -148,6 +201,64 @@ function MessageBody({ message, bookmarks, onToggleBookmark }: {
       </div>
     )}
   </>
+}
+
+function SkillsCatalogModal({ skills, onClose }: { skills: SkillInfo[]; onClose: () => void }) {
+  const categoryLabels: Record<string, string> = {
+    research: '🌐 Research & Web Browsing',
+    media: '📚 Media & Ryukomik',
+    productivity: '📝 Productivity & Planning',
+    computing: '💻 Computing & Code Sandbox',
+    general: '⚙️ General Capabilities'
+  }
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, SkillInfo[]>()
+    for (const s of skills) {
+      const cat = s.category || 'general'
+      if (!map.has(cat)) map.set(cat, [])
+      map.get(cat)!.push(s)
+    }
+    return map
+  }, [skills])
+
+  return (
+    <div className="timeline-overlay" onClick={onClose}>
+      <section className="timeline-card skills-modal" onClick={e => e.stopPropagation()}>
+        <header>
+          <div>
+            <small>Hermes / OpenCode Engine</small>
+            <h2>Katalog Skills Yuki Agent</h2>
+          </div>
+          <button onClick={onClose} aria-label="Tutup"><X size={17} /></button>
+        </header>
+
+        <div className="skills-modal-content">
+          <p className="skills-intro">
+            Dalam <b>Mode Agent</b>, Yuki dibekali sistem skills modular untuk riset web, manajemen agenda to-do, pelacakan Ryukomik, dan komputasi presisi.
+          </p>
+
+          {Array.from(grouped.entries()).map(([cat, list]) => (
+            <div className="skills-cat-group" key={cat}>
+              <h3>{categoryLabels[cat] || cat.toUpperCase()}</h3>
+              <div className="skills-grid">
+                {list.map(s => (
+                  <div className="skill-card" key={s.name}>
+                    <div className="skill-card-top">
+                      <strong>{s.title}</strong>
+                      <span className="skill-ver">v{s.version}</span>
+                    </div>
+                    <p>{s.description}</p>
+                    <code>skills/{cat}/{s.name}</code>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  )
 }
 
 function Onboarding({ onReady }: { onReady: (session: Session, history?: Message[], bondValue?: number, milestones?: Milestone[]) => void }) {
@@ -207,6 +318,7 @@ export default function App() {
   const [bond, setBond] = useState(() => localStorage.getItem(SESSION_KEYS.bond) || 'orang asing')
   const [bondValue, setBondValue] = useState(() => Number(localStorage.getItem(SESSION_KEYS.bondValue)) || 0)
   const [feeling, setFeeling] = useState(() => localStorage.getItem(SESSION_KEYS.feeling) || 'Lagi kalem, jawab seperlunya.')
+  const [chatMode, setChatMode] = useState<ChatMode>(() => (localStorage.getItem(SESSION_KEYS.mode) as ChatMode) || 'companion')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [avatarCompact, setAvatarCompact] = useState(false)
   const [blinking, setBlinking] = useState(false)
@@ -218,6 +330,8 @@ export default function App() {
   const [timelineOpen, setTimelineOpen] = useState(false)
   const [bookmarks, setBookmarks] = useState<BookmarkedComic[]>([])
   const [bookmarksOpen, setBookmarksOpen] = useState(false)
+  const [skills, setSkills] = useState<SkillInfo[]>([])
+  const [skillsModalOpen, setSkillsModalOpen] = useState(false)
   const [feedback, setFeedback] = useState<Record<number, 1 | -1>>({})
   const endRef = useRef<HTMLDivElement>(null)
   const currentAudio = useRef<HTMLAudioElement | null>(null)
@@ -225,6 +339,10 @@ export default function App() {
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [messages, busy])
   useEffect(() => { if (session) localStorage.setItem(historyKey(session.userId), JSON.stringify(messages.slice(-40))) }, [messages, session])
+  useEffect(() => {
+    localStorage.setItem(SESSION_KEYS.mode, chatMode)
+  }, [chatMode])
+
   useEffect(() => {
     const online = () => setConnection('idle')
     const offline = () => setConnection('offline')
@@ -237,11 +355,13 @@ export default function App() {
       window.removeEventListener('beforeinstallprompt', install); window.removeEventListener('yuki-pwa-update', updated)
     }
   }, [])
+
   useEffect(() => () => requestTimers.current.forEach(window.clearTimeout), [])
   useEffect(() => {
     if (!session || session.sessionToken || !session.accessCode) return
     restore(session.accessCode).then(data => ready({ ...session, sessionToken: data.sessionToken }, data.history || messages, data.bondValue, data.milestones)).catch(() => reset())
   }, [session?.userId, session?.sessionToken])
+
   useEffect(() => {
     if (!session?.sessionToken) return
     getRelationship(session.userId).then(data => {
@@ -249,6 +369,7 @@ export default function App() {
       setBond(data.bond); setBondValue(data.bondValue)
     }).catch(() => {})
     getBookmarks().then(data => setBookmarks(data.bookmarks || [])).catch(() => {})
+    getSkills().then(data => setSkills(data.skills || [])).catch(() => {})
   }, [session?.userId, session?.sessionToken])
 
   const avatarExpression = useMemo(() => moodImage[mood] || 'tenang', [mood])
@@ -311,7 +432,7 @@ export default function App() {
     const content = input.trim()
     if (!content || busy || !session) return
     navigator.vibrate?.(10)
-    const next: Message[] = [...messages, { role: 'user', content }]
+    const next: Message[] = [...messages, { role: 'user', content, mode: chatMode }]
     setMessages(next); setInput(''); setBusy(true); setError(''); setConnection('thinking')
     requestTimers.current.forEach(window.clearTimeout)
     requestTimers.current = [
@@ -320,9 +441,16 @@ export default function App() {
     ]
     let failed = false
     try {
-      const result = await sendChat(session.userId, next)
+      const result = await sendChat(session.userId, next, false, chatMode)
       if (!result.reply?.trim()) throw new Error('Yuki mengirim balasan kosong. Coba lagi.')
-      setMessages([...next, { role: 'assistant', content: result.reply, comics: result.comics || [], messageId: result.messageId }])
+      setMessages([...next, {
+        role: 'assistant',
+        content: result.reply,
+        comics: result.comics || [],
+        messageId: result.messageId,
+        mode: result.mode || chatMode,
+        steps: result.steps || []
+      }])
       setMood(result.mood || 'tenang'); setBond(result.bond || bond)
       setBondValue(result.bondValue || 0); setFeeling(result.feeling || feeling)
       if (result.milestones) setMilestones(result.milestones)
@@ -343,20 +471,20 @@ export default function App() {
   useEffect(() => {
     if (!session || busy || messages.length < 2 || document.hidden) return
     const timer = window.setTimeout(async () => {
-      if (document.hidden || !navigator.onLine) return
+      if (document.hidden || !navigator.onLine || chatMode === 'agent') return
       setBusy(true); setConnection('thinking')
       try {
-        const result = await sendChat(session.userId, messages, true)
+        const result = await sendChat(session.userId, messages, true, 'companion')
         if (result.reply?.trim()) {
           setMessages(current => [...current, { role: 'assistant', content: result.reply, messageId: result.messageId }])
           setMood(result.mood || 'tenang'); setFeeling(result.feeling || feeling)
           if (result.milestones) setMilestones(result.milestones)
         }
-      } catch { /* sapaan idle tidak boleh mengganggu chat utama */ }
+      } catch { /* sapaan idle */ }
       finally { setBusy(false); setConnection(navigator.onLine ? 'idle' : 'offline') }
     }, 120_000)
     return () => window.clearTimeout(timer)
-  }, [messages, session, busy])
+  }, [messages, session, busy, chatMode])
 
   async function rateMessage(index: number, message: Message, rating: 1 | -1) {
     if (!session || feedback[index]) return
@@ -404,18 +532,36 @@ export default function App() {
     catch (cause) { setError(cause instanceof Error ? cause.message : 'Data belum berhasil dihapus') }
   }
 
-  return <main className={`app-shell${avatarCompact ? ' avatar-compact' : ''}`}>
+  const companionSuggestions = [
+    'Rekomendasi Manhwa Aksi',
+    'Manga Romance Manis',
+    'Komik Isekai Seru',
+    'Update Chapter Terbaru'
+  ]
+
+  const agentSuggestions = [
+    'Cari berita anime terbaru minggu ini',
+    'Catat to-do list belajarku besok',
+    'Berapa hari lagi menuju tahun baru?',
+    'Cari manga rating tertinggi di Ryukomik'
+  ]
+
+  return <main className={`app-shell${avatarCompact ? ' avatar-compact' : ''} mode-${chatMode}`}>
     {updateReady && <div className="pwa-update"><RefreshCw size={14} /><span>Versi baru Yuki sudah siap.</span><button onClick={() => window.location.reload()}>Muat ulang</button></div>}
     {!session && <Onboarding onReady={ready} />}
     <section className="chat-panel">
       <header className="chat-header">
         <div className="monogram">Y</div>
-        <div className="identity"><strong>Yuki</strong><span><i className={`connection-dot ${connection}`} /> {connectionLabel[connection]}</span></div>
+        <div className="identity">
+          <strong>Yuki</strong>
+          <span><i className={`connection-dot ${connection}`} /> {connectionLabel[connection]}</span>
+        </div>
         <div className="header-actions">
           <a href="/docs" target="_blank" aria-label="Dokumentasi"><BookOpen size={17} /></a>
           <button onClick={() => setSettingsOpen(!settingsOpen)} aria-label="Pengaturan"><Settings size={17} /></button>
         </div>
         {settingsOpen && <div className="settings-card">
+          <button onClick={() => { setSkillsModalOpen(true); setSettingsOpen(false) }}><Wrench size={15} /><span><b>Katalog Skills Agent</b><small>{skills.length || 7} skills aktif</small></span></button>
           <button onClick={() => { setBookmarksOpen(true); setSettingsOpen(false) }}><Bookmark size={15} /><span><b>Komik tersimpan</b><small>{bookmarks.length} judul tersimpan</small></span></button>
           <button onClick={() => { setTimelineOpen(true); setSettingsOpen(false) }}><Heart size={15} /><span><b>Perjalanan hubungan</b><small>{milestones.length} momen tersimpan</small></span></button>
           {installPrompt && <button onClick={installApp}><Download size={15} /><span><b>Pasang aplikasi Yuki</b><small>Tambahkan ke layar utama</small></span></button>}
@@ -425,6 +571,44 @@ export default function App() {
           <button className="danger" onClick={removeAccount}><X size={15} /><span><b>Hapus seluruh data</b><small>Permanen dari server Yuki</small></span></button>
         </div>}
       </header>
+
+      {/* Mode Switcher Bar */}
+      <div className="mode-switcher-bar">
+        <div className="mode-switcher-pill" role="tablist">
+          <button
+            type="button"
+            className={`mode-btn ${chatMode === 'companion' ? 'active' : ''}`}
+            onClick={() => setChatMode('companion')}
+          >
+            <MessageSquare size={13} />
+            <span>Teman Ngobrol</span>
+          </button>
+          <button
+            type="button"
+            className={`mode-btn agent-btn ${chatMode === 'agent' ? 'active' : ''}`}
+            onClick={() => setChatMode('agent')}
+          >
+            <Zap size={13} />
+            <span>Mode Agent</span>
+          </button>
+        </div>
+
+        {chatMode === 'agent' && (
+          <button
+            type="button"
+            className="skills-catalog-pill"
+            onClick={() => setSkillsModalOpen(true)}
+            title="Lihat seluruh Skills aktif (Hermes/OpenCode style)"
+          >
+            <Wrench size={12} />
+            <span>{skills.length || 7} Skills</span>
+          </button>
+        )}
+      </div>
+
+      {skillsModalOpen && (
+        <SkillsCatalogModal skills={skills} onClose={() => setSkillsModalOpen(false)} />
+      )}
 
       {timelineOpen && <div className="timeline-overlay" onClick={() => setTimelineOpen(false)}><section className="timeline-card" onClick={event => event.stopPropagation()}>
         <header><div><small>Relationship archive</small><h2>Perjalanan kalian</h2></div><button onClick={() => setTimelineOpen(false)}><X size={17}/></button></header>
@@ -455,31 +639,57 @@ export default function App() {
       </section></div>}
 
       <div className="messages" aria-live="polite">
-        {messages.length === 0 && <div className="empty-state"><span>01</span><h2>Yuki menunggumu bicara.</h2><p>Mulai dari hal sederhana. Jangan berharap dia langsung ramah.</p></div>}
-        {messages.map((message, index) => <article className={`message ${message.role}`} key={`${index}-${message.content.slice(0, 12)}`}>
-          {message.role === 'assistant' && <div className="message-avatar">Y</div>}
-          <div className="message-content"><MessageBody message={message} bookmarks={bookmarks} onToggleBookmark={handleToggleBookmark} /></div>
-          {message.role === 'assistant' && <div className="message-tools"><button className={`speak ${speakingIndex === index ? 'active' : ''}`} onClick={() => play(message.content, index)} aria-label="Putar suara">{speakingIndex === index ? <span className="audio-bars" aria-hidden="true"><i/><i/><i/></span> : <Volume2 size={14} />}</button><button className={feedback[index] === 1 ? 'selected' : ''} onClick={() => rateMessage(index, message, 1)} aria-label="Balasan cocok"><ThumbsUp size={12}/></button><button className={feedback[index] === -1 ? 'selected negative' : ''} onClick={() => rateMessage(index, message, -1)} aria-label="Balasan kurang cocok"><ThumbsDown size={12}/></button></div>}
+        {messages.length === 0 && <div className="empty-state">
+          <span>01</span>
+          <h2>{chatMode === 'agent' ? 'Yuki Agent siap menjalankan tugas.' : 'Yuki menunggumu bicara.'}</h2>
+          <p>{chatMode === 'agent'
+            ? 'Minta Yuki mencari berita di internet, mencatat agenda, atau mengecek info komik.'
+            : 'Mulai dari hal sederhana. Jangan berharap dia langsung ramah.'}</p>
+        </div>}
+        {messages.map((message, index) => <article className={`message ${message.role} ${message.mode === 'agent' ? 'agent-msg' : ''}`} key={`${index}-${message.content.slice(0, 12)}`}>
+          {message.role === 'assistant' && <div className="message-avatar">{message.mode === 'agent' ? '⚡' : 'Y'}</div>}
+          <div className="message-content">
+            <MessageBody message={message} bookmarks={bookmarks} onToggleBookmark={handleToggleBookmark} />
+          </div>
+          {message.role === 'assistant' && <div className="message-tools">
+            <button className={`speak ${speakingIndex === index ? 'active' : ''}`} onClick={() => play(message.content, index)} aria-label="Putar suara">{speakingIndex === index ? <span className="audio-bars" aria-hidden="true"><i/><i/><i/></span> : <Volume2 size={14} />}</button>
+            <button className={feedback[index] === 1 ? 'selected' : ''} onClick={() => rateMessage(index, message, 1)} aria-label="Balasan cocok"><ThumbsUp size={12}/></button>
+            <button className={feedback[index] === -1 ? 'selected negative' : ''} onClick={() => rateMessage(index, message, -1)} aria-label="Balasan kurang cocok"><ThumbsDown size={12}/></button>
+          </div>}
         </article>)}
-        {busy && <><div className={`request-status ${connection}`}>{connection === 'slow' || connection === 'retrying' ? <RefreshCw className="spin" size={12} /> : <LoaderCircle className="spin" size={12} />}<span>{connectionLabel[connection]}</span></div><article className="message assistant"><div className="message-avatar">Y</div><div className="message-content typing"><i/><i/><i/></div></article></>}
+        {busy && <><div className={`request-status ${connection}`}>{connection === 'slow' || connection === 'retrying' ? <RefreshCw className="spin" size={12} /> : <LoaderCircle className="spin" size={12} />}<span>{chatMode === 'agent' ? 'Yuki sedang mengeksekusi aksi...' : connectionLabel[connection]}</span></div><article className="message assistant"><div className="message-avatar">{chatMode === 'agent' ? '⚡' : 'Y'}</div><div className="message-content typing"><i/><i/><i/></div></article></>}
         {connection === 'offline' && !busy && <div className="request-status offline"><WifiOff size={12}/><span>Kamu offline. Pesan yang belum dikirim tetap aman.</span></div>}
         {error && <div className="error-banner"><span>{error}</span><button onClick={() => setError('')}><X size={14}/></button></div>}
         <div ref={endRef} />
       </div>
 
       <form className="composer" onSubmit={submit}>
-        <span className="composer-index">01</span>
-        <textarea rows={1} value={input} onChange={e => setInput(e.target.value)} onFocus={() => setAvatarCompact(true)} placeholder="Tulis pesan untuk Yuki…"
-          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit() } }} />
+        <span className="composer-index">{chatMode === 'agent' ? '⚡' : '01'}</span>
+        <textarea
+          rows={1}
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onFocus={() => setAvatarCompact(true)}
+          placeholder={chatMode === 'agent' ? 'Minta Yuki meriset web, mencatat to-do, atau menjalankan tugas...' : 'Tulis pesan untuk Yuki…'}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit() } }}
+        />
         <button disabled={busy || !input.trim()} aria-label="Kirim pesan">{busy ? <LoaderCircle className="spin" size={19}/> : <Send size={19}/>}</button>
       </form>
-      <div className="activities" aria-label="Aktivitas bersama"><Sparkles size={12}/>{['Rekomendasi Manhwa Aksi', 'Manga Romance Manis', 'Komik Isekai Seru', 'Update Chapter Terbaru'].map(label => <button key={label} onClick={() => setInput(label)}>{label}</button>)}</div>
+      <div className="activities" aria-label="Aktivitas bersama">
+        <Sparkles size={12}/>
+        {(chatMode === 'agent' ? agentSuggestions : companionSuggestions).map(label => (
+          <button key={label} onClick={() => setInput(label)}>{label}</button>
+        ))}
+      </div>
     </section>
 
     <aside className="character-panel">
-      <div className="panel-meta"><span>Character viewport</span><b>Session active</b></div>
+      <div className="panel-meta">
+        <span>Character viewport</span>
+        <b>{chatMode === 'agent' ? '⚡ Agent Mode Active' : 'Session active'}</b>
+      </div>
       <div className="character-frame">
-        <div className="frame-code">LIVE / 001</div>
+        <div className="frame-code">{chatMode === 'agent' ? 'AGENT / 001' : 'LIVE / 001'}</div>
         <div className="mobile-bond" aria-label={`Bond ${Math.round(bondValue)} dari 100`}><span>{bond}</span><b>{Math.round(bondValue)}</b><i><u style={{ width: `${Math.max(2, bondValue)}%` }} /></i></div>
         <button className="avatar-toggle" type="button" onClick={() => setAvatarCompact(value => !value)}
           aria-label={avatarCompact ? 'Perbesar avatar Yuki' : 'Kecilkan avatar Yuki'} aria-expanded={!avatarCompact}>

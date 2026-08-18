@@ -1,4 +1,5 @@
 export type Role = 'user' | 'assistant'
+export type ChatMode = 'companion' | 'agent'
 
 export interface ComicRecommendation {
   title: string
@@ -13,9 +14,31 @@ export interface ComicRecommendation {
 
 export type BookmarkedComic = ComicRecommendation
 
+export interface AgentStep {
+  id: string
+  tool: string
+  title: string
+  input: any
+  output?: any
+  status: 'running' | 'done' | 'error'
+  durationMs?: number
+  skillName?: string
+  skillTitle?: string
+}
+
+export interface SkillInfo {
+  name: string
+  title: string
+  category: string
+  description: string
+  version: string
+}
+
 export interface Message {
   role: Role
   content: string
+  mode?: ChatMode
+  steps?: AgentStep[]
   comics?: ComicRecommendation[]
   messageId?: number
 }
@@ -35,6 +58,8 @@ export interface ChatResponse {
   bond: string
   bondValue: number
   feeling: string
+  mode?: ChatMode
+  steps?: AgentStep[]
   messageId?: number
   milestones?: Milestone[]
   comics?: ComicRecommendation[]
