@@ -828,7 +828,7 @@ export default function App() {
           value={input}
           onChange={e => setInput(e.target.value)}
           onFocus={() => setAvatarCompact(true)}
-          placeholder={chatMode === 'agent' ? 'Minta Yuki Agent membuat live mini-app, meriset web, atau coding...' : 'Tulis pesan untuk Yuki…'}
+          placeholder={chatMode === 'agent' ? 'Tulis tugas untuk Yuki Agent…' : 'Tulis pesan untuk Yuki…'}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit() } }}
         />
         <button disabled={busy || !input.trim()} aria-label="Kirim pesan">{busy ? <LoaderCircle className="spin" size={19}/> : <Send size={19}/>}</button>
