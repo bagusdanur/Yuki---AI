@@ -276,55 +276,65 @@ function CodexArtifactModal({ artifact, onClose }: { artifact: ArtifactItem; onC
   }
 
   return (
-    <div className={`timeline-overlay ${isFullscreen ? 'fullscreen-overlay' : ''}`} onClick={onClose}>
-      <section className={`timeline-card codex-artifact-modal ${isFullscreen ? 'fullscreen-modal' : ''}`} onClick={e => e.stopPropagation()}>
+    <div className={`artifact-modal-backdrop ${isFullscreen ? 'fullscreen-backdrop' : ''}`} onClick={onClose}>
+      <section className={`artifact-modal-window ${isFullscreen ? 'fullscreen-window' : ''}`} onClick={e => e.stopPropagation()}>
         <header className="artifact-modal-header">
           <div className="artifact-title-group">
-            <span className="artifact-badge"><Code2 size={12} /> YUKI AGENT ARTIFACT</span>
-            <h2>{artifact.title}</h2>
+            <span className="artifact-badge"><Code2 size={12} /> ARTIFACT APP</span>
+            <h2 title={artifact.title}>{artifact.title}</h2>
           </div>
-          <div className="artifact-header-actions">
+
+          <div className="artifact-header-controls">
             <div className="artifact-tab-pill">
               <button
                 type="button"
                 className={`artifact-tab-btn ${tab === 'preview' ? 'active' : ''}`}
                 onClick={() => setTab('preview')}
+                title="Tampilkan Preview Aplikasi"
               >
-                <Play size={11} /><span className="tab-label">Preview</span>
+                <Play size={12} />
+                <span>Preview</span>
               </button>
               <button
                 type="button"
                 className={`artifact-tab-btn ${tab === 'code' ? 'active' : ''}`}
                 onClick={() => setTab('code')}
+                title="Lihat Source Code"
               >
-                <Code2 size={11} /><span className="tab-label">Kode</span>
+                <Code2 size={12} />
+                <span>Kode</span>
               </button>
             </div>
-            {tab === 'preview' && (
+
+            <div className="artifact-action-icons">
+              {tab === 'preview' && (
+                <button
+                  className="artifact-action-icon"
+                  onClick={() => setReloadKey(k => k + 1)}
+                  title="Restart / Reload"
+                  aria-label="Restart Sandbox"
+                >
+                  <RotateCcw size={13} />
+                </button>
+              )}
               <button
                 className="artifact-action-icon"
-                onClick={() => setReloadKey(k => k + 1)}
-                title="Restart / Reload Sandbox"
-                aria-label="Restart Sandbox"
+                onClick={() => setIsFullscreen(!isFullscreen)}
+                title={isFullscreen ? 'Keluar Fullscreen' : 'Fullscreen'}
+                aria-label="Toggle Fullscreen"
               >
-                <RotateCcw size={14} />
+                {isFullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
               </button>
-            )}
-            <button
-              className="artifact-action-icon"
-              onClick={() => setIsFullscreen(!isFullscreen)}
-              title={isFullscreen ? 'Keluar Fullscreen' : 'Fullscreen'}
-              aria-label="Toggle Fullscreen"
-            >
-              {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-            </button>
-            <button className="artifact-action-icon" onClick={handleCopy} title="Salin Kode">
-              {copied ? <Check size={14} /> : <Copy size={14} />}
-            </button>
-            <button className="artifact-action-icon" onClick={handleDownload} title="Download File">
-              <Download size={14} />
-            </button>
-            <button className="artifact-close-btn" onClick={onClose} aria-label="Tutup"><X size={17} /></button>
+              <button className="artifact-action-icon" onClick={handleCopy} title="Salin Kode" aria-label="Salin Kode">
+                {copied ? <Check size={13} /> : <Copy size={13} />}
+              </button>
+              <button className="artifact-action-icon" onClick={handleDownload} title="Unduh File" aria-label="Unduh File">
+                <Download size={13} />
+              </button>
+              <button className="artifact-close-btn" onClick={onClose} aria-label="Tutup" title="Tutup Modal">
+                <X size={15} />
+              </button>
+            </div>
           </div>
         </header>
 
@@ -340,6 +350,7 @@ function CodexArtifactModal({ artifact, onClose }: { artifact: ArtifactItem; onC
                 allow="autoplay"
               />
             </div>
+
           ) : (
             <div className="artifact-code-view">
               <pre><code>{artifact.content}</code></pre>

@@ -612,61 +612,55 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   background: #18181b;
 }
 
-/* Artifact Modal (Clean shadcn Dialog Style) */
-.codex-artifact-modal {
+/* Artifact Modal Backdrop & Window (Fully Isolated from timeline-card) */
+.artifact-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: modalFadeIn 0.15s ease-out;
+}
+
+.artifact-modal-window {
   width: min(960px, 96vw);
-  height: min(760px, 92dvh);
+  height: min(780px, 92dvh);
   max-height: 92dvh;
   display: flex;
   flex-direction: column;
   background: #09090b;
   border: 1px solid #27272a;
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.9);
   transition: all 0.15s ease;
+  animation: modalPopIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.codex-artifact-modal.fullscreen-modal {
+
+.artifact-modal-window.fullscreen-window,
+.artifact-modal-backdrop.fullscreen-backdrop .artifact-modal-window {
   width: 100vw !important;
   height: 100dvh !important;
   max-height: 100dvh !important;
   border-radius: 0 !important;
   border: 0 !important;
 }
-/* Mobile: artifact modal takes full screen automatically */
-@media (max-width: 600px) {
-  .codex-artifact-modal {
-    width: 100vw !important;
-    height: 100dvh !important;
-    max-height: 100dvh !important;
-    border-radius: 0 !important;
-    border: 0 !important;
-  }
-  .timeline-overlay {
-    padding: 0 !important;
-  }
-  .artifact-modal-header {
-    padding: 6px 10px !important;
-  }
-  .artifact-title-group h2 {
-    font-size: 12px !important;
-  }
-  .artifact-badge {
-    display: none !important;
-  }
-}
+
 .artifact-modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 12px;
+  padding: 10px 14px;
   border-bottom: 1px solid #27272a;
   background: #121215;
   flex-shrink: 0;
-  min-height: 48px;
-  overflow: visible;
 }
+
 .artifact-title-group {
   display: flex;
   flex-direction: column;
@@ -674,33 +668,34 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   min-width: 0;
   flex: 1;
 }
+
 .artifact-badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   color: #a1a1aa;
   font: 600 8.5px/1 ui-monospace, monospace;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
+
 .artifact-title-group h2 {
   margin: 0;
-  font-size: 14px;
+  font-size: 13.5px;
   color: #f4f4f5;
   font-weight: 600;
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.artifact-header-actions {
+
+.artifact-header-controls {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
   flex-shrink: 0;
-  flex-wrap: nowrap;
-  overflow: visible;
 }
+
 .artifact-tab-pill {
   display: flex;
   align-items: center;
@@ -710,13 +705,13 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   border-radius: 6px;
   background: #18181b;
   flex-shrink: 0;
-  overflow: visible;
 }
+
 .artifact-tab-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 5px 10px;
+  gap: 5px;
+  padding: 4px 10px;
   border: 0;
   border-radius: 4px;
   color: #71717a;
@@ -724,22 +719,27 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   font: 500 11.5px/1 ui-sans-serif, system-ui, sans-serif;
   cursor: pointer;
   white-space: nowrap;
-  flex-shrink: 0;
   transition: all 0.12s ease;
 }
+
 .artifact-tab-btn:hover {
   color: #d4d4d8;
 }
+
 .artifact-tab-btn.active {
   color: #ffffff;
   background: #27272a;
   font-weight: 600;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
-/* Hide text label on very narrow screens, keep icon */
-@media (max-width: 420px) {
-  .artifact-tab-btn .tab-label { display: none; }
+
+.artifact-action-icons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
 }
+
 .artifact-action-icon,
 .artifact-close-btn {
   width: 28px;
@@ -754,15 +754,53 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   flex-shrink: 0;
   transition: all 0.12s ease;
 }
-.artifact-action-icon:hover,
-.artifact-close-btn:hover {
+
+.artifact-action-icon:hover {
   color: #ffffff;
   border-color: #3f3f46;
   background: #27272a;
 }
+
 .artifact-close-btn:hover {
   color: #f87171;
+  border-color: #7f1d1d;
+  background: rgba(239, 68, 68, 0.1);
 }
+
+/* Mobile Responsiveness for Artifact Modal */
+@media (max-width: 640px) {
+  .artifact-modal-backdrop {
+    padding: 0 !important;
+  }
+  .artifact-modal-window {
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    border: 0 !important;
+  }
+  .artifact-modal-header {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+  .artifact-badge {
+    display: none;
+  }
+  .artifact-title-group h2 {
+    font-size: 12px;
+  }
+  .artifact-tab-btn {
+    padding: 4px 7px;
+    font-size: 10.5px;
+    gap: 3px;
+  }
+  .artifact-action-icon,
+  .artifact-close-btn {
+    width: 26px;
+    height: 26px;
+  }
+}
+
 
 .codex-artifact-body {
   flex: 1 1 auto;

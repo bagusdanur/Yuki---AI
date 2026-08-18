@@ -14,35 +14,236 @@ export async function executeBuildInteractiveArtifact(params = {}) {
 
   const rawContent = String(rawCode).trim()
 
-  // Jika sudah HTML lengkap (punya <!DOCTYPE atau <html>), gunakan as-is tanpa wrapping
-  // hanya inject mobile controls script sebelum </body>
+  // Helper universal script & styling for mobile responsiveness & touch controls
+  const universalMobileEngine = `
+  <style>
+    /* Auto-responsive & mobile touch optimization */
+    * { -webkit-tap-highlight-color: transparent; }
+    html, body {
+      width: 100% !important;
+      height: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+      touch-action: none !important;
+      user-select: none !important;
+      -webkit-user-select: none !important;
+    }
+    canvas {
+      display: block !important;
+      margin: 0 auto !important;
+      max-width: 100vw !important;
+      max-height: calc(100vh - 90px) !important;
+      width: auto !important;
+      height: auto !important;
+      object-fit: contain !important;
+      touch-action: none !important;
+    }
+    /* Virtual Mobile Touch Controls Bar */
+    #_yuki_m_pad {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 84px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px 8px;
+      background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.5) 75%, transparent 100%);
+      pointer-events: none;
+      z-index: 999999;
+    }
+    ._yuki_btn_grp {
+      display: flex;
+      gap: 12px;
+      pointer-events: auto;
+    }
+    ._yuki_ctrl_btn {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255, 255, 255, 0.25);
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(8px);
+      color: #ffffff;
+      font-size: 22px;
+      font-weight: bold;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+      transition: background 0.1s, transform 0.1s;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+    }
+    ._yuki_ctrl_btn:active, ._yuki_ctrl_btn.active {
+      background: rgba(255, 255, 255, 0.35);
+      transform: scale(0.92);
+      border-color: #ffffff;
+    }
+    ._yuki_btn_action {
+      background: rgba(167, 139, 250, 0.25);
+      border-color: rgba(167, 139, 250, 0.5);
+      color: #d8b4fe;
+      font-size: 15px;
+      width: 62px;
+      height: 62px;
+    }
+    ._yuki_btn_action:active {
+      background: rgba(167, 139, 250, 0.5);
+    }
+    @media (min-width: 900px) and (pointer: fine) {
+      #_yuki_m_pad { display: none !important; }
+      canvas { max-height: 98vh !important; }
+    }
+  </style>
+
+  <!-- Virtual Mobile D-Pad -->
+  <div id="_yuki_m_pad">
+    <div class="_yuki_btn_grp">
+      <button type="button" class="_yuki_ctrl_btn" id="_btn_left" aria-label="Kiri">◀</button>
+      <button type="button" class="_yuki_ctrl_btn" id="_btn_right" aria-label="Kanan">▶</button>
+    </div>
+    <div class="_yuki_btn_grp">
+      <button type="button" class="_yuki_ctrl_btn _yuki_btn_action" id="_btn_act" aria-label="Aksi / Start">● TAP</button>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    // 1. Universal Direct Touch-to-Mouse & Touch-to-Canvas Drag Bridge
+    function relayTouchToMouse(e) {
+      if (!e.touches || e.touches.length === 0) return;
+      const touch = e.touches[0];
+      const target = document.elementFromPoint(touch.clientX, touch.clientY) || e.target;
+      
+      const mouseMoveEvt = new MouseEvent('mousemove', {
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+        screenX: touch.screenX,
+        screenY: touch.screenY,
+        bubbles: true,
+        cancelable: true,
+        view: window
+      });
+      target.dispatchEvent(mouseMoveEvt);
+      window.dispatchEvent(mouseMoveEvt);
+      document.dispatchEvent(mouseMoveEvt);
+    }
+
+    window.addEventListener('touchstart', function(e) {
+      if (e.target.closest('#_yuki_m_pad')) return;
+      relayTouchToMouse(e);
+      // Dispatch click for Start / Restart buttons inside canvas/DOM
+      const touch = e.touches[0];
+      const clickEvt = new MouseEvent('click', {
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+        bubbles: true,
+        cancelable: true
+      });
+      const target = document.elementFromPoint(touch.clientX, touch.clientY) || e.target;
+      target.dispatchEvent(clickEvt);
+
+      // Trigger standard Game Start keys
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space', keyCode: 32, which: 32, bubbles: true }));
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
+    }, { passive: false });
+
+    window.addEventListener('touchmove', function(e) {
+      if (e.target.closest('#_yuki_m_pad')) return;
+      e.preventDefault(); // Prevent page pull/scroll inside game
+      relayTouchToMouse(e);
+    }, { passive: false });
+
+    window.addEventListener('touchend', function(e) {
+      if (e.target.closest('#_yuki_m_pad')) return;
+      window.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', code: 'Space', keyCode: 32, which: 32, bubbles: true }));
+    }, { passive: false });
+
+    // 2. Virtual D-Pad Continuous Press Bridge
+    function bindContinuousButton(btnId, keyName, keyCodeVal) {
+      const btn = document.getElementById(btnId);
+      if (!btn) return;
+      let intervalId = null;
+
+      function startPress(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        btn.classList.add('active');
+        const trigger = () => {
+          window.dispatchEvent(new KeyboardEvent('keydown', { key: keyName, code: keyName, keyCode: keyCodeVal, which: keyCodeVal, bubbles: true }));
+        };
+        trigger();
+        if (!intervalId) {
+          intervalId = setInterval(trigger, 35);
+        }
+      }
+
+      function stopPress(e) {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        btn.classList.remove('active');
+        if (intervalId) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
+        window.dispatchEvent(new KeyboardEvent('keyup', { key: keyName, code: keyName, keyCode: keyCodeVal, which: keyCodeVal, bubbles: true }));
+      }
+
+      btn.addEventListener('touchstart', startPress, { passive: false });
+      btn.addEventListener('touchend', stopPress, { passive: false });
+      btn.addEventListener('touchcancel', stopPress, { passive: false });
+      btn.addEventListener('mousedown', startPress);
+      btn.addEventListener('mouseup', stopPress);
+      btn.addEventListener('mouseleave', stopPress);
+    }
+
+    bindContinuousButton('_btn_left', 'ArrowLeft', 37);
+    bindContinuousButton('_btn_right', 'ArrowRight', 39);
+
+    // Action button (Space / Jump / Shoot / Start)
+    const actBtn = document.getElementById('_btn_act');
+    if (actBtn) {
+      function triggerAction(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space', keyCode: 32, which: 32, bubbles: true }));
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', code: 'ArrowUp', keyCode: 38, which: 38, bubbles: true }));
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
+        
+        // Also trigger click in center of screen
+        const midX = window.innerWidth / 2;
+        const midY = window.innerHeight / 2;
+        const centerElem = document.elementFromPoint(midX, midY) || document.body;
+        centerElem.dispatchEvent(new MouseEvent('click', { clientX: midX, clientY: midY, bubbles: true }));
+      }
+
+      function releaseAction(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', code: 'Space', keyCode: 32, which: 32, bubbles: true }));
+        window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowUp', code: 'ArrowUp', keyCode: 38, which: 38, bubbles: true }));
+      }
+
+      actBtn.addEventListener('touchstart', triggerAction, { passive: false });
+      actBtn.addEventListener('touchend', releaseAction, { passive: false });
+      actBtn.addEventListener('mousedown', triggerAction);
+      actBtn.addEventListener('mouseup', releaseAction);
+    }
+  })();
+  </script>
+  `
+
   let finalCode
   if (rawContent.toLowerCase().includes('<!doctype') || rawContent.toLowerCase().includes('<html')) {
-    // Inject mobile touch controls sebelum </body>
-    const mobileScript = `
-  <!-- Mobile touch controls (auto-injected by Yuki Agent) -->
-  <div id="_m_controls" style="display:none;position:fixed;bottom:0;left:0;right:0;height:120px;pointer-events:none;z-index:9999">
-    <div id="_m_left" style="position:absolute;bottom:12px;left:18px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.18);display:grid;place-items:center;pointer-events:all;touch-action:none;font-size:28px;color:rgba(255,255,255,.5);-webkit-tap-highlight-color:transparent">◀</div>
-    <div id="_m_fire" style="position:absolute;bottom:20px;left:50%;transform:translateX(-50%);width:64px;height:64px;border-radius:50%;background:rgba(167,139,250,.15);border:2px solid rgba(167,139,250,.4);display:grid;place-items:center;pointer-events:all;touch-action:none;font-size:22px;color:rgba(167,139,250,.7);-webkit-tap-highlight-color:transparent">●</div>
-    <div id="_m_right" style="position:absolute;bottom:12px;right:18px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.18);display:grid;place-items:center;pointer-events:all;touch-action:none;font-size:28px;color:rgba(255,255,255,.5);-webkit-tap-highlight-color:transparent">▶</div>
-  </div>
-  <script>
-    if (window.matchMedia('(pointer:coarse)').matches||'ontouchstart' in window){
-      document.getElementById('_m_controls').style.display='block';
-      function _mFire(el,type,key,code){el.addEventListener(type,function(e){e.preventDefault();window.dispatchEvent(new KeyboardEvent(type==='touchstart'?'keydown':'keyup',{key,code,bubbles:true}));},{passive:false});}
-      _mFire(document.getElementById('_m_left'),'touchstart','ArrowLeft','ArrowLeft');
-      _mFire(document.getElementById('_m_left'),'touchend','ArrowLeft','ArrowLeft');
-      _mFire(document.getElementById('_m_right'),'touchstart','ArrowRight','ArrowRight');
-      _mFire(document.getElementById('_m_right'),'touchend','ArrowRight','ArrowRight');
-      _mFire(document.getElementById('_m_fire'),'touchstart',' ','Space');
-      _mFire(document.getElementById('_m_fire'),'touchend',' ','Space');
+    // Inject mobile engine tepat sebelum </body> atau di akhir dokumen
+    if (/<\/body>/i.test(rawContent)) {
+      finalCode = rawContent.replace(/<\/body>/i, universalMobileEngine + '\n</body>')
+    } else {
+      finalCode = rawContent + '\n' + universalMobileEngine
     }
-  </script>`
-    finalCode = rawContent.replace(/<\/body>/i, mobileScript + '\n</body>')
-    // Jika tidak ada </body>, append saja
-    if (finalCode === rawContent) finalCode = rawContent + mobileScript
   } else {
-    // Bungkus dengan template mobile-friendly
+    // Bungkus dokumen baru dengan HTML5 lengkap dan universal mobile engine
     finalCode = `<!DOCTYPE html>
 <html lang="id">
 <head>
@@ -51,39 +252,16 @@ export async function executeBuildInteractiveArtifact(params = {}) {
   <title>${cleanTitle}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { width: 100%; height: 100%; background: #09090b; color: #f4f4f5; font-family: system-ui, sans-serif; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
-    body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
-    canvas { display: block; max-width: 100%; max-height: calc(100vh - 120px); touch-action: none; }
-    #_m_controls { display: none; position: fixed; bottom: 0; left: 0; right: 0; height: 120px; pointer-events: none; z-index: 9999; }
-    #_m_left, #_m_right { position: absolute; bottom: 12px; width: 80px; height: 80px; border-radius: 50%; background: rgba(255,255,255,0.08); border: 2px solid rgba(255,255,255,0.18); display: grid; place-items: center; pointer-events: all; touch-action: none; font-size: 28px; color: rgba(255,255,255,0.5); -webkit-tap-highlight-color: transparent; }
-    #_m_left { left: 18px; }
-    #_m_right { right: 18px; }
-    #_m_fire { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 64px; height: 64px; border-radius: 50%; background: rgba(167,139,250,0.15); border: 2px solid rgba(167,139,250,0.4); display: grid; place-items: center; pointer-events: all; touch-action: none; font-size: 22px; color: rgba(167,139,250,0.7); -webkit-tap-highlight-color: transparent; }
-    @media (max-width: 768px), (pointer: coarse) { #_m_controls { display: block; } canvas { max-height: calc(100vh - 140px); } }
+    html, body { width: 100%; height: 100%; background: #09090b; color: #f4f4f5; font-family: system-ui, sans-serif; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; }
   </style>
 </head>
 <body>
   ${rawContent}
-  <div id="_m_controls">
-    <div id="_m_left">◀</div>
-    <div id="_m_fire">●</div>
-    <div id="_m_right">▶</div>
-  </div>
-  <script>
-    if (window.matchMedia('(pointer:coarse)').matches||'ontouchstart' in window){
-      document.getElementById('_m_controls').style.display='block';
-      function _mFire(el,type,key,code){el.addEventListener(type,function(e){e.preventDefault();window.dispatchEvent(new KeyboardEvent(type==='touchstart'?'keydown':'keyup',{key,code,bubbles:true}));},{passive:false});}
-      _mFire(document.getElementById('_m_left'),'touchstart','ArrowLeft','ArrowLeft');
-      _mFire(document.getElementById('_m_left'),'touchend','ArrowLeft','ArrowLeft');
-      _mFire(document.getElementById('_m_right'),'touchstart','ArrowRight','ArrowRight');
-      _mFire(document.getElementById('_m_right'),'touchend','ArrowRight','ArrowRight');
-      _mFire(document.getElementById('_m_fire'),'touchstart',' ','Space');
-      _mFire(document.getElementById('_m_fire'),'touchend',' ','Space');
-    }
-  </script>
+  ${universalMobileEngine}
 </body>
 </html>`
   }
+
 
 
   const artifactId = `art_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
