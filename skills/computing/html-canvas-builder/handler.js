@@ -426,16 +426,30 @@ export async function executeReadArtifactFile(params = {}, context = {}) {
 }
 
 export async function executeUpdateInteractiveArtifact(params = {}, context = {}) {
-  const { id, title, html_content, code, content, patch_note, summary } = params
+  const userId = context?.userId || params?.userId
+  const { getLatestUserArtifact, getUserArtifactById } = await import('../../../lib/memory.js')
+  
+  let targetId = params.id || context?.activeArtifactId
+  let activeArt = null
+  if (userId) {
+    activeArt = targetId ? getUserArtifactById(userId, targetId) : getLatestUserArtifact(userId)
+    if (activeArt) {
+      targetId = activeArt.id
+    }
+  }
+
+  const { title, html_content, code, content, patch_note, summary } = params
   const rawCode = html_content || code || content
   if (!rawCode) {
     return { success: false, error: 'Parameter "html_content" atau "code" yang diperbarui tidak boleh kosong.' }
   }
 
+  const finalTitle = title || activeArt?.title || 'Updated Canvas App'
+
   // Gunakan executeBuildInteractiveArtifact untuk memproses injeksi engine & penyimpanan
   const buildResult = await executeBuildInteractiveArtifact({
-    id,
-    title: title || 'Updated Canvas App',
+    id: targetId,
+    title: finalTitle,
     html_content: rawCode,
     patch_note: patch_note || summary || 'Incremental update / level extension'
   }, context)
