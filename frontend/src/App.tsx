@@ -169,42 +169,86 @@ function AgentThoughtCard({ thinking }: { thinking?: string }) {
 }
 
 function AgentStepsCard({ steps }: { steps?: AgentStep[] }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(true)
   if (!steps || steps.length === 0) return null
 
   return (
     <div className="agent-steps-card">
-      <button
-        type="button"
-        className="agent-steps-toggle"
-        onClick={() => setOpen(!open)}
-        aria-expanded={open}
-      >
+      <div className="agent-steps-header">
         <span className="agent-steps-title">
           <Zap size={13} className="agent-zap-icon" />
-          <span><b>Langkah Kerja Yuki Agent</b> ({steps.length} aksi)</span>
+          <span><b>Proses Eksekusi Agent</b> ({steps.length} langkah tuntas)</span>
         </span>
-        <span className="agent-steps-chevron">
-          {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-        </span>
-      </button>
+        <button
+          type="button"
+          className="agent-steps-toggle-btn"
+          onClick={() => setOpen(!open)}
+          aria-expanded={open}
+        >
+          {open ? 'Tutup' : 'Lihat'}
+          {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+        </button>
+      </div>
 
       {open && (
         <div className="agent-steps-list">
           {steps.map((step, idx) => (
             <div className={`agent-step-item ${step.status || 'done'}`} key={step.id || idx}>
-              <div className="agent-step-header">
-                <span className="agent-step-badge">{step.skillTitle || step.tool}</span>
-                <span className="agent-step-desc">{step.title}</span>
-                {step.durationMs !== undefined && (
-                  <span className="agent-step-time">{step.durationMs}ms</span>
-                )}
+              <div className="agent-step-icon-col">
+                <span className="agent-step-check"><Check size={11} /></span>
+                {idx < steps.length - 1 && <span className="agent-step-line" />}
+              </div>
+              <div className="agent-step-main-col">
+                <div className="agent-step-top">
+                  <span className="agent-step-badge">{step.skillTitle || step.tool}</span>
+                  {step.durationMs !== undefined && (
+                    <span className="agent-step-time">{step.durationMs}ms</span>
+                  )}
+                </div>
+                <div className="agent-step-desc">{step.title}</div>
               </div>
             </div>
           ))}
         </div>
       )}
     </div>
+  )
+}
+
+function LiveAgentWorkingBubble() {
+  const [seconds, setSeconds] = useState(0)
+
+  useEffect(() => {
+    const timer = setInterval(() => setSeconds(s => s + 1), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const phases = [
+    'Menganalisis instruksi tugas & memilih skills...',
+    'Menjalankan Hermes ReAct Reasoning Loop...',
+    'Merakit logika aplikasi, HTML5 Canvas & Web Audio...',
+    'Menguji dan mengompilasi Live Sandbox Artifact...',
+    'Menyusun balasan akhir & panel interaktif...'
+  ]
+
+  const currentPhase = phases[Math.min(Math.floor(seconds / 3), phases.length - 1)]
+
+  return (
+    <article className="message assistant agent-msg live-agent-working-bubble">
+      <div className="message-avatar">
+        <Zap size={14} className="agent-pulse-icon" />
+      </div>
+      <div className="message-content live-agent-working-content">
+        <div className="live-agent-badge-row">
+          <span className="live-pulse-dot" />
+          <span><b>Working</b> — {seconds}s — Yuki Agent</span>
+        </div>
+        <div className="live-agent-step-text">
+          <LoaderCircle size={13} className="spin" />
+          <span>{currentPhase}</span>
+        </div>
+      </div>
+    </article>
   )
 }
 
@@ -886,7 +930,22 @@ export default function App() {
             </div>
           )}
         </article>)}
-        {busy && <><div className={`request-status ${connection}`}>{connection === 'slow' || connection === 'retrying' ? <RefreshCw className="spin" size={12} /> : <LoaderCircle className="spin" size={12} />}<span>{chatMode === 'agent' ? 'Yuki Agent sedang berpikir & mengeksekusi...' : connectionLabel[connection]}</span></div><article className="message assistant"><div className="message-avatar">{chatMode === 'agent' ? <Zap size={13} /> : 'Y'}</div><div className="message-content typing"><i/><i/><i/></div></article></>}
+        {busy && (
+          chatMode === 'agent' ? (
+            <LiveAgentWorkingBubble />
+          ) : (
+            <>
+              <div className={`request-status ${connection}`}>
+                {connection === 'slow' || connection === 'retrying' ? <RefreshCw className="spin" size={12} /> : <LoaderCircle className="spin" size={12} />}
+                <span>{connectionLabel[connection]}</span>
+              </div>
+              <article className="message assistant">
+                <div className="message-avatar">Y</div>
+                <div className="message-content typing"><i/><i/><i/></div>
+              </article>
+            </>
+          )
+        )}
         {connection === 'offline' && !busy && <div className="request-status offline"><WifiOff size={12}/><span>Kamu offline. Pesan yang belum dikirim tetap aman.</span></div>}
         {error && <div className="error-banner"><span>{error}</span><button onClick={() => setError('')}><X size={14}/></button></div>}
         <div ref={endRef} />

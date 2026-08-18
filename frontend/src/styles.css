@@ -344,12 +344,166 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 
 /* Thought Process Card */
 .hermes-thought-card { margin-bottom: 8px; border: 1px solid #28243d; border-radius: 6px; background: #0e0d18; overflow: hidden; }
-.hermes-thought-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; border: 0; background: transparent; color: #c4b5fd; font: 600 11px/1.2 ui-sans-serif, system-ui, sans-serif; }
+.hermes-thought-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; border: 0; background: transparent; color: #c4b5fd; font: 600 11px/1.2 ui-sans-serif, system-ui, sans-serif; cursor: pointer; }
 .hermes-thought-toggle:hover { background: rgba(196,181,253,.07); }
 .hermes-thought-title { display: flex; align-items: center; gap: 6px; }
 .hermes-sparkle-icon { color: #a78bfa; }
 .hermes-thought-body { padding: 8px 10px; border-top: 1px solid #1f1c30; background: #0b0914; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: #a5a0bf; max-height: 180px; overflow-y: auto; line-height: 1.5; }
 .hermes-thought-body pre { margin: 0; white-space: pre-wrap; font-family: inherit; }
+
+/* Hermes Agent Execution Steps Card */
+.agent-steps-card {
+  margin-bottom: 10px;
+  border: 1px solid #1f2a3a;
+  border-radius: 8px;
+  background: #0a0e16;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+.agent-steps-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #0f1622;
+  border-bottom: 1px solid #182232;
+}
+.agent-steps-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #00f2fe;
+  font: 600 11.5px/1.2 ui-sans-serif, system-ui, sans-serif;
+}
+.agent-zap-icon {
+  color: #00f2fe;
+  filter: drop-shadow(0 0 4px rgba(0, 242, 254, 0.6));
+}
+.agent-steps-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border: 1px solid #233144;
+  border-radius: 4px;
+  background: #141c2b;
+  color: #8a96a9;
+  font: 600 10.5px/1 ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.agent-steps-toggle-btn:hover {
+  color: #00f2fe;
+  border-color: #00f2fe;
+}
+.agent-steps-list {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.agent-step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.agent-step-icon-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 0 0 auto;
+}
+.agent-step-check {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid #10b981;
+  color: #10b981;
+}
+.agent-step-line {
+  width: 1px;
+  height: 18px;
+  background: #1f2a3a;
+  margin-top: 3px;
+}
+.agent-step-main-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.agent-step-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.agent-step-badge {
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(0, 242, 254, 0.12);
+  color: #00f2fe;
+  font: 700 9px/1.2 ui-monospace, monospace;
+  letter-spacing: 0.04em;
+}
+.agent-step-time {
+  color: #6a7485;
+  font: 500 9.5px/1 ui-monospace, monospace;
+}
+.agent-step-desc {
+  color: #d1d7e3;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* Live Agent Working Bubble */
+.live-agent-working-bubble {
+  animation: pulse-glow 2s infinite ease-in-out;
+}
+.live-agent-working-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #0a0e16 !important;
+  border-left: 2px solid #00f2fe !important;
+}
+.live-agent-badge-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #00f2fe;
+  font: 600 11.5px/1 ui-sans-serif, system-ui, sans-serif;
+}
+.live-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #00f2fe;
+  box-shadow: 0 0 8px #00f2fe;
+  animation: live-blink 1.2s infinite;
+}
+@keyframes live-blink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(0.7); }
+}
+.live-agent-step-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+.agent-pulse-icon {
+  color: #00f2fe;
+  animation: pulse-zap 1.5s infinite;
+}
+@keyframes pulse-zap {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.9); }
+}
 
 /* Artifact Launcher Buttons */
 .artifacts-launcher-list { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
