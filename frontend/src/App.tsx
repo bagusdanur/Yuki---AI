@@ -211,6 +211,8 @@ function AgentStepsCard({ steps }: { steps?: AgentStep[] }) {
 function CodexArtifactModal({ artifact, onClose }: { artifact: ArtifactItem; onClose: () => void }) {
   const [tab, setTab] = useState<'preview' | 'code'>('preview')
   const [copied, setCopied] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
 
   function handleCopy() {
     navigator.clipboard.writeText(artifact.content)
@@ -230,8 +232,8 @@ function CodexArtifactModal({ artifact, onClose }: { artifact: ArtifactItem; onC
   }
 
   return (
-    <div className="timeline-overlay" onClick={onClose}>
-      <section className="timeline-card codex-artifact-modal" onClick={e => e.stopPropagation()}>
+    <div className={`timeline-overlay ${isFullscreen ? 'fullscreen-overlay' : ''}`} onClick={onClose}>
+      <section className={`timeline-card codex-artifact-modal ${isFullscreen ? 'fullscreen-modal' : ''}`} onClick={e => e.stopPropagation()}>
         <header className="artifact-modal-header">
           <div className="artifact-title-group">
             <span className="artifact-badge"><Code2 size={12} /> YUKI AGENT ARTIFACT</span>
@@ -254,6 +256,24 @@ function CodexArtifactModal({ artifact, onClose }: { artifact: ArtifactItem; onC
                 <Code2 size={11} /> Source Code
               </button>
             </div>
+            {tab === 'preview' && (
+              <button
+                className="artifact-action-icon"
+                onClick={() => setReloadKey(k => k + 1)}
+                title="Restart / Reload Sandbox"
+                aria-label="Restart Sandbox"
+              >
+                <RotateCcw size={14} />
+              </button>
+            )}
+            <button
+              className="artifact-action-icon"
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              title={isFullscreen ? 'Keluar Fullscreen' : 'Fullscreen'}
+              aria-label="Toggle Fullscreen"
+            >
+              {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            </button>
             <button className="artifact-action-icon" onClick={handleCopy} title="Salin Kode">
               {copied ? <Check size={14} /> : <Copy size={14} />}
             </button>
@@ -268,6 +288,7 @@ function CodexArtifactModal({ artifact, onClose }: { artifact: ArtifactItem; onC
           {tab === 'preview' ? (
             <div className="artifact-iframe-container">
               <iframe
+                key={reloadKey}
                 title={artifact.title}
                 srcDoc={artifact.content}
                 sandbox="allow-scripts allow-modals allow-forms allow-same-origin"
@@ -683,10 +704,11 @@ export default function App() {
   ]
 
   const agentSuggestions = [
-    'Buatkan mini game Pong interaktif dengan HTML/Canvas',
-    'Cari berita anime terbaru minggu ini',
-    'Bikin kalkulator scientific HTML/JS modern',
-    'Catat to-do list belajarku besok'
+    '🎮 Buatkan mini-game Canvas retro interaktif',
+    '🛠️ Analisis & debug kode JavaScript ini',
+    '📡 Test endpoint REST API https://httpbin.org/get',
+    '🌐 Riset berita & update anime terbaru minggu ini',
+    '📝 Catat agenda to-do list belajarku besok'
   ]
 
   return <main className={`app-shell${avatarCompact ? ' avatar-compact' : ''} mode-${chatMode}`}>
