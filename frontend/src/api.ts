@@ -24,7 +24,7 @@ async function parse<T>(response: Response): Promise<T> {
   return data as T
 }
 
-async function request<T>(url: string, init: RequestInit, timeoutMs = 30_000): Promise<T> {
+async function request<T>(url: string, init: RequestInit, timeoutMs = 30_000, retries = 1): Promise<T> {
   const controller = new AbortController()
   const timeout = window.setTimeout(() => controller.abort(), timeoutMs)
   try {
@@ -34,7 +34,15 @@ async function request<T>(url: string, init: RequestInit, timeoutMs = 30_000): P
     return await parse<T>(await fetch(url, { ...init, headers, signal: controller.signal }))
   } catch (cause) {
     if (cause instanceof DOMException && cause.name === 'AbortError') {
-      throw new Error('Permintaan terlalu lama. Coba kirim ulang sebentar lagi.')
+      throw new Error('Permintaan membutuhkan waktu lebih lama. Silakan coba kirim ulang.')
+    }
+    // Auto-retry sekali jika koneksi terputus sesaat (misal saat server reload)
+    if (retries > 0 && !(cause instanceof DOMException && cause.name === 'AbortError')) {
+      await new Promise(r => setTimeout(r, 1500))
+      return request<T>(url, init, timeoutMs, retries - 1)
+    }
+    if (cause instanceof TypeError && String(cause.message).includes('Failed to fetch')) {
+      throw new Error('Koneksi ke server terputus sesaat. Coba kirim ulang pesanmu ya.')
     }
     throw cause
   } finally {
