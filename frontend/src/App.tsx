@@ -306,6 +306,15 @@ function CodexArtifactModal({ artifact, onClose }: { artifact: ArtifactItem; onC
   )
 }
 
+function cleanMessageContent(text: string) {
+  if (!text) return ''
+  let clean = text
+  clean = clean.replace(/```(?:json)?\s*\{[\s\S]*?"(?:name|tool)":\s*"(?:html-canvas-builder|build_interactive_artifact)"[\s\S]*?```/gi, '')
+  clean = clean.replace(/```(?:html|xml)?\s*\n\s*(?:<!DOCTYPE|<html)[\s\S]*?(?:```|$)/gi, '')
+  clean = clean.replace(/<tool_call>[\s\S]*?<\/tool_call>/gi, '')
+  return clean.trim()
+}
+
 function MessageBody({ message, bookmarks, onToggleBookmark, onOpenArtifact }: {
   message: Message
   bookmarks: BookmarkedComic[]
@@ -314,7 +323,9 @@ function MessageBody({ message, bookmarks, onToggleBookmark, onOpenArtifact }: {
 }) {
   const legacy = legacyComics(message.content)
   const comics = message.comics?.length ? message.comics : legacy.comics
-  const text = cleanComicText(message.comics?.length ? message.content : legacy.clean, comics)
+  const rawText = message.comics?.length ? message.content : legacy.clean
+  const textWithoutComics = cleanComicText(rawText, comics)
+  const text = message.artifacts?.length ? cleanMessageContent(textWithoutComics) : textWithoutComics
   const parts = text.split(/(\*[^*\n]{2,100}\*)/g).filter(Boolean)
   const bookmarkedUrls = new Set(bookmarks.map(b => b.url))
 
@@ -331,16 +342,35 @@ function MessageBody({ message, bookmarks, onToggleBookmark, onOpenArtifact }: {
     {message.artifacts && message.artifacts.length > 0 && (
       <div className="artifacts-launcher-list">
         {message.artifacts.map(art => (
-          <button
-            type="button"
-            key={art.id}
-            className="artifact-launch-btn"
-            onClick={() => onOpenArtifact(art)}
-          >
-            <Play size={13} className="artifact-play-icon" />
-            <span><b>Buka Live Artifact:</b> {art.title}</span>
-            <span className="artifact-type-tag">{art.type.toUpperCase()}</span>
-          </button>
+          <div className="artifact-launcher-card" key={art.id}>
+            <button
+              type="button"
+              className="artifact-launch-btn"
+              onClick={() => onOpenArtifact(art)}
+            >
+              <Play size={13} className="artifact-play-icon" />
+              <span><b>{art.title}</b> <small>· Mainkan Live</small></span>
+              <span className="artifact-type-tag">{art.type.toUpperCase()}</span>
+            </button>
+            <button
+              type="button"
+              className="artifact-download-btn"
+              title="Unduh file .html mandiri"
+              onClick={(e) => {
+                e.stopPropagation()
+                const blob = new Blob([art.content], { type: 'text/html;charset=utf-8' })
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `${art.title.toLowerCase().replace(/[^a-z0-9]+/g, '_') || 'yuki_game'}.html`
+                a.click()
+                URL.revokeObjectURL(url)
+              }}
+            >
+              <Download size={12} />
+              <span>Unduh .html</span>
+            </button>
+          </div>
         ))}
       </div>
     )}

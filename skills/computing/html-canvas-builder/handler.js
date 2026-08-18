@@ -1,4 +1,6 @@
 // skills/computing/html-canvas-builder/handler.js
+import fs from 'node:fs'
+import path from 'node:path'
 
 export async function executeBuildInteractiveArtifact(params = {}) {
   const { title, type = 'html', html_content, code, content } = params
@@ -18,7 +20,7 @@ export async function executeBuildInteractiveArtifact(params = {}) {
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>${cleanTitle}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -32,6 +34,7 @@ export async function executeBuildInteractiveArtifact(params = {}) {
       align-items: center;
       justify-content: center;
       padding: 16px;
+      overflow-x: hidden;
     }
   </style>
 </head>
@@ -43,6 +46,17 @@ export async function executeBuildInteractiveArtifact(params = {}) {
 
   const artifactId = `art_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
 
+  // Simpan file ke public/artifacts di server agar bisa langsung diakses / diunduh
+  try {
+    const artifactsDir = path.resolve('public/artifacts')
+    if (!fs.existsSync(artifactsDir)) {
+      fs.mkdirSync(artifactsDir, { recursive: true })
+    }
+    fs.writeFileSync(path.join(artifactsDir, `${artifactId}.html`), finalCode, 'utf8')
+  } catch (err) {
+    console.warn('[artifact] Gagal menyimpan file ke disk:', err.message)
+  }
+
   return {
     success: true,
     message: `Artifact "${cleanTitle}" berhasil dirakit dan siap dirender di Live Preview.`,
@@ -50,7 +64,8 @@ export async function executeBuildInteractiveArtifact(params = {}) {
       id: artifactId,
       title: cleanTitle,
       type: cleanType,
-      content: finalCode
+      content: finalCode,
+      url: `/artifacts/${artifactId}.html`
     }
   }
 }
