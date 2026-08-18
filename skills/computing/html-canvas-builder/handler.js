@@ -323,19 +323,28 @@ export async function executeBuildInteractiveArtifact(params = {}) {
 
   const artifactId = String(params.id || `art_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`)
 
-  // Simpan file ke public/artifacts di server agar bisa langsung diakses / diunduh
+  // 📂 SIMPAN FILE KE FOLDER PER USER: public/artifacts/<username>/
   const rawUsername = context?.username || 'user'
-  const cleanUsername = String(rawUsername).toLowerCase().replace(/[^a-z0-9_-]+/g, '_')
-  const cleanTitleSlug = cleanTitle.toLowerCase().replace(/[^a-z0-9_-]+/g, '_') || 'app'
-  const namedFile = `${cleanUsername}_${cleanTitleSlug}.html`
+  const cleanUsername = String(rawUsername).trim().replace(/[^a-zA-Z0-9_-]+/g, '_') || 'user'
+  const cleanTitleSlug = cleanTitle.trim().replace(/[^a-zA-Z0-9_-]+/g, '_') || 'app'
+  const userFileName = `${cleanTitleSlug}.html`
+  const relativeUrl = `/artifacts/${cleanUsername}/${userFileName}`
 
   try {
-    const artifactsDir = path.resolve('public/artifacts')
-    if (!fs.existsSync(artifactsDir)) {
-      fs.mkdirSync(artifactsDir, { recursive: true })
+    // 1. Folder spesifik per user: public/artifacts/<username>/
+    const userArtifactsDir = path.resolve(`public/artifacts/${cleanUsername}`)
+    if (!fs.existsSync(userArtifactsDir)) {
+      fs.mkdirSync(userArtifactsDir, { recursive: true })
     }
-    fs.writeFileSync(path.join(artifactsDir, `${artifactId}.html`), finalCode, 'utf8')
-    fs.writeFileSync(path.join(artifactsDir, namedFile), finalCode, 'utf8')
+    fs.writeFileSync(path.join(userArtifactsDir, userFileName), finalCode, 'utf8')
+    fs.writeFileSync(path.join(userArtifactsDir, `${artifactId}.html`), finalCode, 'utf8')
+
+    // 2. Root folder public/artifacts untuk backwards compatibility
+    const rootArtifactsDir = path.resolve('public/artifacts')
+    if (!fs.existsSync(rootArtifactsDir)) {
+      fs.mkdirSync(rootArtifactsDir, { recursive: true })
+    }
+    fs.writeFileSync(path.join(rootArtifactsDir, `${artifactId}.html`), finalCode, 'utf8')
   } catch (err) {
     console.warn('[artifact] Gagal menyimpan file ke disk:', err.message)
   }
@@ -359,14 +368,16 @@ export async function executeBuildInteractiveArtifact(params = {}) {
 
   return {
     success: true,
-    message: `Artifact "${cleanTitle}" (v${savedRecord.version || 1}) berhasil dirakit dan siap dirender di Live Preview.`,
+    message: `Artifact "${cleanTitle}" (v${savedRecord.version || 1}) berhasil disimpan di folder "${cleanUsername}/${userFileName}".`,
     artifact: {
       id: savedRecord.id || artifactId,
       title: savedRecord.title || cleanTitle,
       type: cleanType,
       content: finalCode,
       version: savedRecord.version || 1,
-      url: `/artifacts/${artifactId}.html`
+      url: relativeUrl,
+      folder: cleanUsername,
+      filename: userFileName
     }
   }
 }
