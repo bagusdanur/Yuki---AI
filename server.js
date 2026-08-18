@@ -19,6 +19,8 @@ import { warmupEmbedder } from './lib/semantic.js'
 import { searchComics, latestComics, wantsComic, extractQuery, buildComicContext } from './lib/ryukomik.js'
 import { initSkills, listSkills } from './lib/agent/skills-engine.js'
 import { runAgent, extractHtmlArtifactsFromText } from './lib/agent/runner.js'
+import { restoreScheduledJobs, setTaskTriggerCallback } from './lib/scheduler.js'
+import { closeBrowser } from './lib/browser.js'
 
 // Hemat DeepSeek: cuma ekstrak fakta kalau pesan kemungkinan berisi info personal
 // (mayoritas chat biasa nggak perlu -> menghemat ~1 panggilan LLM tiap giliran).
@@ -159,6 +161,28 @@ warmupEmbedder().catch(() => {})
 
 // Inisialisasi Yuki Agent Skills Engine
 initSkills().catch((err) => console.error('[skills-engine] Inisialisasi gagal:', err.message))
+
+// Inisialisasi Scheduled Tasks Engine & Callback Notifikasi
+setTaskTriggerCallback((userId, task) => {
+  try {
+    const reminderMsg = `*[Pengingat Terjadwal: ${task.title}]*\n\n${task.description}\n\n*menatapmu*\nJangan sampai lupa tugas ini ya!`
+    saveChatMessage(userId, 'assistant', reminderMsg)
+    console.info(`[scheduler] Notifikasi pengingat disimpan untuk user ${userId}: "${task.title}"`)
+  } catch (err) {
+    console.error('[server] Gagal simpan notifikasi scheduled task:', err.message)
+  }
+})
+restoreScheduledJobs()
+
+// Graceful shutdown untuk browser pool
+process.on('SIGINT', async () => {
+  await closeBrowser()
+  process.exit(0)
+})
+process.on('SIGTERM', async () => {
+  await closeBrowser()
+  process.exit(0)
+})
 
 // Endpoint Katalog Skills Yuki Agent
 app.get('/api/agent/skills', rateLimit({ max: 60 }), async (_req, res) => {
