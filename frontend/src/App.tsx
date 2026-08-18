@@ -290,14 +290,14 @@ function CodexArtifactModal({ artifact, onClose }: { artifact: ArtifactItem; onC
                 className={`artifact-tab-btn ${tab === 'preview' ? 'active' : ''}`}
                 onClick={() => setTab('preview')}
               >
-                <Play size={11} /> Live Preview
+                <Play size={11} /><span className="tab-label">Preview</span>
               </button>
               <button
                 type="button"
                 className={`artifact-tab-btn ${tab === 'code' ? 'active' : ''}`}
                 onClick={() => setTab('code')}
               >
-                <Code2 size={11} /> Source Code
+                <Code2 size={11} /><span className="tab-label">Kode</span>
               </button>
             </div>
             {tab === 'preview' && (
@@ -335,8 +335,9 @@ function CodexArtifactModal({ artifact, onClose }: { artifact: ArtifactItem; onC
                 key={reloadKey}
                 title={artifact.title}
                 srcDoc={artifact.content}
-                sandbox="allow-scripts allow-modals allow-forms allow-same-origin"
+                sandbox="allow-scripts allow-modals allow-forms allow-same-origin allow-pointer-lock"
                 className="artifact-preview-frame"
+                allow="autoplay"
               />
             </div>
           ) : (

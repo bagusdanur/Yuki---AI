@@ -100,9 +100,9 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 }
 
 .mode-btn.agent-btn.active {
-  color: #07090e;
-  background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
-  box-shadow: 0 2px 12px rgba(79,172,254,.35);
+  color: #ffffff;
+  background: #27272a;
+  box-shadow: 0 1px 3px rgba(0,0,0,.3);
 }
 
 .skills-catalog-pill {
@@ -110,27 +110,24 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   align-items: center;
   gap: 5px;
   padding: 5px 10px;
-  border: 1px solid #2d3748;
+  border: 1px solid #27272a;
   border-radius: 14px;
-  color: #4facfe;
-  background: rgba(79,172,254,.08);
-  font: 700 10px/1 ui-monospace, monospace;
-  text-transform: uppercase;
-  letter-spacing: .05em;
+  color: #a1a1aa;
+  background: #18181b;
+  font: 500 10px/1 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: .03em;
   transition: all .18s ease;
-  white-space: nowrap;
+  cursor: pointer;
 }
-
 .skills-catalog-pill:hover {
-  border-color: #4facfe;
-  background: rgba(79,172,254,.18);
-  color: #fff;
+  color: #ffffff;
+  border-color: #3f3f46;
+  background: #27272a;
 }
 
 /* Agent Theme Enhancements */
-.app-shell.mode-agent { border-color: #243447; }
-.app-shell.mode-agent .character-glow { background: rgba(79,172,254,.22); }
-.message.agent-msg .message-avatar { color: #040914; background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); border-color: #00f2fe; }
+.app-shell.mode-agent { border-color: #27272a; }
+.message.agent-msg .message-avatar { color: #ffffff; background: #27272a; border-color: #3f3f46; }
 
 /* Agent Steps Card (Collapsible Tool Execution Trace) */
 .agent-steps-card { margin-bottom: 10px; border: 1px solid #232d3d; border-radius: 6px; background: #0d121c; overflow: hidden; }
@@ -617,9 +614,9 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 
 /* Artifact Modal (Clean shadcn Dialog Style) */
 .codex-artifact-modal {
-  width: min(920px, 94vw);
-  height: min(740px, 88dvh);
-  max-height: 88dvh;
+  width: min(960px, 96vw);
+  height: min(760px, 92dvh);
+  max-height: 92dvh;
   display: flex;
   flex-direction: column;
   background: #09090b;
@@ -636,15 +633,39 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   border-radius: 0 !important;
   border: 0 !important;
 }
+/* Mobile: artifact modal takes full screen automatically */
+@media (max-width: 600px) {
+  .codex-artifact-modal {
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    border: 0 !important;
+  }
+  .timeline-overlay {
+    padding: 0 !important;
+  }
+  .artifact-modal-header {
+    padding: 6px 10px !important;
+  }
+  .artifact-title-group h2 {
+    font-size: 12px !important;
+  }
+  .artifact-badge {
+    display: none !important;
+  }
+}
 .artifact-modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 10px 14px;
+  gap: 8px;
+  padding: 8px 12px;
   border-bottom: 1px solid #27272a;
   background: #121215;
   flex-shrink: 0;
+  min-height: 48px;
+  overflow: visible;
 }
 .artifact-title-group {
   display: flex;
@@ -675,9 +696,10 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 .artifact-header-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   flex-shrink: 0;
   flex-wrap: nowrap;
+  overflow: visible;
 }
 .artifact-tab-pill {
   display: flex;
@@ -688,19 +710,21 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   border-radius: 6px;
   background: #18181b;
   flex-shrink: 0;
+  overflow: visible;
 }
 .artifact-tab-btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 9px;
+  gap: 4px;
+  padding: 5px 10px;
   border: 0;
   border-radius: 4px;
   color: #71717a;
   background: transparent;
-  font: 500 11px/1.2 ui-sans-serif, system-ui, sans-serif;
+  font: 500 11.5px/1 ui-sans-serif, system-ui, sans-serif;
   cursor: pointer;
   white-space: nowrap;
+  flex-shrink: 0;
   transition: all 0.12s ease;
 }
 .artifact-tab-btn:hover {
@@ -709,8 +733,12 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 .artifact-tab-btn.active {
   color: #ffffff;
   background: #27272a;
-  font-weight: 500;
+  font-weight: 600;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+/* Hide text label on very narrow screens, keep icon */
+@media (max-width: 420px) {
+  .artifact-tab-btn .tab-label { display: none; }
 }
 .artifact-action-icon,
 .artifact-close-btn {
@@ -751,14 +779,19 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   min-height: 0;
   flex: 1 1 auto;
   display: flex;
+  flex-direction: column;
   background: #000;
-  overflow: auto;
+  overflow: hidden;
 }
 .artifact-preview-frame {
   width: 100%;
   height: 100%;
+  min-height: 0;
+  flex: 1;
   border: 0;
   display: block;
+  /* Allow touch events to pass through to game canvas */
+  touch-action: none;
 }
 .artifact-code-view {
   flex: 1;
