@@ -3,13 +3,14 @@ import 'dotenv/config'
 import { runAgent } from '../lib/agent/runner.js'
 
 async function run() {
-  console.log('Testing runAgent end-to-end...')
+  console.log('Testing runAgent end-to-end with real user message: "buatkan game platform terbaik jadul retro gituu"...')
   const start = Date.now()
   try {
     const res = await runAgent({
-      userMessage: 'Yuki, tolong buatkan game retro platformer jadul sekarang juga yang seru dan bisa dimainkan di canvas',
-      userId: 'test_user_game_2',
-      pastMessages: []
+      userId: 'test_user_game_retro',
+      messages: [
+        { role: 'user', content: 'buatkan game platform terbaik jadul retro gituu' }
+      ]
     })
 
     console.log(`\n🎉 SUCCESS in ${Date.now() - start}ms:`)
@@ -21,7 +22,8 @@ async function run() {
       console.log('  Artifact #1 Type:', res.artifacts[0].type)
       console.log('  Artifact #1 Content length:', res.artifacts[0].content?.length)
     }
-    console.log('  Reply text snippet:\n', res.reply?.slice(0, 300))
+    console.log('  Steps executed:', res.steps?.length || 0)
+    console.log('  Reply text snippet:\n', res.reply?.slice(0, 400))
   } catch (err) {
     console.error(`\n❌ FAILED in ${Date.now() - start}ms:`, err.message)
     if (err.cause) console.error('  Cause:', err.cause)
