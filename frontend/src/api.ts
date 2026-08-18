@@ -74,8 +74,9 @@ export async function sendChat(userId: string, messages: Message[], isIdle = fal
 
   return request<ChatResponse>('/api/chat', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, messages: sanitizedMessages, isIdle, mode }),
-  }, 125_000)
+  }, 150_000)
 }
+
 
 
 export async function getSkills() {
