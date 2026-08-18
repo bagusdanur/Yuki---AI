@@ -36,18 +36,14 @@ export async function executeRunJavascriptCode({ code }) {
   const context = vm.createContext(sandbox)
 
   try {
-    // Bungkus jika ada return langsung atau blok ekspresi
+    // Bungkus dengan IIFE agar return langsung berfungsi dan tidak ada double execution
     const wrappedCode = `
       (() => {
-        try {
-          ${code.includes('return') ? code : `return (${code});`}
-        } catch (e) {
-          ${code}
-        }
+        ${code}
       })()
     `
-    const script = new vm.Script(wrappedCode)
-    const result = script.runInContext(context, { timeout: 3000 })
+    const script = new vm.Script(wrappedCode, { filename: 'yuki-scratchpad.js' })
+    const result = script.runInContext(context, { timeout: 5000 })
 
     return {
       success: true,
@@ -61,6 +57,7 @@ export async function executeRunJavascriptCode({ code }) {
       logs: logs.length > 0 ? logs.join('\n') : undefined
     }
   }
+
 }
 
 export default {
