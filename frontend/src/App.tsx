@@ -143,24 +143,24 @@ function AgentThoughtCard({ thinking }: { thinking?: string }) {
   if (!thinking || !thinking.trim()) return null
 
   return (
-    <div className="hermes-thought-card">
+    <div className="yuki-thought-card">
       <button
         type="button"
-        className="hermes-thought-toggle"
+        className="yuki-thought-toggle"
         onClick={() => setOpen(!open)}
         aria-expanded={open}
       >
-        <span className="hermes-thought-title">
-          <Sparkles size={13} className="hermes-sparkle-icon" />
+        <span className="yuki-thought-title">
+          <Sparkles size={13} className="yuki-sparkle-icon" />
           <span><b>Proses Berpikir Yuki</b> (Analisis Internal)</span>
         </span>
-        <span className="hermes-thought-chevron">
+        <span className="yuki-thought-chevron">
           {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
         </span>
       </button>
 
       {open && (
-        <div className="hermes-thought-body">
+        <div className="yuki-thought-body">
           <pre>{thinking}</pre>
         </div>
       )}
@@ -225,7 +225,7 @@ function LiveAgentWorkingBubble() {
 
   const phases = [
     'Menganalisis instruksi tugas & memilih skills...',
-    'Menjalankan Hermes ReAct Reasoning Loop...',
+    'Menjalankan Yuki ReAct Reasoning Loop...',
     'Merakit logika aplikasi, HTML5 Canvas & Web Audio...',
     'Menguji dan mengompilasi Live Sandbox Artifact...',
     'Menyusun balasan akhir & panel interaktif...'
@@ -319,13 +319,18 @@ function prepareArtifactHtml(rawHtml = '') {
     setTimeout(autoScaleCanvas, 250);
     setInterval(autoScaleCanvas, 1500);
 
+    var startTouchX = null;
+    var startTouchY = null;
     var lastTouchX = null;
+    var lastTouchY = null;
+    var touchMoved = false;
+
     function dispatchMouse(type, clientX, clientY) {
       var canvases = document.querySelectorAll('canvas');
       canvases.forEach(function(canvas) {
         var rect = canvas.getBoundingClientRect();
-        var scaleX = canvas.width / rect.width;
-        var scaleY = canvas.height / rect.height;
+        var scaleX = canvas.width / (rect.width || 1);
+        var scaleY = canvas.height / (rect.height || 1);
         var localX = (clientX - rect.left) * scaleX;
         var localY = (clientY - rect.top) * scaleY;
         var evt = new MouseEvent(type, {
@@ -345,17 +350,27 @@ function prepareArtifactHtml(rawHtml = '') {
       window.dispatchEvent(docEvt);
     }
 
+    function triggerKey(keyName, keyCodeVal) {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: keyName, code: keyName, keyCode: keyCodeVal, which: keyCodeVal, bubbles: true }));
+      setTimeout(function() {
+        window.dispatchEvent(new KeyboardEvent('keyup', { key: keyName, code: keyName, keyCode: keyCodeVal, which: keyCodeVal, bubbles: true }));
+      }, 35);
+    }
+
     window.addEventListener('touchstart', function(e) {
       if (!e.touches || e.touches.length === 0) return;
       var touch = e.touches[0];
+      startTouchX = touch.clientX;
+      startTouchY = touch.clientY;
       lastTouchX = touch.clientX;
+      lastTouchY = touch.clientY;
+      touchMoved = false;
+
       dispatchMouse('mousedown', touch.clientX, touch.clientY);
       dispatchMouse('mousemove', touch.clientX, touch.clientY);
 
       var clickEvt = new MouseEvent('click', { clientX: touch.clientX, clientY: touch.clientY, bubbles: true, cancelable: true });
       e.target.dispatchEvent(clickEvt);
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space', keyCode: 32, which: 32, bubbles: true }));
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
     }, { passive: false });
 
     window.addEventListener('touchmove', function(e) {
@@ -363,27 +378,50 @@ function prepareArtifactHtml(rawHtml = '') {
       e.preventDefault();
       var touch = e.touches[0];
       var currentX = touch.clientX;
-      dispatchMouse('mousemove', currentX, touch.clientY);
+      var currentY = touch.clientY;
 
-      if (lastTouchX !== null) {
+      dispatchMouse('mousemove', currentX, currentY);
+
+      if (lastTouchX !== null && lastTouchY !== null) {
         var deltaX = currentX - lastTouchX;
-        if (deltaX < -2) {
-          window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', code: 'ArrowLeft', keyCode: 37, which: 37, bubbles: true }));
-          setTimeout(function() { window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowLeft', code: 'ArrowLeft', keyCode: 37, which: 37, bubbles: true })); }, 30);
-        } else if (deltaX > 2) {
-          window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', code: 'ArrowRight', keyCode: 39, which: 39, bubbles: true }));
-          setTimeout(function() { window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', code: 'ArrowRight', keyCode: 39, which: 39, bubbles: true })); }, 30);
+        var deltaY = currentY - lastTouchY;
+
+        if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
+          touchMoved = true;
+        }
+
+        // Horizontal Swipe: Left / Right (Tetris & Paddle games)
+        if (deltaX < -3) {
+          triggerKey('ArrowLeft', 37);
+        } else if (deltaX > 3) {
+          triggerKey('ArrowRight', 39);
+        }
+
+        // Vertical Swipe Down: Drop / Fast Fall (Tetris & Puzzle games)
+        if (deltaY > 6) {
+          triggerKey('ArrowDown', 40);
         }
       }
       lastTouchX = currentX;
+      lastTouchY = currentY;
     }, { passive: false });
 
     window.addEventListener('touchend', function(e) {
-      lastTouchX = null;
       dispatchMouse('mouseup', 0, 0);
-      window.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', code: 'Space', keyCode: 32, which: 32, bubbles: true }));
-      window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowLeft', code: 'ArrowLeft', keyCode: 37, which: 37, bubbles: true }));
-      window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', code: 'ArrowRight', keyCode: 39, which: 39, bubbles: true }));
+
+      // Tap detection (Sentuhan cepat tanpa geser = Rotate / Action / Jump di Tetris & Runner)
+      if (!touchMoved && startTouchX !== null) {
+        triggerKey('ArrowUp', 38); // Rotate piece in Tetris
+        triggerKey('w', 87);
+        triggerKey(' ', 32);      // Space / Action
+        triggerKey('Enter', 13);  // Start
+      }
+
+      startTouchX = null;
+      startTouchY = null;
+      lastTouchX = null;
+      lastTouchY = null;
+      touchMoved = false;
     }, { passive: false });
   })();
   </script>`

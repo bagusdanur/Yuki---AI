@@ -156,10 +156,10 @@ app.get('/docs', (req, res) => {
 // Panaskan model embedding di latar belakang (biar recall cepat saat dipakai)
 warmupEmbedder().catch(() => {})
 
-// Inisialisasi Hermes/OpenCode Skills Engine
+// Inisialisasi Yuki Agent Skills Engine
 initSkills().catch((err) => console.error('[skills-engine] Inisialisasi gagal:', err.message))
 
-// Endpoint Katalog Skills Yuki Agent (Hermes/OpenCode Style)
+// Endpoint Katalog Skills Yuki Agent
 app.get('/api/agent/skills', rateLimit({ max: 60 }), async (_req, res) => {
   try {
     const skills = await listSkills()
@@ -284,7 +284,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
     const recall = await recallMemory(userId, userText)
     const memoryContext = buildMemoryContext(recall)
 
-    // === MODE AGENT AI (Hermes / OpenCode Skills ReAct Loop) ===
+    // === MODE AGENT AI (Yuki Agent Skills ReAct Loop) ===
     if (mode === 'agent' && !isIdle) {
       const messagesToSend = sanitizedMessages.slice(-18)
       const agentResult = await runAgent({

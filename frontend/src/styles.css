@@ -344,14 +344,14 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
    ========================================================================== */
 
 /* Thought Process Card (Clean Accordion) */
-.hermes-thought-card {
+.yuki-thought-card {
   margin-bottom: 8px;
   border: 1px solid #27272a;
   border-radius: 6px;
   background: #121215;
   overflow: hidden;
 }
-.hermes-thought-toggle {
+.yuki-thought-toggle {
   width: 100%;
   display: flex;
   align-items: center;
@@ -364,19 +364,19 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
 }
-.hermes-thought-toggle:hover {
+.yuki-thought-toggle:hover {
   background: #18181b;
   color: #f4f4f5;
 }
-.hermes-thought-title {
+.yuki-thought-title {
   display: flex;
   align-items: center;
   gap: 6px;
 }
-.hermes-sparkle-icon {
+.yuki-sparkle-icon {
   color: #a78bfa;
 }
-.hermes-thought-body {
+.yuki-thought-body {
   padding: 10px 12px;
   border-top: 1px solid #27272a;
   background: #09090b;
@@ -387,11 +387,12 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   overflow-y: auto;
   line-height: 1.55;
 }
-.hermes-thought-body pre {
+.yuki-thought-body pre {
   margin: 0;
   white-space: pre-wrap;
   font-family: inherit;
 }
+
 
 /* Agent Execution Steps Card (Clean Timeline) */
 .agent-steps-card {
