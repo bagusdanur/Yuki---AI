@@ -252,11 +252,162 @@ function LiveAgentWorkingBubble() {
   )
 }
 
+function prepareArtifactHtml(rawHtml = '') {
+  if (!rawHtml || typeof rawHtml !== 'string') return ''
+  let html = rawHtml.trim()
+
+  const mobileTouchEngine = `
+  <style id="_yuki_injected_style">
+    * { box-sizing: border-box !important; -webkit-tap-highlight-color: transparent !important; }
+    html, body {
+      width: 100vw !important;
+      height: 100vh !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+      background: #08090c !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: center !important;
+      touch-action: none !important;
+      user-select: none !important;
+      -webkit-user-select: none !important;
+    }
+    canvas {
+      display: block !important;
+      margin: auto !important;
+      touch-action: none !important;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.8) !important;
+    }
+  </style>
+  <script id="_yuki_injected_script">
+  (function() {
+    function autoScaleCanvas() {
+      var canvases = document.querySelectorAll('canvas');
+      canvases.forEach(function(canvas) {
+        if (!canvas.dataset.nativeW) {
+          canvas.dataset.nativeW = canvas.width || 400;
+          canvas.dataset.nativeH = canvas.height || 600;
+        }
+        var nw = parseFloat(canvas.dataset.nativeW);
+        var nh = parseFloat(canvas.dataset.nativeH);
+        var ratio = nw / nh;
+        var maxW = window.innerWidth;
+        var maxH = window.innerHeight;
+        var targetW = maxW;
+        var targetH = targetW / ratio;
+        if (targetH > maxH) {
+          targetH = maxH;
+          targetW = targetH * ratio;
+        }
+        canvas.style.width = Math.floor(targetW) + 'px';
+        canvas.style.height = Math.floor(targetH) + 'px';
+        canvas.style.maxWidth = '100vw';
+        canvas.style.maxHeight = '100vh';
+      });
+    }
+
+    window.addEventListener('resize', autoScaleCanvas);
+    window.addEventListener('orientationchange', autoScaleCanvas);
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', autoScaleCanvas);
+    } else {
+      autoScaleCanvas();
+    }
+    setTimeout(autoScaleCanvas, 50);
+    setTimeout(autoScaleCanvas, 250);
+    setInterval(autoScaleCanvas, 1500);
+
+    var lastTouchX = null;
+    function dispatchMouse(type, clientX, clientY) {
+      var canvases = document.querySelectorAll('canvas');
+      canvases.forEach(function(canvas) {
+        var rect = canvas.getBoundingClientRect();
+        var scaleX = canvas.width / rect.width;
+        var scaleY = canvas.height / rect.height;
+        var localX = (clientX - rect.left) * scaleX;
+        var localY = (clientY - rect.top) * scaleY;
+        var evt = new MouseEvent(type, {
+          clientX: clientX, clientY: clientY,
+          bubbles: true, cancelable: true, view: window
+        });
+        try {
+          Object.defineProperty(evt, 'offsetX', { value: localX });
+          Object.defineProperty(evt, 'offsetY', { value: localY });
+          Object.defineProperty(evt, 'layerX', { value: localX });
+          Object.defineProperty(evt, 'layerY', { value: localY });
+        } catch(e) {}
+        canvas.dispatchEvent(evt);
+      });
+      var docEvt = new MouseEvent(type, { clientX: clientX, clientY: clientY, bubbles: true, cancelable: true, view: window });
+      document.dispatchEvent(docEvt);
+      window.dispatchEvent(docEvt);
+    }
+
+    window.addEventListener('touchstart', function(e) {
+      if (!e.touches || e.touches.length === 0) return;
+      var touch = e.touches[0];
+      lastTouchX = touch.clientX;
+      dispatchMouse('mousedown', touch.clientX, touch.clientY);
+      dispatchMouse('mousemove', touch.clientX, touch.clientY);
+
+      var clickEvt = new MouseEvent('click', { clientX: touch.clientX, clientY: touch.clientY, bubbles: true, cancelable: true });
+      e.target.dispatchEvent(clickEvt);
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space', keyCode: 32, which: 32, bubbles: true }));
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
+    }, { passive: false });
+
+    window.addEventListener('touchmove', function(e) {
+      if (!e.touches || e.touches.length === 0) return;
+      e.preventDefault();
+      var touch = e.touches[0];
+      var currentX = touch.clientX;
+      dispatchMouse('mousemove', currentX, touch.clientY);
+
+      if (lastTouchX !== null) {
+        var deltaX = currentX - lastTouchX;
+        if (deltaX < -2) {
+          window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', code: 'ArrowLeft', keyCode: 37, which: 37, bubbles: true }));
+          setTimeout(function() { window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowLeft', code: 'ArrowLeft', keyCode: 37, which: 37, bubbles: true })); }, 30);
+        } else if (deltaX > 2) {
+          window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', code: 'ArrowRight', keyCode: 39, which: 39, bubbles: true }));
+          setTimeout(function() { window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', code: 'ArrowRight', keyCode: 39, which: 39, bubbles: true })); }, 30);
+        }
+      }
+      lastTouchX = currentX;
+    }, { passive: false });
+
+    window.addEventListener('touchend', function(e) {
+      lastTouchX = null;
+      dispatchMouse('mouseup', 0, 0);
+      window.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', code: 'Space', keyCode: 32, which: 32, bubbles: true }));
+      window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowLeft', code: 'ArrowLeft', keyCode: 37, which: 37, bubbles: true }));
+      window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', code: 'ArrowRight', keyCode: 39, which: 39, bubbles: true }));
+    }, { passive: false });
+  })();
+  </script>`
+
+  if (!html.includes('_yuki_injected_script')) {
+    if (/<\/body>/i.test(html)) {
+      html = html.replace(/<\/body>/i, `${mobileTouchEngine}\n</body>`)
+    } else if (/<\/html>/i.test(html)) {
+      html = html.replace(/<\/html>/i, `${mobileTouchEngine}\n</html>`)
+    } else {
+      html = `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"></head><body>${html}${mobileTouchEngine}</body></html>`
+    }
+  }
+
+  return html
+}
+
 function CodexArtifactModal({ artifact, onClose }: { artifact: ArtifactItem; onClose: () => void }) {
   const [tab, setTab] = useState<'preview' | 'code'>('preview')
   const [copied, setCopied] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
+
+  const processedHtml = useMemo(() => prepareArtifactHtml(artifact.content), [artifact.content])
 
   function handleCopy() {
     navigator.clipboard.writeText(artifact.content)
@@ -344,12 +495,13 @@ function CodexArtifactModal({ artifact, onClose }: { artifact: ArtifactItem; onC
               <iframe
                 key={reloadKey}
                 title={artifact.title}
-                srcDoc={artifact.content}
+                srcDoc={processedHtml}
                 sandbox="allow-scripts allow-modals allow-forms allow-same-origin allow-pointer-lock"
                 className="artifact-preview-frame"
                 allow="autoplay"
               />
             </div>
+
 
           ) : (
             <div className="artifact-code-view">
