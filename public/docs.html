@@ -856,6 +856,12 @@
         </svg>
         Kunci Ingatan
       </a>
+      <a href="#yuki-agent" class="nav-item" data-sec="yuki-agent" style="color: #00f2fe; border-color: rgba(0, 242, 254, 0.2); background: rgba(0, 242, 254, 0.05);">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="stroke: #00f2fe;">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+        Yuki Agent 1.0
+      </a>
       <a href="#versi-3" class="nav-item" data-sec="versi-3">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18m9-9H3" /></svg>
         Sistem Versi 3.0
@@ -1244,6 +1250,50 @@
       <div class="info-box">
         <p>
           <strong>Percakapan YUKI 3.0:</strong> balasan dibuat lebih utuh, tidak mudah terpotong, tidak berulang-ulang, dan tetap sesuai dengan hal yang benar-benar Yuki ingat tentangmu.
+        </p>
+      </div>
+    </section>
+
+    <!-- ==================== YUKI AGENT 1.0 ==================== -->
+    <section id="yuki-agent">
+      <div class="version-chip" style="color: #00f2fe; border-color: rgba(0, 242, 254, 0.4); background: rgba(0, 242, 254, 0.1);">AUTONOMOUS AI ENGINE / 1.0</div>
+      <h2>Yuki Agent 1.0 — Mode Eksekusi Tugas & Tools</h2>
+      <div class="subtitle">Asisten cerdas otonom bergaya Hermes & OpenCode dengan kemampuan live tools & interactive artifacts</div>
+
+      <p>
+        <strong>Yuki Agent 1.0</strong> adalah mode kerja cerdas di mana Yuki bertransformasi menjadi AI Agent otonom. Berbeda dari mode obrolan biasa (<em>Teman Ngobrol</em>), dalam mode Agent Yuki dapat melakukan penalaran multi-langkah (<em>multi-step reasoning</em>), menggunakan berbagai tools eksternal secara mandiri, dan merakit mini-app interaktif yang langsung bisa dimainkan di browser.
+      </p>
+
+      <div class="card accent" style="border-color: rgba(0, 242, 254, 0.3); background: rgba(0, 242, 254, 0.03);">
+        <h3 style="color: #00f2fe;">Daftar 10 Skills Aktif Yuki Agent</h3>
+        <p style="font-size: 13px; color: var(--muted); margin-bottom: 16px;">Setiap skill terisolasi dan bekerja secara terkoordinasi melalui sistem function calling teroptimasi token:</p>
+        <div class="persona-grid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
+          <div class="p-item"><div class="p-label" style="color: #00f2fe;">1. CODE ANALYZER</div><div class="p-val">Mendeteksi bug, error stack trace, validasi sintaks (JS, TS, Python, JSON, SQL, HTML), dan rekomendasi refactoring.</div></div>
+          <div class="p-item"><div class="p-label" style="color: #00f2fe;">2. REST API TESTER</div><div class="p-val">Melakukan live testing endpoint REST API / Webhook (GET, POST, PUT, DELETE) dengan metrik latency ms & response JSON.</div></div>
+          <div class="p-item"><div class="p-label" style="color: #00f2fe;">3. HTML/CANVAS BUILDER</div><div class="p-val">Merakit mini-game 2D, kalkulator, widget, chart visual, dan simulasi interaktif ke Live Artifact Sandbox.</div></div>
+          <div class="p-item"><div class="p-label" style="color: #00f2fe;">4. CODE SCRATCHPAD</div><div class="p-val">Mengeksekusi logika JavaScript kecil, simulasi algoritma, dan regex di sandbox VM terisolasi.</div></div>
+          <div class="p-item"><div class="p-label" style="color: #00f2fe;">5. SAFE CALCULATOR</div><div class="p-val">Kalkulasi matematika presisi, persentase diskon, trigonometri, dan perhitungan angka tanpa bias LLM.</div></div>
+          <div class="p-item"><div class="p-label" style="color: #00f2fe;">6. RYUKOMIK EXPERT</div><div class="p-val">Pencarian manga/manhwa/manhua, pemeriksaan update chapter terbaru, dan kurasi komik di Ryukomik.</div></div>
+          <div class="p-item"><div class="p-label" style="color: #00f2fe;">7. TASK & TO-DO PLANNER</div><div class="p-val">Menyimpan dan mengelola to-do list, catatan belajar, dan agenda pengguna ke database persisten SQLite.</div></div>
+          <div class="p-item"><div class="p-label" style="color: #00f2fe;">8. DATETIME & TIMEZONE</div><div class="p-val">Pengecekan waktu presisi (WIB/WITA/WIT), kalender hari, selisih hari, dan hitung mundur tanggal target.</div></div>
+          <div class="p-item"><div class="p-label" style="color: #00f2fe;">9. WEB SEARCH ENGINE</div><div class="p-val">Riset berita aktual, artikel anime terkini, jadwal rilis, dan informasi real-time dari internet.</div></div>
+          <div class="p-item"><div class="p-label" style="color: #00f2fe;">10. URL READER</div><div class="p-val">Membaca dan mengekstrak teks isi dari tautan web atau artikel online secara instan.</div></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 24px;">
+        <h3>Fitur Unggulan Live Artifact Sandbox</h3>
+        <ul>
+          <li><strong>Live Interactive Preview</strong>: Membuka mini-app atau game HTML5 Canvas langsung di atas obrolan chat.</li>
+          <li><strong>Fullscreen Mode</strong>: Tombol layar penuh untuk memainkan game atau visualisasi Canvas tanpa terdistraksi.</li>
+          <li><strong>Restart Sandbox</strong>: Memuat ulang simulasi game secara instan dengan satu klik tombol reload.</li>
+          <li><strong>1-Click Export .HTML & Copy Code</strong>: Unduh file kode aplikasi mandiri untuk dijalankan secara offline di komputer atau browser manapun.</li>
+        </ul>
+      </div>
+
+      <div class="info-box" style="border-left-color: #00f2fe; background: rgba(0, 242, 254, 0.05); margin-top: 20px;">
+        <p>
+          <strong>Cara Berpindah ke Mode Agent:</strong> Klik tombol pill <strong>"⚡ Yuki Agent"</strong> di bagian atas chat. Kamu bisa langsung mengetik perintah seperti <em>"Buatkan mini game Pong Canvas"</em>, <em>"Analisis kode error ini"</em>, atau <em>"Test API https://httpbin.org/get"</em>.
         </p>
       </div>
     </section>
