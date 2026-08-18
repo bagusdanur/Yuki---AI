@@ -9,7 +9,7 @@ from kokoro_onnx import Kokoro
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "kokoro-v0_19.onnx")
-VOICES_PATH = os.path.join(BASE_DIR, "voices.json")
+VOICES_PATH = os.path.join(BASE_DIR, "voices.bin")
 
 print(f"[Kokoro TTS] Loading ONNX model from {MODEL_PATH}...")
 kokoro = Kokoro(model_path=MODEL_PATH, voices_path=VOICES_PATH)
