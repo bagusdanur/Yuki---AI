@@ -324,12 +324,18 @@ export async function executeBuildInteractiveArtifact(params = {}) {
   const artifactId = String(params.id || `art_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`)
 
   // Simpan file ke public/artifacts di server agar bisa langsung diakses / diunduh
+  const rawUsername = context?.username || 'user'
+  const cleanUsername = String(rawUsername).toLowerCase().replace(/[^a-z0-9_-]+/g, '_')
+  const cleanTitleSlug = cleanTitle.toLowerCase().replace(/[^a-z0-9_-]+/g, '_') || 'app'
+  const namedFile = `${cleanUsername}_${cleanTitleSlug}.html`
+
   try {
     const artifactsDir = path.resolve('public/artifacts')
     if (!fs.existsSync(artifactsDir)) {
       fs.mkdirSync(artifactsDir, { recursive: true })
     }
     fs.writeFileSync(path.join(artifactsDir, `${artifactId}.html`), finalCode, 'utf8')
+    fs.writeFileSync(path.join(artifactsDir, namedFile), finalCode, 'utf8')
   } catch (err) {
     console.warn('[artifact] Gagal menyimpan file ke disk:', err.message)
   }

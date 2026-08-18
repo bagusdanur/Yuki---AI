@@ -576,12 +576,15 @@ function CodexArtifactModal({ artifact, onClose }: { artifact: ArtifactItem; onC
   }
 
   function handleDownload() {
-    const ext = artifact.type === 'svg' ? 'svg' : artifact.type === 'javascript' ? 'js' : 'html'
+    const rawUsername = localStorage.getItem(SESSION_KEYS.username) || 'user'
+    const cleanUser = rawUsername.trim().replace(/[^a-zA-Z0-9_-]+/g, '_')
+    const cleanTitle = (artifact.title || 'project').trim().replace(/[^a-zA-Z0-9_-]+/g, '_')
+    const ext = artifact.type === 'svg' ? 'svg' : artifact.type === 'javascript' || artifact.type === 'js' ? 'js' : artifact.type === 'python' || artifact.type === 'py' ? 'py' : 'html'
     const blob = new Blob([artifact.content], { type: 'text/plain;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${artifact.title.toLowerCase().replace(/[^a-z0-9]+/g, '_')}.${ext}`
+    a.download = `${cleanUser}_${cleanTitle}.${ext}`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -772,11 +775,15 @@ function MessageBody({ message, bookmarks, onToggleBookmark, onOpenArtifact }: {
                 title="Unduh file .html mandiri"
                 onClick={(e) => {
                   e.stopPropagation()
+                  const rawUsername = localStorage.getItem(SESSION_KEYS.username) || 'user'
+                  const cleanUser = rawUsername.trim().replace(/[^a-zA-Z0-9_-]+/g, '_')
+                  const cleanTitle = (art.title || 'project').trim().replace(/[^a-zA-Z0-9_-]+/g, '_')
+                  const ext = art.type === 'svg' ? 'svg' : art.type === 'javascript' || art.type === 'js' ? 'js' : art.type === 'python' || art.type === 'py' ? 'py' : 'html'
                   const blob = new Blob([art.content], { type: 'text/html;charset=utf-8' })
                   const url = URL.createObjectURL(blob)
                   const a = document.createElement('a')
                   a.href = url
-                  a.download = `${art.title.toLowerCase().replace(/[^a-z0-9]+/g, '_') || 'yuki_game'}.html`
+                  a.download = `${cleanUser}_${cleanTitle}.${ext}`
                   a.click()
                   URL.revokeObjectURL(url)
                 }}

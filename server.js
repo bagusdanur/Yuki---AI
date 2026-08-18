@@ -8,7 +8,7 @@ import { synthesize } from './lib/tts.js'
 import { Emotion } from './lib/emotion.js'
 import {
   loadMemory, addFacts, addEvent, buildMemoryContext, recallMemory, saveEmotion,
-  registerUser, getUserByAccessCode, saveChatMessage, getChatHistory,
+  registerUser, getUserByAccessCode, getUsernameByUserId, saveChatMessage, getChatHistory,
   countChatMessages, summarizeAndTrimHistory, captureStructuredMemory,
   recordConversationEvent, syncBondMilestones, saveResponseFeedback,
   consumeRateLimit, pruneRateLimits, deleteUserData, getAdminStats, userExists,
@@ -341,8 +341,10 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
     // === MODE AGENT AI (Yuki Agent Skills ReAct Loop) ===
     if (mode === 'agent' && !isIdle) {
       const messagesToSend = sanitizedMessages.slice(-18)
+      const currentUsername = getUsernameByUserId(userId) || req.body.username || 'User'
       const agentResult = await runAgent({
         userId,
+        username: currentUsername,
         messages: messagesToSend,
         memoryContext,
         bondName: bond.name
