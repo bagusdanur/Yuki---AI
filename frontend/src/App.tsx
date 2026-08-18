@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Bookmark, BookOpen, Bot, Check, ChevronDown, ChevronUp, Code2, Copy, Download,
-  Globe, Heart, KeyRound, ListTodo, LoaderCircle, MessageSquare, Play, RefreshCw,
-  RotateCcw, Send, Settings, Sparkles, Star, Terminal, ThumbsDown, ThumbsUp,
-  Volume2, WifiOff, Wrench, X, Zap
+  Gamepad2, Globe, Heart, KeyRound, ListTodo, LoaderCircle, Maximize2, MessageSquare,
+  Minimize2, Play, Radio, RefreshCw, RotateCcw, Send, Settings, Sparkles, Star,
+  Terminal, ThumbsDown, ThumbsUp, Volume2, WifiOff, Wrench, X, Zap
 } from 'lucide-react'
 import {
   addBookmark, deleteAccount, getBookmarks, getRelationship,
@@ -521,7 +521,13 @@ export default function App() {
   useEffect(() => () => requestTimers.current.forEach(window.clearTimeout), [])
   useEffect(() => {
     if (!session || session.sessionToken || !session.accessCode) return
-    restore(session.accessCode).then(data => ready({ ...session, sessionToken: data.sessionToken }, data.history || messages, data.bondValue, data.milestones)).catch(() => reset())
+    restore(session.accessCode)
+      .then(data => ready({ ...session, sessionToken: data.sessionToken }, data.history || messages, data.bondValue, data.milestones))
+      .catch(err => {
+        console.warn('[Session] Gagal restore dari server, mempertahankan data lokal:', err.message)
+        const localHist = loadHistory(session.userId)
+        if (localHist.length && messages.length === 0) setMessages(localHist)
+      })
   }, [session?.userId, session?.sessionToken])
 
   useEffect(() => {
@@ -697,18 +703,18 @@ export default function App() {
   }
 
   const companionSuggestions = [
-    'Rekomendasi Manhwa Aksi',
-    'Manga Romance Manis',
-    'Komik Isekai Seru',
-    'Update Chapter Terbaru'
+    { icon: Sparkles, label: 'Manhwa Aksi', text: 'Rekomendasikan manhwa aksi terbaik di Ryukomik' },
+    { icon: Heart, label: 'Romance Manis', text: 'Rekomendasi manga romance yang manis dan santai' },
+    { icon: BookOpen, label: 'Isekai Populer', text: 'Cari komik bertema isekai yang seru' },
+    { icon: RefreshCw, label: 'Update Terbaru', text: 'Komik apa saja yang baru update chapter di Ryukomik?' }
   ]
 
   const agentSuggestions = [
-    '🎮 Buatkan mini-game Canvas retro interaktif',
-    '🛠️ Analisis & debug kode JavaScript ini',
-    '📡 Test endpoint REST API https://httpbin.org/get',
-    '🌐 Riset berita & update anime terbaru minggu ini',
-    '📝 Catat agenda to-do list belajarku besok'
+    { icon: Gamepad2, label: 'Mini-Game Canvas', text: 'Buatkan mini-game Canvas retro interaktif' },
+    { icon: Code2, label: 'Analisis & Debug', text: 'Analisis dan debug kode JavaScript ini' },
+    { icon: Radio, label: 'Test REST API', text: 'Test endpoint REST API https://httpbin.org/get' },
+    { icon: Globe, label: 'Riset Berita Web', text: 'Riset berita dan update anime terbaru minggu ini' },
+    { icon: ListTodo, label: 'Agenda To-Do', text: 'Catat agenda to-do list belajarku besok' }
   ]
 
   return <main className={`app-shell${avatarCompact ? ' avatar-compact' : ''} mode-${chatMode}`}>
@@ -726,7 +732,7 @@ export default function App() {
           <button onClick={() => setSettingsOpen(!settingsOpen)} aria-label="Pengaturan"><Settings size={17} /></button>
         </div>
         {settingsOpen && <div className="settings-card">
-          <button onClick={() => { setSkillsModalOpen(true); setSettingsOpen(false) }}><Wrench size={15} /><span><b>Katalog Skills Yuki Agent</b><small>{skills.length || 8} skills aktif</small></span></button>
+          <button onClick={() => { setSkillsModalOpen(true); setSettingsOpen(false) }}><Wrench size={15} /><span><b>Katalog Skills Yuki Agent</b><small>{skills.length || 10} skills aktif</small></span></button>
           <button onClick={() => { setBookmarksOpen(true); setSettingsOpen(false) }}><Bookmark size={15} /><span><b>Komik tersimpan</b><small>{bookmarks.length} judul tersimpan</small></span></button>
           <button onClick={() => { setTimelineOpen(true); setSettingsOpen(false) }}><Heart size={15} /><span><b>Perjalanan hubungan</b><small>{milestones.length} momen tersimpan</small></span></button>
           {installPrompt && <button onClick={installApp}><Download size={15} /><span><b>Pasang aplikasi Yuki</b><small>Tambahkan ke layar utama</small></span></button>}
@@ -766,7 +772,7 @@ export default function App() {
             title="Lihat seluruh Skills aktif Yuki Agent"
           >
             <Wrench size={12} />
-            <span>{skills.length || 8} Skills</span>
+            <span>{skills.length || 10} Skills</span>
           </button>
         )}
       </div>
@@ -871,10 +877,20 @@ export default function App() {
         <button disabled={busy || !input.trim()} aria-label="Kirim pesan">{busy ? <LoaderCircle className="spin" size={19}/> : <Send size={19}/>}</button>
       </form>
       <div className="activities" aria-label="Aktivitas bersama">
-        <Sparkles size={12}/>
-        {(chatMode === 'agent' ? agentSuggestions : companionSuggestions).map(label => (
-          <button key={label} onClick={() => setInput(label)}>{label}</button>
-        ))}
+        {(chatMode === 'agent' ? agentSuggestions : companionSuggestions).map(item => {
+          const Icon = item.icon
+          return (
+            <button
+              key={item.label}
+              type="button"
+              onClick={() => setInput(item.text)}
+              title={item.text}
+            >
+              <Icon size={12} />
+              <span>{item.label}</span>
+            </button>
+          )
+        })}
       </div>
     </section>
 
