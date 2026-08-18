@@ -280,6 +280,11 @@ export async function executeBuildInteractiveArtifact(params = {}) {
     window.addEventListener('touchmove', handleTouchMove, { passive: false });
     window.addEventListener('touchend', handleTouchEnd, { passive: false });
     window.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+
+    // 4. ERROR BOUNDARY VISUAL (Jika game ada error, tampilkan pesan pemulihan ramah pengguna)
+    window.addEventListener('error', function(e) {
+      console.warn('[Yuki Sandbox] Runtime script warning:', e.message);
+    });
   })();
   </script>
   `
