@@ -360,6 +360,26 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 .message.user .message-content { border: 1px solid #aaa7ff; border-radius: 8px 4px 4px 8px; color: #121318; background: #aaa7ff; font-weight: 620; }
 .message-content .action { display: block; margin: 0 0 8px; color: #9fa1ac; font-family: Georgia, "Times New Roman", serif; font-size: 13px; line-height: 1.5; }
 .message-content .action::before { content: "// "; color: #8581ea; font-family: ui-monospace, monospace; font-size: 9px; font-style: normal; }
+.message-content pre {
+  margin: 8px 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #0b0e14;
+  border: 1px solid #252a36;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #c9d1d9;
+  overflow-x: auto;
+}
+.message-content code:not(pre code) {
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: rgba(170, 167, 255, 0.12);
+  color: #c4c1ff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
 
 .comic-list { width: min(430px, 72vw); margin-top: 12px; display: grid; gap: 8px; white-space: normal; }
 .comic-card { min-width: 0; min-height: 76px; display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; gap: 11px; align-items: center; overflow: hidden; border: 1px solid #343846; border-radius: 7px; color: inherit; background: #0d1016; text-decoration: none; transition: border-color .18s, background .18s; }
