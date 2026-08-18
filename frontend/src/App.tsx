@@ -807,11 +807,40 @@ export default function App() {
               onOpenArtifact={art => setSelectedArtifact(art)}
             />
           </div>
-          {message.role === 'assistant' && <div className="message-tools">
-            <button className={`speak ${speakingIndex === index ? 'active' : ''}`} onClick={() => play(message.content, index)} aria-label="Putar suara">{speakingIndex === index ? <span className="audio-bars" aria-hidden="true"><i/><i/><i/></span> : <Volume2 size={14} />}</button>
-            <button className={feedback[index] === 1 ? 'selected' : ''} onClick={() => rateMessage(index, message, 1)} aria-label="Balasan cocok"><ThumbsUp size={12}/></button>
-            <button className={feedback[index] === -1 ? 'selected negative' : ''} onClick={() => rateMessage(index, message, -1)} aria-label="Balasan kurang cocok"><ThumbsDown size={12}/></button>
-          </div>}
+          {message.role === 'assistant' && (
+            <div className="message-tools">
+              <button
+                className={`speak ${speakingIndex === index ? 'active' : ''}`}
+                onClick={() => play(message.content, index)}
+                aria-label="Putar suara"
+                title="Dengarkan suara Yuki"
+              >
+                {speakingIndex === index ? (
+                  <span className="audio-bars" aria-hidden="true"><i/><i/><i/></span>
+                ) : (
+                  <Volume2 size={13} />
+                )}
+              </button>
+              <div className="message-feedback-group">
+                <button
+                  className={feedback[index] === 1 ? 'selected' : ''}
+                  onClick={() => rateMessage(index, message, 1)}
+                  aria-label="Balasan cocok"
+                  title="Suka balasan ini"
+                >
+                  <ThumbsUp size={11}/>
+                </button>
+                <button
+                  className={feedback[index] === -1 ? 'selected negative' : ''}
+                  onClick={() => rateMessage(index, message, -1)}
+                  aria-label="Balasan kurang cocok"
+                  title="Kurang suka balasan ini"
+                >
+                  <ThumbsDown size={11}/>
+                </button>
+              </div>
+            </div>
+          )}
         </article>)}
         {busy && <><div className={`request-status ${connection}`}>{connection === 'slow' || connection === 'retrying' ? <RefreshCw className="spin" size={12} /> : <LoaderCircle className="spin" size={12} />}<span>{chatMode === 'agent' ? 'Yuki Agent sedang berpikir & mengeksekusi...' : connectionLabel[connection]}</span></div><article className="message assistant"><div className="message-avatar">{chatMode === 'agent' ? <Zap size={13} /> : 'Y'}</div><div className="message-content typing"><i/><i/><i/></div></article></>}
         {connection === 'offline' && !busy && <div className="request-status offline"><WifiOff size={12}/><span>Kamu offline. Pesan yang belum dikirim tetap aman.</span></div>}
