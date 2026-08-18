@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Bookmark, BookOpen, Check, ChevronDown, ChevronUp, Code2, Copy, Download, Heart,
-  KeyRound, LoaderCircle, MessageSquare, Play, RefreshCw, RotateCcw, Send,
-  Settings, Sparkles, Terminal, ThumbsDown, ThumbsUp, Volume2, WifiOff, Wrench, X, Zap
+  Bookmark, BookOpen, Bot, Check, ChevronDown, ChevronUp, Code2, Copy, Download,
+  Globe, Heart, KeyRound, ListTodo, LoaderCircle, MessageSquare, Play, RefreshCw,
+  RotateCcw, Send, Settings, Sparkles, Star, Terminal, ThumbsDown, ThumbsUp,
+  Volume2, WifiOff, Wrench, X, Zap
 } from 'lucide-react'
 import {
   addBookmark, deleteAccount, getBookmarks, getRelationship,
@@ -99,7 +100,6 @@ function ComicCard({ comic, isBookmarked, onToggleBookmark }: {
   isBookmarked: boolean
   onToggleBookmark: (comic: ComicRecommendation) => void
 }) {
-  const meta = [comic.type, comic.chapter, comic.score ? `★ ${comic.score}` : ''].filter(Boolean).join(' · ')
   return (
     <div className="comic-card">
       <div className="comic-cover">
@@ -110,7 +110,15 @@ function ComicCard({ comic, isBookmarked, onToggleBookmark }: {
           {comic.format && <span className="comic-format-tag">{comic.format}</span>}
           <strong>{comic.title}</strong>
         </div>
-        <span>{meta || 'Baca di Ryukomik'}</span>
+        <span className="comic-meta-row">
+          {comic.type && <span>{comic.type}</span>}
+          {comic.chapter && <span>· {comic.chapter}</span>}
+          {comic.score && (
+            <span className="comic-score-tag">
+              <Star size={9} fill="currentColor" /> {comic.score}
+            </span>
+          )}
+        </span>
       </div>
       <div className="comic-card-actions">
         <button
@@ -331,12 +339,12 @@ function MessageBody({ message, bookmarks, onToggleBookmark, onOpenArtifact }: {
 }
 
 function SkillsCatalogModal({ skills, onClose }: { skills: SkillInfo[]; onClose: () => void }) {
-  const categoryLabels: Record<string, string> = {
-    research: '🌐 Research & Web Browsing',
-    media: '📚 Media & Ryukomik',
-    productivity: '📝 Productivity & Planning',
-    computing: '💻 Computing & Codex Artifacts',
-    general: '⚙️ General Capabilities'
+  const categoryConfig: Record<string, { label: string; icon: typeof Globe }> = {
+    research: { label: 'Research & Web Browsing', icon: Globe },
+    media: { label: 'Media & Ryukomik Catalog', icon: BookOpen },
+    productivity: { label: 'Productivity & Planning', icon: ListTodo },
+    computing: { label: 'Computing & Codex Artifacts', icon: Terminal },
+    general: { label: 'General Capabilities', icon: Wrench }
   }
 
   const grouped = useMemo(() => {
@@ -365,23 +373,30 @@ function SkillsCatalogModal({ skills, onClose }: { skills: SkillInfo[]; onClose:
             Dalam <b>Mode Agent</b>, Yuki dibekali sistem skills modular untuk riset web, live artifact builder, manajemen agenda to-do, pelacakan Ryukomik, dan komputasi presisi.
           </p>
 
-          {Array.from(grouped.entries()).map(([cat, list]) => (
-            <div className="skills-cat-group" key={cat}>
-              <h3>{categoryLabels[cat] || cat.toUpperCase()}</h3>
-              <div className="skills-grid">
-                {list.map(s => (
-                  <div className="skill-card" key={s.name}>
-                    <div className="skill-card-top">
-                      <strong>{s.title}</strong>
-                      <span className="skill-ver">v{s.version}</span>
+          {Array.from(grouped.entries()).map(([cat, list]) => {
+            const conf = categoryConfig[cat] || { label: cat.toUpperCase(), icon: Wrench }
+            const CatIcon = conf.icon
+            return (
+              <div className="skills-cat-group" key={cat}>
+                <h3>
+                  <CatIcon size={14} className="cat-header-icon" />
+                  <span>{conf.label}</span>
+                </h3>
+                <div className="skills-grid">
+                  {list.map(s => (
+                    <div className="skill-card" key={s.name}>
+                      <div className="skill-card-top">
+                        <strong>{s.title}</strong>
+                        <span className="skill-ver">v{s.version}</span>
+                      </div>
+                      <p>{s.description}</p>
+                      <code>skills/{cat}/{s.name}</code>
                     </div>
-                    <p>{s.description}</p>
-                    <code>skills/{cat}/{s.name}</code>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </section>
     </div>
@@ -779,7 +794,11 @@ export default function App() {
             : 'Mulai dari hal sederhana. Jangan berharap dia langsung ramah.'}</p>
         </div>}
         {messages.map((message, index) => <article className={`message ${message.role} ${message.mode === 'agent' ? 'agent-msg' : ''}`} key={`${index}-${message.content.slice(0, 12)}`}>
-          {message.role === 'assistant' && <div className="message-avatar">{message.mode === 'agent' ? '⚡' : 'Y'}</div>}
+          {message.role === 'assistant' && (
+            <div className="message-avatar">
+              {message.mode === 'agent' ? <Zap size={13} /> : 'Y'}
+            </div>
+          )}
           <div className="message-content">
             <MessageBody
               message={message}
@@ -794,14 +813,16 @@ export default function App() {
             <button className={feedback[index] === -1 ? 'selected negative' : ''} onClick={() => rateMessage(index, message, -1)} aria-label="Balasan kurang cocok"><ThumbsDown size={12}/></button>
           </div>}
         </article>)}
-        {busy && <><div className={`request-status ${connection}`}>{connection === 'slow' || connection === 'retrying' ? <RefreshCw className="spin" size={12} /> : <LoaderCircle className="spin" size={12} />}<span>{chatMode === 'agent' ? 'Hermes ReAct Engine sedang berpikir & mengeksekusi...' : connectionLabel[connection]}</span></div><article className="message assistant"><div className="message-avatar">{chatMode === 'agent' ? '⚡' : 'Y'}</div><div className="message-content typing"><i/><i/><i/></div></article></>}
+        {busy && <><div className={`request-status ${connection}`}>{connection === 'slow' || connection === 'retrying' ? <RefreshCw className="spin" size={12} /> : <LoaderCircle className="spin" size={12} />}<span>{chatMode === 'agent' ? 'Hermes ReAct Engine sedang berpikir & mengeksekusi...' : connectionLabel[connection]}</span></div><article className="message assistant"><div className="message-avatar">{chatMode === 'agent' ? <Zap size={13} /> : 'Y'}</div><div className="message-content typing"><i/><i/><i/></div></article></>}
         {connection === 'offline' && !busy && <div className="request-status offline"><WifiOff size={12}/><span>Kamu offline. Pesan yang belum dikirim tetap aman.</span></div>}
         {error && <div className="error-banner"><span>{error}</span><button onClick={() => setError('')}><X size={14}/></button></div>}
         <div ref={endRef} />
       </div>
 
       <form className="composer" onSubmit={submit}>
-        <span className="composer-index">{chatMode === 'agent' ? '⚡' : '01'}</span>
+        <span className="composer-index">
+          {chatMode === 'agent' ? <Zap size={12} /> : '01'}
+        </span>
         <textarea
           rows={1}
           value={input}
@@ -823,7 +844,7 @@ export default function App() {
     <aside className="character-panel">
       <div className="panel-meta">
         <span>Character viewport</span>
-        <b>{chatMode === 'agent' ? '⚡ Hermes Codex Active' : 'Session active'}</b>
+        <b>{chatMode === 'agent' ? <span className="agent-meta-badge"><Zap size={10} /> Hermes Codex Active</span> : 'Session active'}</b>
       </div>
       <div className="character-frame">
         <div className="frame-code">{chatMode === 'agent' ? 'HERMES / 001' : 'LIVE / 001'}</div>
