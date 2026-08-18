@@ -215,7 +215,83 @@ function AgentStepsCard({ steps }: { steps?: AgentStep[] }) {
   )
 }
 
-function LiveAgentWorkingBubble() {
+function getContextualAgentPhases(query = ''): string[] {
+  const q = query.toLowerCase()
+
+  // 1. Bug Fix / Perbaikan / Debugging
+  if (/bug|perbaiki|rusak|error|tembus|loncat|kurang|fix|salah|gagal|benerin|kok gini|gak jalan/i.test(q)) {
+    return [
+      '🔍 Menganalisis laporan bug & memeriksa basis kode sebelumnya...',
+      '🛠️ Menemukan akar masalah & menyusun patch perbaikan...',
+      '💾 Menguji runtime patch & memperbarui memori Self-Improvement...',
+      '✨ Mengompilasi kode yang sudah diperbaiki ke Live Sandbox Viewer...'
+    ]
+  }
+
+  // 2. Game / Platformer / Retro / Canvas / Web Widget
+  if (/game|platformer|retro|canvas|tetris|snake|pong|shooter|kalkulator|widget|animasi|mini[- ]?game/i.test(q)) {
+    return [
+      '🎮 Merancang arsitektur game 2D & sistem fisika canvas...',
+      '🕹️ Menyusun kontrol keyboard + touch sentuh mobile & game loop 60 FPS...',
+      '🎵 Mengintegrasikan Web Audio synthesizer & rintangan level...',
+      '🚀 Mengompilasi Live Sandbox Game Artifact...'
+    ]
+  }
+
+  // 3. Ryukomik / Manga / Manhwa / Komik
+  if (/komik|manga|manhwa|manhua|ryukomik|chapter|baca komik/i.test(q)) {
+    return [
+      '📖 Menghubungkan ke API Ryukomik & query database komik...',
+      '🔍 Memfilter update chapter terbaru, rating, & link baca langsung...',
+      '✨ Menyusun kartu rekomendasi komik & daftar chapter...'
+    ]
+  }
+
+  // 4. Jadwal / Pengingat / Scheduler
+  if (/ingatkan|jadwal|jadwalkan|schedule|remind|alarm|besok|menit lagi|setiap/i.test(q)) {
+    return [
+      '⏰ Memparsing jadwal waktu (WIB) & mengecek jadwal aktif...',
+      '💾 Mendaftarkan tugas ke SQLite Persistent Task Scheduler...',
+      '🔔 Menyiapkan konfirmasi pengingat otomatis...'
+    ]
+  }
+
+  // 5. Browser / Web Search / Riset
+  if (/cari|browsing|browse|search|riset|berita|harga|artikel|web|url|link|http/i.test(q)) {
+    return [
+      '🌐 Menjalankan Headless Browser & mengekstrak konten web...',
+      '📊 Menganalisis data temuan & memvalidasi fakta sumber...',
+      '📝 Menyusun intisari ringkasan riset...'
+    ]
+  }
+
+  // 6. Subagent Delegation
+  if (/delegasi|subagent|paralel|bagi tugas|kompleks/i.test(q)) {
+    return [
+      '🤖 Membagi task kompleks menjadi subagent paralel...',
+      '⚡ Menjalankan child workers & mengagregasi output...',
+      '📑 Mengonsolidasikan laporan multi-aspek...'
+    ]
+  }
+
+  // 7. Coding & Algorithms
+  if (/kode|code|javascript|python|function|script|regex|algoritma|api|database|sql/i.test(q)) {
+    return [
+      '🧠 Menganalisis logika algoritma & sintaks kode...',
+      '⚡ Menjalankan uji eksekusi di sandbox VM terisolasi...',
+      '✨ Menyusun balasan teknis & optimasi performa...'
+    ]
+  }
+
+  // 8. General Default
+  return [
+    '🧠 Menganalisis instruksi tugas & memilih skill yang relevan...',
+    '⚡ Menjalankan Yuki ReAct Reasoning Loop & eksekusi tools...',
+    '✨ Menyusun balasan terstruktur & ringkasan hasil...'
+  ]
+}
+
+function LiveAgentWorkingBubble({ userQuery = '' }: { userQuery?: string }) {
   const [seconds, setSeconds] = useState(0)
 
   useEffect(() => {
@@ -223,15 +299,8 @@ function LiveAgentWorkingBubble() {
     return () => clearInterval(timer)
   }, [])
 
-  const phases = [
-    'Menganalisis instruksi tugas & memilih skills...',
-    'Menjalankan Yuki ReAct Reasoning Loop...',
-    'Merakit logika aplikasi, HTML5 Canvas & Web Audio...',
-    'Menguji dan mengompilasi Live Sandbox Artifact...',
-    'Menyusun balasan akhir & panel interaktif...'
-  ]
-
-  const currentPhase = phases[Math.min(Math.floor(seconds / 3), phases.length - 1)]
+  const phases = useMemo(() => getContextualAgentPhases(userQuery), [userQuery])
+  const currentPhase = phases[Math.min(Math.floor(seconds / 2.8), phases.length - 1)]
 
   return (
     <article className="message assistant agent-msg live-agent-working-bubble">
@@ -606,6 +675,25 @@ function cleanMessageContent(text: string) {
   return clean.trim()
 }
 
+function HermesSelfImprovementCard({ text }: { text: string }) {
+  const match = text.match(/💾\s*Self-improvement(?:\s*review)?:\s*(?:Memory updated\s*—\s*)?([\s\S]*)/i)
+  const detail = match ? match[1].trim() : text.replace(/💾/g, '').trim()
+
+  return (
+    <div className="hermes-si-card">
+      <div className="hermes-si-top">
+        <span className="hermes-si-icon">💾</span>
+        <span className="hermes-si-title">Self-improvement review: Memory updated</span>
+      </div>
+      {detail && detail !== 'Memory updated' && (
+        <div className="hermes-si-detail">
+          {detail}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function MessageBody({ message, bookmarks, onToggleBookmark, onOpenArtifact }: {
   message: Message
   bookmarks: BookmarkedComic[]
@@ -617,7 +705,17 @@ function MessageBody({ message, bookmarks, onToggleBookmark, onOpenArtifact }: {
   const rawText = message.comics?.length ? message.content : legacy.clean
   const textWithoutComics = cleanComicText(rawText, comics)
   const text = cleanMessageContent(textWithoutComics)
-  const parts = text.split(/(\*[^*\n]{2,100}\*)/g).filter(Boolean)
+
+  const selfImprovementLines: string[] = []
+  const textWithoutSI = text.split('\n').filter(line => {
+    if (/💾\s*Self-improvement/i.test(line)) {
+      selfImprovementLines.push(line)
+      return false
+    }
+    return true
+  }).join('\n')
+
+  const parts = textWithoutSI.split(/(\*[^*\n]{2,100}\*)/g).filter(Boolean)
   const bookmarkedUrls = new Set(bookmarks.map(b => b.url))
 
   return <>
@@ -627,6 +725,9 @@ function MessageBody({ message, bookmarks, onToggleBookmark, onOpenArtifact }: {
     {message.steps && message.steps.length > 0 && (
       <AgentStepsCard steps={message.steps} />
     )}
+    {selfImprovementLines.map((siText, idx) => (
+      <HermesSelfImprovementCard text={siText} key={idx} />
+    ))}
     {parts.map((part, index) => part.startsWith('*') && part.endsWith('*')
       ? <em className="action" key={index}>{part.slice(1, -1).trim()}</em>
       : <span key={index}>{part.replace(/^\s*\*\s*$/gm, '')}</span>)}
@@ -1179,7 +1280,7 @@ export default function App() {
         </article>)}
         {busy && (
           chatMode === 'agent' ? (
-            <LiveAgentWorkingBubble />
+            <LiveAgentWorkingBubble userQuery={messages.filter(m => m.role === 'user').slice(-1)[0]?.content || input || ''} />
           ) : (
             <>
               <div className={`request-status ${connection}`}>
