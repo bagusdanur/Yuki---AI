@@ -3,12 +3,12 @@ import 'dotenv/config'
 import { runAgent } from '../lib/agent/runner.js'
 
 async function run() {
-  console.log('Testing runAgent end-to-end with user prompt: "buatkan game platform terbaik jadul retro gituu"...')
+  console.log('Testing runAgent end-to-end...')
   const start = Date.now()
   try {
     const res = await runAgent({
-      userMessage: 'buatkan game platform terbaik jadul retro gituu',
-      userId: 'test_user_game',
+      userMessage: 'Yuki, tolong buatkan game retro platformer jadul sekarang juga yang seru dan bisa dimainkan di canvas',
+      userId: 'test_user_game_2',
       pastMessages: []
     })
 
