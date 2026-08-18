@@ -33,7 +33,8 @@ function worthRemembering(text = '') {
 
 const app = express()
 app.set('trust proxy', 1)
-app.use(express.json({ limit: '64kb' }))
+app.use(express.json({ limit: '10mb' }))
+app.use(express.urlencoded({ limit: '10mb', extended: true }))
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production' || process.env.ENVIRONMENT === 'production'
 const AUTH_SECRET = process.env.AUTH_SECRET || crypto.randomBytes(32).toString('hex')

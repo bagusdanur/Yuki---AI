@@ -55,10 +55,28 @@ export async function restore(accessCode: string) {
 }
 
 export async function sendChat(userId: string, messages: Message[], isIdle = false, mode: ChatMode = 'companion') {
+  // Padatkan pesan-pesan lampau agar payload ringan dan tidak overload
+  const sanitizedMessages = messages.map((m, idx) => {
+    let content = m.content || ''
+    // Jangan potong pesan terakhir dari user
+    if (idx === messages.length - 1 && m.role === 'user') {
+      return { role: m.role, content }
+    }
+    // Ringkas lampiran kode artifact HTML raksasa dari pesan lama
+    if (m.role === 'assistant' && (content.includes('<!DOCTYPE html') || content.includes('<html'))) {
+      content = content.replace(/```(?:html|xml)?\s*\n\s*(?:<!DOCTYPE|<html)[\s\S]*?(?:```|$)/gi, '[Lampiran Aplikasi Visual]')
+    }
+    if (m.role === 'assistant' && content.length > 2500) {
+      content = content.slice(0, 2500) + '... [bagian teks panjang dipadatkan]'
+    }
+    return { role: m.role, content }
+  })
+
   return request<ChatResponse>('/api/chat', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, messages, isIdle, mode }),
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, messages: sanitizedMessages, isIdle, mode }),
   }, 125_000)
 }
+
 
 export async function getSkills() {
   return request<{ skills: SkillInfo[] }>('/api/agent/skills', { method: 'GET' })
