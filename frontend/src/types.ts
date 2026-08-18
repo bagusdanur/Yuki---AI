@@ -14,6 +14,13 @@ export interface ComicRecommendation {
 
 export type BookmarkedComic = ComicRecommendation
 
+export interface ArtifactItem {
+  id: string
+  title: string
+  type: 'html' | 'javascript' | 'svg' | string
+  content: string
+}
+
 export interface AgentStep {
   id: string
   tool: string
@@ -39,6 +46,8 @@ export interface Message {
   content: string
   mode?: ChatMode
   steps?: AgentStep[]
+  thinking?: string
+  artifacts?: ArtifactItem[]
   comics?: ComicRecommendation[]
   messageId?: number
 }
@@ -60,6 +69,8 @@ export interface ChatResponse {
   feeling: string
   mode?: ChatMode
   steps?: AgentStep[]
+  thinking?: string
+  artifacts?: ArtifactItem[]
   messageId?: number
   milestones?: Milestone[]
   comics?: ComicRecommendation[]

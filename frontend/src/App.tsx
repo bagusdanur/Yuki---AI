@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Bookmark, BookOpen, ChevronDown, ChevronUp, Copy, Download, Heart,
-  KeyRound, LoaderCircle, MessageSquare, RefreshCw, RotateCcw, Send,
-  Settings, Sparkles, ThumbsDown, ThumbsUp, Volume2, WifiOff, Wrench, X, Zap
+  Bookmark, BookOpen, Check, ChevronDown, ChevronUp, Code2, Copy, Download, Heart,
+  KeyRound, LoaderCircle, MessageSquare, Play, RefreshCw, RotateCcw, Send,
+  Settings, Sparkles, Terminal, ThumbsDown, ThumbsUp, Volume2, WifiOff, Wrench, X, Zap
 } from 'lucide-react'
 import {
   addBookmark, deleteAccount, getBookmarks, getRelationship,
   getSkills, register, removeBookmark, restore, sendChat, sendFeedback, speak
 } from './api'
 import type {
-  AgentStep, BookmarkedComic, ChatMode, ComicRecommendation,
+  AgentStep, ArtifactItem, BookmarkedComic, ChatMode, ComicRecommendation,
   Message, Milestone, Session, SkillInfo
 } from './types'
 
@@ -81,7 +81,7 @@ function legacyComics(text: string) {
       parsed.searchParams.delete('img')
       const [type = '', chapter = ''] = String(meta).split(/\s*[·•]\s*/)
       comics.push({ title: String(title).trim(), type, chapter, image, url: parsed.toString() })
-    } catch { /* abaikan markup lama */ }
+    } catch { /* abaikan */ }
     return ''
   })
   return { clean: clean.trim(), comics }
@@ -130,6 +130,36 @@ function ComicCard({ comic, isBookmarked, onToggleBookmark }: {
   )
 }
 
+function HermesThoughtCard({ thinking }: { thinking?: string }) {
+  const [open, setOpen] = useState(false)
+  if (!thinking || !thinking.trim()) return null
+
+  return (
+    <div className="hermes-thought-card">
+      <button
+        type="button"
+        className="hermes-thought-toggle"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+      >
+        <span className="hermes-thought-title">
+          <Sparkles size={13} className="hermes-sparkle-icon" />
+          <span><b>Hermes Thought Process</b> (Penalaran Internal)</span>
+        </span>
+        <span className="hermes-thought-chevron">
+          {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+        </span>
+      </button>
+
+      {open && (
+        <div className="hermes-thought-body">
+          <pre>{thinking}</pre>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function AgentStepsCard({ steps }: { steps?: AgentStep[] }) {
   const [open, setOpen] = useState(false)
   if (!steps || steps.length === 0) return null
@@ -144,7 +174,7 @@ function AgentStepsCard({ steps }: { steps?: AgentStep[] }) {
       >
         <span className="agent-steps-title">
           <Zap size={13} className="agent-zap-icon" />
-          <span><b>Langkah Kerja Agent</b> ({steps.length} aksi)</span>
+          <span><b>Langkah Kerja Hermes Agent</b> ({steps.length} aksi)</span>
         </span>
         <span className="agent-steps-chevron">
           {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
@@ -170,10 +200,88 @@ function AgentStepsCard({ steps }: { steps?: AgentStep[] }) {
   )
 }
 
-function MessageBody({ message, bookmarks, onToggleBookmark }: {
+function CodexArtifactModal({ artifact, onClose }: { artifact: ArtifactItem; onClose: () => void }) {
+  const [tab, setTab] = useState<'preview' | 'code'>('preview')
+  const [copied, setCopied] = useState(false)
+
+  function handleCopy() {
+    navigator.clipboard.writeText(artifact.content)
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 2000)
+  }
+
+  function handleDownload() {
+    const ext = artifact.type === 'svg' ? 'svg' : artifact.type === 'javascript' ? 'js' : 'html'
+    const blob = new Blob([artifact.content], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${artifact.title.toLowerCase().replace(/[^a-z0-9]+/g, '_')}.${ext}`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  return (
+    <div className="timeline-overlay" onClick={onClose}>
+      <section className="timeline-card codex-artifact-modal" onClick={e => e.stopPropagation()}>
+        <header className="artifact-modal-header">
+          <div className="artifact-title-group">
+            <span className="artifact-badge"><Code2 size={12} /> HERMES CODEX ARTIFACT</span>
+            <h2>{artifact.title}</h2>
+          </div>
+          <div className="artifact-header-actions">
+            <div className="artifact-tab-pill">
+              <button
+                type="button"
+                className={`artifact-tab-btn ${tab === 'preview' ? 'active' : ''}`}
+                onClick={() => setTab('preview')}
+              >
+                <Play size={11} /> Live Preview
+              </button>
+              <button
+                type="button"
+                className={`artifact-tab-btn ${tab === 'code' ? 'active' : ''}`}
+                onClick={() => setTab('code')}
+              >
+                <Code2 size={11} /> Source Code
+              </button>
+            </div>
+            <button className="artifact-action-icon" onClick={handleCopy} title="Salin Kode">
+              {copied ? <Check size={14} /> : <Copy size={14} />}
+            </button>
+            <button className="artifact-action-icon" onClick={handleDownload} title="Download File">
+              <Download size={14} />
+            </button>
+            <button className="artifact-close-btn" onClick={onClose} aria-label="Tutup"><X size={17} /></button>
+          </div>
+        </header>
+
+        <div className="codex-artifact-body">
+          {tab === 'preview' ? (
+            <div className="artifact-iframe-container">
+              <iframe
+                title={artifact.title}
+                srcDoc={artifact.content}
+                sandbox="allow-scripts allow-modals allow-forms allow-same-origin"
+                className="artifact-preview-frame"
+              />
+            </div>
+          ) : (
+            <div className="artifact-code-view">
+              <pre><code>{artifact.content}</code></pre>
+            </div>
+          )}
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function MessageBody({ message, bookmarks, onToggleBookmark, onOpenArtifact }: {
   message: Message
   bookmarks: BookmarkedComic[]
   onToggleBookmark: (comic: ComicRecommendation) => void
+  onOpenArtifact: (artifact: ArtifactItem) => void
 }) {
   const legacy = legacyComics(message.content)
   const comics = message.comics?.length ? message.comics : legacy.comics
@@ -182,12 +290,31 @@ function MessageBody({ message, bookmarks, onToggleBookmark }: {
   const bookmarkedUrls = new Set(bookmarks.map(b => b.url))
 
   return <>
+    {message.thinking && (
+      <HermesThoughtCard thinking={message.thinking} />
+    )}
     {message.steps && message.steps.length > 0 && (
       <AgentStepsCard steps={message.steps} />
     )}
     {parts.map((part, index) => part.startsWith('*') && part.endsWith('*')
       ? <em className="action" key={index}>{part.slice(1, -1).trim()}</em>
       : <span key={index}>{part.replace(/^\s*\*\s*$/gm, '')}</span>)}
+    {message.artifacts && message.artifacts.length > 0 && (
+      <div className="artifacts-launcher-list">
+        {message.artifacts.map(art => (
+          <button
+            type="button"
+            key={art.id}
+            className="artifact-launch-btn"
+            onClick={() => onOpenArtifact(art)}
+          >
+            <Play size={13} className="artifact-play-icon" />
+            <span><b>Buka Live Artifact:</b> {art.title}</span>
+            <span className="artifact-type-tag">{art.type.toUpperCase()}</span>
+          </button>
+        ))}
+      </div>
+    )}
     {comics.length > 0 && (
       <div className="comic-list">
         {comics.map(comic => (
@@ -208,7 +335,7 @@ function SkillsCatalogModal({ skills, onClose }: { skills: SkillInfo[]; onClose:
     research: '🌐 Research & Web Browsing',
     media: '📚 Media & Ryukomik',
     productivity: '📝 Productivity & Planning',
-    computing: '💻 Computing & Code Sandbox',
+    computing: '💻 Computing & Codex Artifacts',
     general: '⚙️ General Capabilities'
   }
 
@@ -227,7 +354,7 @@ function SkillsCatalogModal({ skills, onClose }: { skills: SkillInfo[]; onClose:
       <section className="timeline-card skills-modal" onClick={e => e.stopPropagation()}>
         <header>
           <div>
-            <small>Hermes / OpenCode Engine</small>
+            <small>Hermes Agent / OpenCode Engine</small>
             <h2>Katalog Skills Yuki Agent</h2>
           </div>
           <button onClick={onClose} aria-label="Tutup"><X size={17} /></button>
@@ -235,7 +362,7 @@ function SkillsCatalogModal({ skills, onClose }: { skills: SkillInfo[]; onClose:
 
         <div className="skills-modal-content">
           <p className="skills-intro">
-            Dalam <b>Mode Agent</b>, Yuki dibekali sistem skills modular untuk riset web, manajemen agenda to-do, pelacakan Ryukomik, dan komputasi presisi.
+            Dalam <b>Mode Agent</b>, Yuki dibekali sistem skills modular untuk riset web, live artifact builder, manajemen agenda to-do, pelacakan Ryukomik, dan komputasi presisi.
           </p>
 
           {Array.from(grouped.entries()).map(([cat, list]) => (
@@ -332,6 +459,7 @@ export default function App() {
   const [bookmarksOpen, setBookmarksOpen] = useState(false)
   const [skills, setSkills] = useState<SkillInfo[]>([])
   const [skillsModalOpen, setSkillsModalOpen] = useState(false)
+  const [selectedArtifact, setSelectedArtifact] = useState<ArtifactItem | null>(null)
   const [feedback, setFeedback] = useState<Record<number, 1 | -1>>({})
   const endRef = useRef<HTMLDivElement>(null)
   const currentAudio = useRef<HTMLAudioElement | null>(null)
@@ -339,9 +467,7 @@ export default function App() {
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [messages, busy])
   useEffect(() => { if (session) localStorage.setItem(historyKey(session.userId), JSON.stringify(messages.slice(-40))) }, [messages, session])
-  useEffect(() => {
-    localStorage.setItem(SESSION_KEYS.mode, chatMode)
-  }, [chatMode])
+  useEffect(() => { localStorage.setItem(SESSION_KEYS.mode, chatMode) }, [chatMode])
 
   useEffect(() => {
     const online = () => setConnection('idle')
@@ -449,7 +575,9 @@ export default function App() {
         comics: result.comics || [],
         messageId: result.messageId,
         mode: result.mode || chatMode,
-        steps: result.steps || []
+        steps: result.steps || [],
+        thinking: result.thinking || '',
+        artifacts: result.artifacts || []
       }])
       setMood(result.mood || 'tenang'); setBond(result.bond || bond)
       setBondValue(result.bondValue || 0); setFeeling(result.feeling || feeling)
@@ -540,10 +668,10 @@ export default function App() {
   ]
 
   const agentSuggestions = [
+    'Buatkan mini game Pong interaktif dengan HTML/Canvas',
     'Cari berita anime terbaru minggu ini',
-    'Catat to-do list belajarku besok',
-    'Berapa hari lagi menuju tahun baru?',
-    'Cari manga rating tertinggi di Ryukomik'
+    'Bikin kalkulator scientific HTML/JS modern',
+    'Catat to-do list belajarku besok'
   ]
 
   return <main className={`app-shell${avatarCompact ? ' avatar-compact' : ''} mode-${chatMode}`}>
@@ -561,7 +689,7 @@ export default function App() {
           <button onClick={() => setSettingsOpen(!settingsOpen)} aria-label="Pengaturan"><Settings size={17} /></button>
         </div>
         {settingsOpen && <div className="settings-card">
-          <button onClick={() => { setSkillsModalOpen(true); setSettingsOpen(false) }}><Wrench size={15} /><span><b>Katalog Skills Agent</b><small>{skills.length || 7} skills aktif</small></span></button>
+          <button onClick={() => { setSkillsModalOpen(true); setSettingsOpen(false) }}><Wrench size={15} /><span><b>Katalog Skills Agent</b><small>{skills.length || 8} skills aktif</small></span></button>
           <button onClick={() => { setBookmarksOpen(true); setSettingsOpen(false) }}><Bookmark size={15} /><span><b>Komik tersimpan</b><small>{bookmarks.length} judul tersimpan</small></span></button>
           <button onClick={() => { setTimelineOpen(true); setSettingsOpen(false) }}><Heart size={15} /><span><b>Perjalanan hubungan</b><small>{milestones.length} momen tersimpan</small></span></button>
           {installPrompt && <button onClick={installApp}><Download size={15} /><span><b>Pasang aplikasi Yuki</b><small>Tambahkan ke layar utama</small></span></button>}
@@ -589,7 +717,7 @@ export default function App() {
             onClick={() => setChatMode('agent')}
           >
             <Zap size={13} />
-            <span>Mode Agent</span>
+            <span>Hermes Codex</span>
           </button>
         </div>
 
@@ -601,13 +729,17 @@ export default function App() {
             title="Lihat seluruh Skills aktif (Hermes/OpenCode style)"
           >
             <Wrench size={12} />
-            <span>{skills.length || 7} Skills</span>
+            <span>{skills.length || 8} Skills</span>
           </button>
         )}
       </div>
 
       {skillsModalOpen && (
         <SkillsCatalogModal skills={skills} onClose={() => setSkillsModalOpen(false)} />
+      )}
+
+      {selectedArtifact && (
+        <CodexArtifactModal artifact={selectedArtifact} onClose={() => setSelectedArtifact(null)} />
       )}
 
       {timelineOpen && <div className="timeline-overlay" onClick={() => setTimelineOpen(false)}><section className="timeline-card" onClick={event => event.stopPropagation()}>
@@ -641,15 +773,20 @@ export default function App() {
       <div className="messages" aria-live="polite">
         {messages.length === 0 && <div className="empty-state">
           <span>01</span>
-          <h2>{chatMode === 'agent' ? 'Yuki Agent siap menjalankan tugas.' : 'Yuki menunggumu bicara.'}</h2>
+          <h2>{chatMode === 'agent' ? 'Yuki Hermes Codex siap mengeksekusi.' : 'Yuki menunggumu bicara.'}</h2>
           <p>{chatMode === 'agent'
-            ? 'Minta Yuki mencari berita di internet, mencatat agenda, atau mengecek info komik.'
+            ? 'Minta Yuki merakit web mini-game interaktif, riset web, eksekusi kode, atau mengelola tugas.'
             : 'Mulai dari hal sederhana. Jangan berharap dia langsung ramah.'}</p>
         </div>}
         {messages.map((message, index) => <article className={`message ${message.role} ${message.mode === 'agent' ? 'agent-msg' : ''}`} key={`${index}-${message.content.slice(0, 12)}`}>
           {message.role === 'assistant' && <div className="message-avatar">{message.mode === 'agent' ? '⚡' : 'Y'}</div>}
           <div className="message-content">
-            <MessageBody message={message} bookmarks={bookmarks} onToggleBookmark={handleToggleBookmark} />
+            <MessageBody
+              message={message}
+              bookmarks={bookmarks}
+              onToggleBookmark={handleToggleBookmark}
+              onOpenArtifact={art => setSelectedArtifact(art)}
+            />
           </div>
           {message.role === 'assistant' && <div className="message-tools">
             <button className={`speak ${speakingIndex === index ? 'active' : ''}`} onClick={() => play(message.content, index)} aria-label="Putar suara">{speakingIndex === index ? <span className="audio-bars" aria-hidden="true"><i/><i/><i/></span> : <Volume2 size={14} />}</button>
@@ -657,7 +794,7 @@ export default function App() {
             <button className={feedback[index] === -1 ? 'selected negative' : ''} onClick={() => rateMessage(index, message, -1)} aria-label="Balasan kurang cocok"><ThumbsDown size={12}/></button>
           </div>}
         </article>)}
-        {busy && <><div className={`request-status ${connection}`}>{connection === 'slow' || connection === 'retrying' ? <RefreshCw className="spin" size={12} /> : <LoaderCircle className="spin" size={12} />}<span>{chatMode === 'agent' ? 'Yuki sedang mengeksekusi aksi...' : connectionLabel[connection]}</span></div><article className="message assistant"><div className="message-avatar">{chatMode === 'agent' ? '⚡' : 'Y'}</div><div className="message-content typing"><i/><i/><i/></div></article></>}
+        {busy && <><div className={`request-status ${connection}`}>{connection === 'slow' || connection === 'retrying' ? <RefreshCw className="spin" size={12} /> : <LoaderCircle className="spin" size={12} />}<span>{chatMode === 'agent' ? 'Hermes ReAct Engine sedang berpikir & mengeksekusi...' : connectionLabel[connection]}</span></div><article className="message assistant"><div className="message-avatar">{chatMode === 'agent' ? '⚡' : 'Y'}</div><div className="message-content typing"><i/><i/><i/></div></article></>}
         {connection === 'offline' && !busy && <div className="request-status offline"><WifiOff size={12}/><span>Kamu offline. Pesan yang belum dikirim tetap aman.</span></div>}
         {error && <div className="error-banner"><span>{error}</span><button onClick={() => setError('')}><X size={14}/></button></div>}
         <div ref={endRef} />
@@ -670,7 +807,7 @@ export default function App() {
           value={input}
           onChange={e => setInput(e.target.value)}
           onFocus={() => setAvatarCompact(true)}
-          placeholder={chatMode === 'agent' ? 'Minta Yuki meriset web, mencatat to-do, atau menjalankan tugas...' : 'Tulis pesan untuk Yuki…'}
+          placeholder={chatMode === 'agent' ? 'Minta Hermes Codex membuat live mini-app, meriset web, atau coding...' : 'Tulis pesan untuk Yuki…'}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit() } }}
         />
         <button disabled={busy || !input.trim()} aria-label="Kirim pesan">{busy ? <LoaderCircle className="spin" size={19}/> : <Send size={19}/>}</button>
@@ -686,10 +823,10 @@ export default function App() {
     <aside className="character-panel">
       <div className="panel-meta">
         <span>Character viewport</span>
-        <b>{chatMode === 'agent' ? '⚡ Agent Mode Active' : 'Session active'}</b>
+        <b>{chatMode === 'agent' ? '⚡ Hermes Codex Active' : 'Session active'}</b>
       </div>
       <div className="character-frame">
-        <div className="frame-code">{chatMode === 'agent' ? 'AGENT / 001' : 'LIVE / 001'}</div>
+        <div className="frame-code">{chatMode === 'agent' ? 'HERMES / 001' : 'LIVE / 001'}</div>
         <div className="mobile-bond" aria-label={`Bond ${Math.round(bondValue)} dari 100`}><span>{bond}</span><b>{Math.round(bondValue)}</b><i><u style={{ width: `${Math.max(2, bondValue)}%` }} /></i></div>
         <button className="avatar-toggle" type="button" onClick={() => setAvatarCompact(value => !value)}
           aria-label={avatarCompact ? 'Perbesar avatar Yuki' : 'Kecilkan avatar Yuki'} aria-expanded={!avatarCompact}>
