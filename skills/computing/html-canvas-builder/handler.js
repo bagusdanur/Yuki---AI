@@ -24,17 +24,26 @@ export async function executeBuildInteractiveArtifact(params = {}) {
   <title>${cleanTitle}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: #09090b;
+      color: #f4f4f5;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #0b0f19;
-      color: #e2e8f0;
-      min-height: 100vh;
+      overflow: auto;
+    }
+    body {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       padding: 16px;
-      overflow-x: hidden;
+      gap: 12px;
+    }
+    canvas {
+      max-width: 100%;
+      max-height: calc(100vh - 80px);
+      object-fit: contain;
     }
   </style>
 </head>
