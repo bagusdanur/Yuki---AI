@@ -810,35 +810,21 @@ export default function App() {
           {message.role === 'assistant' && (
             <div className="message-tools">
               <button
-                className={`speak ${speakingIndex === index ? 'active' : ''}`}
-                onClick={() => play(message.content, index)}
-                aria-label="Putar suara"
-                title="Dengarkan suara Yuki"
+                className={feedback[index] === 1 ? 'selected' : ''}
+                onClick={() => rateMessage(index, message, 1)}
+                aria-label="Balasan cocok"
+                title="Suka balasan ini"
               >
-                {speakingIndex === index ? (
-                  <span className="audio-bars" aria-hidden="true"><i/><i/><i/></span>
-                ) : (
-                  <Volume2 size={13} />
-                )}
+                <ThumbsUp size={12}/>
               </button>
-              <div className="message-feedback-group">
-                <button
-                  className={feedback[index] === 1 ? 'selected' : ''}
-                  onClick={() => rateMessage(index, message, 1)}
-                  aria-label="Balasan cocok"
-                  title="Suka balasan ini"
-                >
-                  <ThumbsUp size={11}/>
-                </button>
-                <button
-                  className={feedback[index] === -1 ? 'selected negative' : ''}
-                  onClick={() => rateMessage(index, message, -1)}
-                  aria-label="Balasan kurang cocok"
-                  title="Kurang suka balasan ini"
-                >
-                  <ThumbsDown size={11}/>
-                </button>
-              </div>
+              <button
+                className={feedback[index] === -1 ? 'selected negative' : ''}
+                onClick={() => rateMessage(index, message, -1)}
+                aria-label="Balasan kurang cocok"
+                title="Kurang suka balasan ini"
+              >
+                <ThumbsDown size={12}/>
+              </button>
             </div>
           )}
         </article>)}
