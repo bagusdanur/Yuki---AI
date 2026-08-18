@@ -42,15 +42,41 @@ export async function executeRecordSelfImprovement(params = {}) {
     console.warn('[self-improvement] Gagal menyimpan log pembelajaran:', err.message)
   }
 
-  const reviewMessage = `💾 Self-improvement review: Memory updated — Patched knowledge on '${cleanSkill}' (${cleanTopic}: ${cleanSummary.slice(0, 80)}${cleanSummary.length > 80 ? '...' : ''})`
+  const reviewMessage = `💾 Self-improvement: Wawasan baru tersimpan di memori — [${cleanSkill}] ${cleanTopic}: ${cleanSummary.slice(0, 100)}`
 
   return {
     success: true,
-    review: reviewMessage,
+    message: reviewMessage,
     data: record
   }
 }
 
+export async function executeListSelfImprovements() {
+  try {
+    if (!fs.existsSync(LEARNING_FILE)) {
+      return { total: 0, lessons: [], message: 'Belum ada catatan self-improvement yang tersimpan.' }
+    }
+    const list = JSON.parse(fs.readFileSync(LEARNING_FILE, 'utf8'))
+    return {
+      total: list.length,
+      lessons: list.slice(0, 15)
+    }
+  } catch (err) {
+    return { error: `Gagal membaca memori pembelajaran: ${err.message}` }
+  }
+}
+
+export function getRecentSelfImprovements(limit = 6) {
+  try {
+    if (!fs.existsSync(LEARNING_FILE)) return []
+    const list = JSON.parse(fs.readFileSync(LEARNING_FILE, 'utf8'))
+    return Array.isArray(list) ? list.slice(0, limit) : []
+  } catch {
+    return []
+  }
+}
+
 export default {
-  record_self_improvement: executeRecordSelfImprovement
+  record_self_improvement: executeRecordSelfImprovement,
+  list_self_improvements: executeListSelfImprovements
 }
