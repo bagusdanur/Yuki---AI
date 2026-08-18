@@ -1,20 +1,31 @@
-// skills/computing/code-scratchpad/handler.js
 import vm from 'node:vm'
+import { validateSafeCodeExecution } from '../../../lib/security.js'
 
 export async function executeRunJavascriptCode({ code }) {
   if (!code || typeof code !== 'string') {
     return { error: 'Kode JavaScript tidak boleh kosong.' }
   }
 
+  // 🛡️ SECURITY CHECK: Blokir akses ke process, fs, child_process, network, require, import, constructor escape
+  const secCheck = validateSafeCodeExecution(code)
+  if (!secCheck.safe) {
+    return {
+      success: false,
+      error: `[Keamanan Sandbox]: ${secCheck.reason}`
+    }
+  }
+
   const logs = []
-  const customConsole = {
+  const customConsole = Object.freeze({
     log: (...args) => logs.push(args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ')),
     info: (...args) => logs.push(args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ')),
     warn: (...args) => logs.push('[warn] ' + args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ')),
     error: (...args) => logs.push('[error] ' + args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '))
-  }
+  })
 
-  const sandbox = {
+  // Sandbox bersih tanpa process, require, global, atau network
+  const sandbox = Object.create(null)
+  Object.assign(sandbox, {
     console: customConsole,
     Math,
     Date,
@@ -31,19 +42,19 @@ export async function executeRunJavascriptCode({ code }) {
     isFinite,
     encodeURIComponent,
     decodeURIComponent
-  }
+  })
 
   const context = vm.createContext(sandbox)
 
   try {
-    // Bungkus dengan IIFE agar return langsung berfungsi dan tidak ada double execution
     const wrappedCode = `
+      "use strict";
       (() => {
         ${code}
       })()
     `
-    const script = new vm.Script(wrappedCode, { filename: 'yuki-scratchpad.js' })
-    const result = script.runInContext(context, { timeout: 5000 })
+    const script = new vm.Script(wrappedCode, { filename: 'yuki-isolated-scratchpad.js' })
+    const result = script.runInContext(context, { timeout: 3000, breakOnSigint: true })
 
     return {
       success: true,

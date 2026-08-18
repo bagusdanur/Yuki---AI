@@ -1,15 +1,22 @@
-// skills/research/url-reader/handler.js
+import { validateSafeOutboundUrl } from '../../../lib/security.js'
 
 export async function executeReadUrl({ url }) {
   if (!url || typeof url !== 'string' || !url.startsWith('http')) {
     return { error: 'URL tidak valid. Harus diawali dengan http:// atau https://' }
   }
 
+  // 🛡️ SECURITY CHECK: Blokir SSRF ke internal VPS
+  const securityCheck = await validateSafeOutboundUrl(url)
+  if (!securityCheck.safe) {
+    return { error: `[Keamanan VPS]: ${securityCheck.reason}` }
+  }
+  const safeUrl = securityCheck.cleanUrl
+
   try {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 12_000)
 
-    const res = await fetch(url, {
+    const res = await fetch(safeUrl, {
       method: 'GET',
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',

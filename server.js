@@ -147,8 +147,37 @@ app.use((req, res, next) => {
   next()
 })
 
-app.use(express.static('dist'))
-app.use(express.static('public'))
+// 🛡️ Global Security Hardening Middleware (Isolasi Host VPS)
+app.disable('x-powered-by')
+app.use((req, res, next) => {
+  // 1. Security Headers
+  res.set({
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'SAMEORIGIN',
+    'X-XSS-Protection': '1; mode=block',
+    'Referrer-Policy': 'strict-origin-when-cross-origin'
+  })
+
+  // 2. Anti Path-Traversal & Dangerous System Payload Check
+  let decodedPath = ''
+  try { decodedPath = decodeURIComponent(req.path || '') } catch { decodedPath = req.path || '' }
+  if (
+    decodedPath.includes('..') ||
+    decodedPath.includes('.env') ||
+    decodedPath.includes('/etc/') ||
+    decodedPath.includes('/proc/') ||
+    decodedPath.includes('/var/') ||
+    decodedPath.includes('.git')
+  ) {
+    console.warn(`[security] Blocked path traversal attempt: ${req.ip} -> ${req.path}`)
+    return res.status(403).json({ error: 'Akses ke path ini dilarang oleh sistem keamanan server.' })
+  }
+
+  next()
+})
+
+app.use(express.static('dist', { dotfiles: 'ignore' }))
+app.use(express.static('public', { dotfiles: 'ignore' }))
 
 
 // Rute Dokumentasi Yuki AI

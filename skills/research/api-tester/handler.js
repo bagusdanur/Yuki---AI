@@ -1,4 +1,4 @@
-// skills/research/api-tester/handler.js
+import { validateSafeOutboundUrl } from '../../../lib/security.js'
 
 export async function http_api_request({ url, method = 'GET', headers = {}, body = null }) {
   if (!url || typeof url !== 'string') {
@@ -9,6 +9,13 @@ export async function http_api_request({ url, method = 'GET', headers = {}, body
   if (!/^https?:\/\//i.test(targetUrl)) {
     targetUrl = 'https://' + targetUrl
   }
+
+  // 🛡️ SECURITY CHECK: Blokir SSRF ke localhost, IP internal, cloud metadata, dan port terlarang
+  const securityCheck = await validateSafeOutboundUrl(targetUrl)
+  if (!securityCheck.safe) {
+    return { error: `[Keamanan VPS]: ${securityCheck.reason}` }
+  }
+  targetUrl = securityCheck.cleanUrl
 
   const httpMethod = String(method || 'GET').toUpperCase()
   const allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD']
