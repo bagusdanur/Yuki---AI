@@ -1,5 +1,11 @@
 import io
 import os
+import numpy as np
+
+# Monkeypatch np.load to allow pickle with numpy 2.x for kokoro voice arrays
+_orig_np_load = np.load
+np.load = lambda *args, **kwargs: _orig_np_load(*args, **{**kwargs, "allow_pickle": True})
+
 import soundfile as sf
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -42,7 +48,6 @@ async def synthesize(req: SynthesizeRequest):
         raise HTTPException(status_code=400, detail="Teks tidak boleh kosong.")
 
     try:
-        # Generate samples with Kokoro ONNX
         samples, sample_rate = kokoro.create(
             text=text,
             voice=req.voice or "af_bella",
