@@ -1,20 +1,20 @@
 // skills/computing/html-canvas-builder/handler.js
 
-export async function executeBuildInteractiveArtifact({ title, type = 'html', html_content }) {
-  if (!title || !title.trim()) {
-    return { error: 'Parameter "title" tidak boleh kosong.' }
-  }
-  if (!html_content || !html_content.trim()) {
-    return { error: 'Parameter "html_content" tidak boleh kosong.' }
+export async function executeBuildInteractiveArtifact(params = {}) {
+  const { title, type = 'html', html_content, code, content } = params
+  const cleanTitle = String(title || 'Interactive Canvas App').trim()
+  const cleanType = ['html', 'javascript', 'svg'].includes(type) ? type : 'html'
+  const rawCode = html_content || code || content
+
+  if (!rawCode || !String(rawCode).trim()) {
+    return { error: 'Parameter "html_content" atau "code" tidak boleh kosong.' }
   }
 
-  const cleanTitle = String(title).trim()
-  const cleanType = ['html', 'javascript', 'svg'].includes(type) ? type : 'html'
-  let code = String(html_content).trim()
+  let finalCode = String(rawCode).trim()
 
   // Jika belum dibungkus struktur HTML lengkap, berikan template dasar modern
-  if (cleanType === 'html' && !code.toLowerCase().includes('<!doctype') && !code.toLowerCase().includes('<html')) {
-    code = `<!DOCTYPE html>
+  if (cleanType === 'html' && !finalCode.toLowerCase().includes('<!doctype') && !finalCode.toLowerCase().includes('<html')) {
+    finalCode = `<!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8">
@@ -36,7 +36,7 @@ export async function executeBuildInteractiveArtifact({ title, type = 'html', ht
   </style>
 </head>
 <body>
-  ${code}
+  ${finalCode}
 </body>
 </html>`
   }
@@ -50,7 +50,7 @@ export async function executeBuildInteractiveArtifact({ title, type = 'html', ht
       id: artifactId,
       title: cleanTitle,
       type: cleanType,
-      content: code
+      content: finalCode
     }
   }
 }
