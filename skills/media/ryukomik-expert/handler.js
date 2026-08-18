@@ -1,13 +1,13 @@
 // skills/media/ryukomik-expert/handler.js
 import { searchComics, latestComics } from '../../../lib/ryukomik.js'
 
-export async function executeSearchRyukomik({ query, is_adult = false }) {
+export async function executeSearchRyukomik({ query, filter_special = false }) {
   if (!query || !query.trim()) {
     return { error: 'Query pencarian komik tidak boleh kosong.' }
   }
 
   try {
-    const list = await searchComics(query.trim(), { adult: Boolean(is_adult) })
+    const list = await searchComics(query.trim(), { adult: Boolean(filter_special) })
     return {
       query: query.trim(),
       total: list.length,

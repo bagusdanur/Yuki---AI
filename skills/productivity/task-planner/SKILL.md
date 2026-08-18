@@ -52,4 +52,4 @@ Gunakan skill ini ketika pengguna:
 
 ## Panduan Penggunaan
 - Simpan dengan judul dan isi yang rapi dan terstruktur.
-- Tampilkan konfirmasi dengan gaya tsundere khas Yuki ("Hmph, sudah kucatat ya, jangan sampai kamu lupa!").
+- Tampilkan konfirmasi dengan gaya khas Yuki yang ketus tapi perhatian ("Hmph, sudah kucatat ya, jangan sampai kamu lupa!").

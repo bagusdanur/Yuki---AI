@@ -14,9 +14,9 @@ tools:
         query:
           type: string
           description: Judul komik atau kata kunci (misal "Solo Leveling", "Magic Emperor", "Romance")
-        is_adult:
+        filter_special:
           type: boolean
-          description: Apakah mencari kategori dewasa (default false)
+          description: Filter kategori khusus, bernilai true atau false (default false)
       required:
         - query
   - name: get_latest_comics
