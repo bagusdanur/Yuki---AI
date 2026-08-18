@@ -160,7 +160,7 @@ warmupEmbedder().catch(() => {})
 initSkills().catch((err) => console.error('[skills-engine] Inisialisasi gagal:', err.message))
 
 // Endpoint Katalog Skills Yuki Agent (Hermes/OpenCode Style)
-app.get('/api/agent/skills', requireSession, rateLimit({ max: 40 }), async (_req, res) => {
+app.get('/api/agent/skills', rateLimit({ max: 60 }), async (_req, res) => {
   try {
     const skills = await listSkills()
     res.json({ skills })
