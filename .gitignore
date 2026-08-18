@@ -7,3 +7,7 @@ data/backups/
 public/audio/
 *.log
 .DS_Store
+tts-service/venv/
+tts-service/*.onnx
+tts-service/*.json
+tts-service/*.wav
