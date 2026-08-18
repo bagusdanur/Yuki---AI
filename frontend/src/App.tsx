@@ -300,7 +300,7 @@ function LiveAgentWorkingBubble({ userQuery = '' }: { userQuery?: string }) {
   }, [])
 
   const phases = useMemo(() => getContextualAgentPhases(userQuery), [userQuery])
-  const currentPhase = phases[Math.min(Math.floor(seconds / 2.8), phases.length - 1)]
+  const activeIndex = Math.min(Math.floor(seconds / 2.6), phases.length - 1)
 
   return (
     <article className="message assistant agent-msg live-agent-working-bubble">
@@ -310,11 +310,23 @@ function LiveAgentWorkingBubble({ userQuery = '' }: { userQuery?: string }) {
       <div className="message-content live-agent-working-content">
         <div className="live-agent-badge-row">
           <span className="live-pulse-dot" />
-          <span><b>Working</b> — {seconds}s — Yuki Agent</span>
+          <span><b>Working</b> — {seconds}s — Yuki Agent Process</span>
         </div>
-        <div className="live-agent-step-text">
-          <LoaderCircle size={13} className="spin" />
-          <span>{currentPhase}</span>
+        <div className="live-agent-steps-stream">
+          {phases.slice(0, activeIndex + 1).map((phaseText, idx) => {
+            const isCompleted = idx < activeIndex
+            return (
+              <div
+                className={`live-stream-step ${isCompleted ? 'completed' : 'current'}`}
+                key={idx}
+              >
+                <span className="live-step-status-icon">
+                  {isCompleted ? <Check size={12} className="check-icon" /> : <LoaderCircle size={12} className="spin" />}
+                </span>
+                <span className="live-step-label">{phaseText}</span>
+              </div>
+            )
+          })}
         </div>
       </div>
     </article>

@@ -1356,17 +1356,49 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.35; transform: scale(0.8); }
 }
-.live-agent-step-text {
+/* Live Progressive Steps Stream */
+.live-agent-steps-stream {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.live-stream-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  transition: all 0.2s ease;
+}
+.live-stream-step.completed {
+  color: #94a3b8;
+}
+.live-stream-step.current {
+  color: #f1f5f9;
+  font-weight: 550;
+}
+.live-step-status-icon {
+  flex: 0 0 16px;
+  height: 16px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 6px;
-  color: #e2e8f0;
-  font-size: 12.5px;
-  font-weight: 500;
+  justify-content: center;
+  margin-top: 1px;
 }
+.live-step-status-icon .check-icon {
+  color: #50fa7b;
+}
+.live-step-status-icon .spin {
+  color: #00f2fe;
+}
+.live-step-label {
+  flex: 1;
+}
+
 .agent-pulse-icon {
   color: #00f2fe;
   animation: spin 3s linear infinite;
 }
+
 
