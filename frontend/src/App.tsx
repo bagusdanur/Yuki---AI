@@ -743,41 +743,52 @@ function MessageBody({ message, bookmarks, onToggleBookmark, onOpenArtifact }: {
     {parts.map((part, index) => part.startsWith('*') && part.endsWith('*')
       ? <em className="action" key={index}>{part.slice(1, -1).trim()}</em>
       : <span key={index}>{part.replace(/^\s*\*\s*$/gm, '')}</span>)}
-    {message.artifacts && message.artifacts.length > 0 && (
-      <div className="artifacts-launcher-list">
-        {message.artifacts.map(art => (
-          <div className="artifact-launcher-card" key={art.id}>
-            <button
-              type="button"
-              className="artifact-launch-btn"
-              onClick={() => onOpenArtifact(art)}
-            >
-              <Play size={13} className="artifact-play-icon" />
-              <span><b>{art.title}</b> <small>· Mainkan Live</small></span>
-              <span className="artifact-type-tag">{art.type.toUpperCase()}</span>
-            </button>
-            <button
-              type="button"
-              className="artifact-download-btn"
-              title="Unduh file .html mandiri"
-              onClick={(e) => {
-                e.stopPropagation()
-                const blob = new Blob([art.content], { type: 'text/html;charset=utf-8' })
-                const url = URL.createObjectURL(blob)
-                const a = document.createElement('a')
-                a.href = url
-                a.download = `${art.title.toLowerCase().replace(/[^a-z0-9]+/g, '_') || 'yuki_game'}.html`
-                a.click()
-                URL.revokeObjectURL(url)
-              }}
-            >
-              <Download size={12} />
-              <span>Unduh .html</span>
-            </button>
-          </div>
-        ))}
-      </div>
-    )}
+    {message.artifacts && message.artifacts.length > 0 && (() => {
+      const uniqueList: ArtifactItem[] = []
+      const seen = new Set<string>()
+      for (const art of message.artifacts) {
+        const k = (art.title || art.id || 'artifact').toLowerCase().trim()
+        if (!seen.has(k)) {
+          seen.add(k)
+          uniqueList.push(art)
+        }
+      }
+      return (
+        <div className="artifacts-launcher-list">
+          {uniqueList.map(art => (
+            <div className="artifact-launcher-card" key={art.id}>
+              <button
+                type="button"
+                className="artifact-launch-btn"
+                onClick={() => onOpenArtifact(art)}
+              >
+                <Play size={13} className="artifact-play-icon" />
+                <span><b>{art.title}</b> <small>· Mainkan Live</small></span>
+                <span className="artifact-type-tag">{art.type.toUpperCase()}</span>
+              </button>
+              <button
+                type="button"
+                className="artifact-download-btn"
+                title="Unduh file .html mandiri"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  const blob = new Blob([art.content], { type: 'text/html;charset=utf-8' })
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement('a')
+                  a.href = url
+                  a.download = `${art.title.toLowerCase().replace(/[^a-z0-9]+/g, '_') || 'yuki_game'}.html`
+                  a.click()
+                  URL.revokeObjectURL(url)
+                }}
+              >
+                <Download size={12} />
+                <span>Unduh .{art.type || 'html'}</span>
+              </button>
+            </div>
+          ))}
+        </div>
+      )
+    })()}
     {comics.length > 0 && (
       <div className="comic-list">
         {comics.map(comic => (

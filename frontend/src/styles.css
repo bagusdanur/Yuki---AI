@@ -129,19 +129,7 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 .app-shell.mode-agent { border-color: #27272a; }
 .message.agent-msg .message-avatar { color: #ffffff; background: #27272a; border-color: #3f3f46; }
 
-/* Agent Steps Card (Collapsible Tool Execution Trace) */
-.agent-steps-card { margin-bottom: 10px; border: 1px solid #232d3d; border-radius: 6px; background: #0d121c; overflow: hidden; }
-.agent-steps-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 7px 10px; border: 0; background: transparent; color: #4facfe; font: 600 11px/1.2 ui-sans-serif, system-ui, sans-serif; }
-.agent-steps-toggle:hover { background: rgba(79,172,254,.06); }
-.agent-steps-title { display: flex; align-items: center; gap: 6px; }
-.agent-zap-icon { color: #00f2fe; }
-.agent-steps-list { padding: 6px 10px 8px; border-top: 1px solid #1a222e; display: flex; flex-direction: column; gap: 6px; font-size: 11.5px; }
-.agent-step-item { display: flex; flex-direction: column; gap: 3px; padding: 5px 8px; border-left: 2px solid #4facfe; border-radius: 3px; background: #111724; }
-.agent-step-item.error { border-left-color: #f87171; }
-.agent-step-header { display: flex; align-items: center; gap: 7px; }
-.agent-step-badge { padding: 2px 5px; border-radius: 3px; color: #00f2fe; background: rgba(0,242,254,.12); font: 700 8.5px/1 ui-monospace, monospace; text-transform: uppercase; }
-.agent-step-desc { color: #d0d7e6; font-size: 11px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.agent-step-time { color: #6e788c; font: 700 8.5px/1 ui-monospace, monospace; margin-left: auto; }
+
 
 /* Base Modal Overlay & Container */
 .timeline-overlay {
@@ -847,7 +835,7 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 .message { width: fit-content; max-width: min(82%, 680px); display: flex; align-items: flex-start; gap: 10px; }
 .message.user { align-self: flex-end; flex-direction: row-reverse; }
 .message-avatar { width: 30px; height: 30px; flex: 0 0 auto; margin-top: 3px; border-radius: 5px; color: #dcdafe; border: 1px solid #484c5a; background: #202331; }
-.message-content { min-width: 0; padding: 13px 15px; overflow-wrap: anywhere; white-space: pre-wrap; border: 1px solid #292d36; border-left: 2px solid #8581ea; border-radius: 4px 8px 8px 4px; color: #e9e7e2; background: #151820; font-size: 14px; line-height: 1.65; }
+.message-content { min-width: 0; padding: 13px 15px; overflow-wrap: anywhere; white-space: pre-wrap; border: 1px solid #27272a; border-radius: 8px; color: #f4f4f5; background: #121215; font-size: 14px; line-height: 1.65; }
 .message.user .message-content { border: 1px solid #aaa7ff; border-radius: 8px 4px 4px 8px; color: #121318; background: #aaa7ff; font-weight: 620; }
 .message-content .action { display: block; margin: 0 0 8px; color: #9fa1ac; font-family: Georgia, "Times New Roman", serif; font-size: 13px; line-height: 1.5; }
 .message-content .action::before { content: "// "; color: #8581ea; font-family: ui-monospace, monospace; font-size: 9px; font-style: normal; }
