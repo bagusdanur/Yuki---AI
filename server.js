@@ -285,10 +285,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
     const memoryContext = buildMemoryContext(recall)
 
     // === MODE AGENT AI (Hermes / OpenCode Skills ReAct Loop) ===
-    const wantsAgentAction = /(buatkan|bikin|buat|tolong buatkan).*?(game|canvas|mini-game|aplikasi|widget|kalkulator)|(analisis|debug|periksa|cek).*?kode|(test|uji|request).*?(api|endpoint|webhook)/i.test(userText)
-    const isAgent = (mode === 'agent' || wantsAgentAction) && !isIdle
-
-    if (isAgent) {
+    if (mode === 'agent' && !isIdle) {
       const messagesToSend = sanitizedMessages.slice(-18)
       const agentResult = await runAgent({
         userId,
