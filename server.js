@@ -18,7 +18,7 @@ import { responseTarget, shouldInitiate, validateCharacterReply } from './lib/ch
 import { warmupEmbedder } from './lib/semantic.js'
 import { searchComics, latestComics, wantsComic, extractQuery, buildComicContext } from './lib/ryukomik.js'
 import { initSkills, listSkills } from './lib/agent/skills-engine.js'
-import { runAgent } from './lib/agent/runner.js'
+import { runAgent, extractHtmlArtifactsFromText } from './lib/agent/runner.js'
 
 // Hemat DeepSeek: cuma ekstrak fakta kalau pesan kemungkinan berisi info personal
 // (mayoritas chat biasa nggak perlu -> menghemat ~1 panggilan LLM tiap giliran).
@@ -285,7 +285,10 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
     const memoryContext = buildMemoryContext(recall)
 
     // === MODE AGENT AI (Hermes / OpenCode Skills ReAct Loop) ===
-    if (mode === 'agent' && !isIdle) {
+    const wantsAgentAction = /(buatkan|bikin|buat|tolong buatkan).*?(game|canvas|mini-game|aplikasi|widget|kalkulator)|(analisis|debug|periksa|cek).*?kode|(test|uji|request).*?(api|endpoint|webhook)/i.test(userText)
+    const isAgent = (mode === 'agent' || wantsAgentAction) && !isIdle
+
+    if (isAgent) {
       const messagesToSend = sanitizedMessages.slice(-18)
       const agentResult = await runAgent({
         userId,
@@ -329,6 +332,8 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
         feeling: emotion.feeling(),
         mode: 'agent',
         steps: agentResult.steps || [],
+        thinking: agentResult.thinking || '',
+        artifacts: agentResult.artifacts || [],
         comics: agentResult.comics || [],
         messageId,
         milestones
@@ -392,7 +397,14 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
       llmMood = retryResult.emotion || llmMood
     }
 
-    if (reply.length > target.max) {
+    let extractedArtifacts = []
+    const extracted = extractHtmlArtifactsFromText(reply)
+    if (extracted.artifacts.length > 0) {
+      extractedArtifacts = extracted.artifacts
+      reply = extracted.cleanText
+    }
+
+    if (extractedArtifacts.length === 0 && reply.length > target.max && !reply.includes('```')) {
       const shortened = reply.slice(0, target.max)
       const lastStop = Math.max(shortened.lastIndexOf('.'), shortened.lastIndexOf('!'), shortened.lastIndexOf('?'))
       reply = (lastStop > target.max * 0.45 ? shortened.slice(0, lastStop + 1) : `${shortened.trimEnd()}…`).trim()
@@ -513,6 +525,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
     res.json({
       reply, model, mood, bond: bond.name, bondValue: emotion.bond, feeling: emotion.feeling(),
       messageId, milestones,
+      artifacts: extractedArtifacts,
       comics: comicResults.map(({ title, url, type, chapter, score, image, format }) => ({ title, url, type, chapter, score, image, format }))
     })
   } catch (e) {
