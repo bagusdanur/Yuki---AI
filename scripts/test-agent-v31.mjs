@@ -8,7 +8,7 @@ process.env.MEMORY_DB = path.join(root, 'test.sqlite')
 process.env.YUKI_AGENT_WORKSPACE = path.join(root, 'workspace')
 
 try {
-  const [{ createApprovalCheckpoint, claimWorkflow, getWorkflow, setWorkflowState }, { createToolResult, verifyToolResult }, runner, scratchpad, learning, memory, scheduler, search, ryukomik, llm] = await Promise.all([
+  const [{ createApprovalCheckpoint, claimWorkflow, getWorkflow, setWorkflowState }, { createToolResult, verifyToolResult }, runner, scratchpad, learning, memory, scheduler, search, ryukomik, agentPersona] = await Promise.all([
     import('../lib/agent/workflow-store.js'),
     import('../lib/agent/tool-result.js'),
     import('../lib/agent/runner.js'),
@@ -18,7 +18,7 @@ try {
     import('../lib/scheduler.js'),
     import('../skills/research/web-search/handler.js'),
     import('../lib/ryukomik.js'),
-    import('../lib/llm.js')
+    import('../lib/agent/persona.js')
   ])
 
   const approval = createApprovalCheckpoint({
@@ -71,12 +71,9 @@ try {
   assert.equal(ryukomik.detectFormat({ format: 'Korean Manhwa' }), 'MANHWA')
   assert.equal(ryukomik.detectFormat({ country: 'Japan' }), 'MANGA')
 
-  const compatibility = llm.buildToolCompatibilityMessages([{ role: 'user', content: 'cek skill' }], [{
-    type: 'function', function: { name: 'run_skill_health_check', description: 'health', parameters: { type: 'object' } }
-  }])
-  assert.match(compatibility[0].content, /<tool_call>/)
-  assert.match(compatibility[0].content, /run_skill_health_check/)
-  assert.equal(compatibility[1].content, 'cek skill')
+  const agentPrompt = agentPersona.buildAgentSystemPrompt({ userId: 'alice' })
+  assert.match(agentPrompt, /<thinking>/)
+  assert.doesNotThrow(() => agentPersona.buildAgentSystemPrompt({ userId: 'alice' }))
 
   const appSource = fs.readFileSync(new URL('../frontend/src/App.tsx', import.meta.url), 'utf8')
   const serverSource = fs.readFileSync(new URL('../server.js', import.meta.url), 'utf8')
