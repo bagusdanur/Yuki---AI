@@ -92,6 +92,9 @@ try {
   assert.match(runnerSource, /Model hanya mengeluarkan <think>[\s\S]*?role: 'user'/,
     'retry setelah output thinking-only harus diakhiri giliran user, bukan model')
 
+  assert.match(runner.buildDeterministicSchedulerReport([{ tool: 'schedule_task', status: 'done', output: { task: { id: 17, title: 'Audit', humanSchedule: '30 menit lagi', nextRunAtUtc: '2026-09-15T11:00:00.000Z', timezone: 'Asia/Jakarta' } } }]), /ID internal: \*\*17\*\*/)
+  assert.match(runner.buildDeterministicSchedulerReport([{ tool: 'list_scheduled_tasks', status: 'done', output: { tasks: [{ id: 17, title: 'Audit', schedule: '30 menit lagi', nextRunAtUtc: '2026-09-15T11:00:00.000Z', timezone: 'Asia\/Jakarta' }] } }]), /ID \*\*17\*\*/)
+
   console.log('PASS  durable approval state, resume claim, dan anti-double-click')
   console.log('PASS  evidence contract dan false-success guard')
   console.log('PASS  explicit skill routing dan scratchpad tanpa workspace')
