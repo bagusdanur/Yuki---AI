@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import {
   addBookmark, decideAgentApproval, deleteAccount, getBookmarks, getRelationship,
-  getAgentProgress, getPendingAgentWorkflows, getSkills, register, removeBookmark, restore, sendChat, sendFeedback, speak
+  getAgentProgress, getPendingAgentWorkflows, getScheduledReminders, getSkills, register, removeBookmark, restore, sendChat, sendFeedback, speak
 } from './api'
 import type {
   AgentStep, ArtifactItem, BookmarkedComic, ChatMode, ComicRecommendation,
@@ -510,7 +510,8 @@ function prepareArtifactHtml(rawHtml = '') {
   })();
   </script>`
 
-  if (!html.includes('_yuki_injected_script')) {
+  // Artifact tersimpan sudah membawa _yuki_touch_guide; cegah listener touch/click ganda.
+  if (!html.includes('_yuki_injected_script') && !html.includes('_yuki_touch_guide')) {
     if (/<\/body>/i.test(html)) {
       html = html.replace(/<\/body>/i, `${mobileTouchEngine}\n</body>`)
     } else if (/<\/html>/i.test(html)) {
@@ -919,6 +920,7 @@ export default function App() {
   const endRef = useRef<HTMLDivElement>(null)
   const currentAudio = useRef<HTMLAudioElement | null>(null)
   const requestTimers = useRef<number[]>([])
+  const reminderCursor = useRef(0)
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [messages, busy])
   useEffect(() => { if (session) localStorage.setItem(historyKey(session.userId), JSON.stringify(messages.slice(-40))) }, [messages, session])
@@ -943,6 +945,37 @@ export default function App() {
       })
     }).catch(() => {})
   }, [session?.sessionToken])
+  useEffect(() => {
+    if (!session?.sessionToken || EMBED_COMPANION_ONLY) return
+    reminderCursor.current = Math.max(reminderCursor.current, ...messages.map(message => Number(message.messageId) || 0))
+    let stopped = false
+    const syncReminders = async () => {
+      if (stopped || !navigator.onLine) return
+      try {
+        const { reminders } = await getScheduledReminders(reminderCursor.current)
+        if (!reminders.length || stopped) return
+        reminderCursor.current = Math.max(reminderCursor.current, ...reminders.map(message => Number(message.messageId) || 0))
+        setMessages(current => {
+          const ids = new Set(current.map(message => message.messageId).filter(Boolean))
+          const contents = new Set(current.map(message => message.content))
+          const fresh = reminders.filter(message => !ids.has(message.messageId) && !contents.has(message.content))
+          return fresh.length ? [...current, ...fresh] : current
+        })
+      } catch { /* polling pengingat tidak boleh mengganggu chat */ }
+    }
+    const onVisible = () => { if (!document.hidden) void syncReminders() }
+    void syncReminders()
+    const timer = window.setInterval(syncReminders, 10_000)
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', syncReminders)
+    return () => {
+      stopped = true
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', syncReminders)
+    }
+  }, [session?.sessionToken])
+
   useEffect(() => {
     if (EMBED_COMPANION_ONLY) {
       if (chatMode !== 'companion') setChatMode('companion')
