@@ -42,6 +42,13 @@ try {
   assert.deepEqual([...runner.selectAgentToolNames('Pakai Code Scratchpad untuk jalankan snippet')], ['run_javascript_code'])
   assert.ok(!runner.selectAgentToolNames('Pakai Self-Improvement untuk simpan evaluasi').has('run_skill_health_check'))
   assert.deepEqual([...runner.selectAgentToolNames('Pakai URL Reader untuk https://example.com')], ['read_url'])
+  const routedFollowUp = runner.selectAgentToolsForConversation([
+    { role: 'user', content: 'Jalankan Skill Health sekarang.' },
+    { role: 'assistant', content: 'Semua skill sehat.' },
+    { role: 'user', content: 'Buat file baru audit-v31.txt di workspace.' }
+  ])
+  assert.ok(routedFollowUp.has('create_workspace_file'))
+  assert.ok(!routedFollowUp.has('run_skill_health_check'), 'skill eksplisit lama tidak boleh meracuni intent terbaru')
 
   const scratchResult = await scratchpad.executeRunJavascriptCode({ code: 'console.log("empat")\nreturn 2 + 2' })
   assert.equal(scratchResult.exitCode, 0)
