@@ -94,7 +94,7 @@ try {
   assert.match(appSource, /_yuki_touch_guide/)
   assert.match(appSource, /getScheduledReminders/)
   assert.doesNotMatch(serverSource, /thinking:\s*agentResult/)
-  assert.match(serverSource, /api\\/chat\\/reminders/)
+  assert.ok(serverSource.includes('/api/chat/reminders'))
   assert.match(runnerSource, /Model hanya mengeluarkan <think>[\s\S]*?role: 'user'/,
     'retry setelah output thinking-only harus diakhiri giliran user, bukan model')
   assert.match(runnerSource, /failedArtifactPatch[\\s\\S]*?update_interactive_artifact/)
