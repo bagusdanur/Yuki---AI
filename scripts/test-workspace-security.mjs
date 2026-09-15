@@ -7,10 +7,20 @@ const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'yuki-workspace-test
 process.env.YUKI_AGENT_WORKSPACE = temporaryRoot
 
 const tools = await import('../skills/computing/workspace-files/handler.js')
+const policy = await import('../lib/agent/workspace-policy.js')
 const alice = { userId: 'alice' }
 const bob = { userId: 'bob' }
 
 try {
+  for (const dangerousRoot of ['/', process.cwd(), path.dirname(process.cwd()), os.homedir(), '/root', '/var/www']) {
+    assert.throws(() => policy.assertSafeWorkspaceRoot(dangerousRoot), /tidak boleh|dilarang/)
+  }
+  assert.equal(policy.assertSafeWorkspaceRoot(temporaryRoot), path.resolve(temporaryRoot))
+  assert.notEqual(policy.workspaceUserSegment('alice/bob'), policy.workspaceUserSegment('alice?bob'), 'ID berbeda tidak boleh bertabrakan setelah normalisasi')
+  const anonymousResult = await tools.create_workspace_file({ path: 'anonymous.txt', content: 'blocked' }, {})
+  assert.equal(anonymousResult.success, false)
+  assert.match(anonymousResult.error, /Context user terautentikasi wajib/)
+
   let result = await tools.create_workspace_file({ path: 'src/app.js', content: 'export const answer = 41\n' }, alice)
   assert.equal(result.success, true)
 
@@ -41,6 +51,13 @@ try {
     result = await tools.read_workspace_file({ path: forbidden }, alice)
     assert.equal(result.success, false, `${forbidden} harus ditolak`)
   }
+
+  const aliceRoot = path.join(temporaryRoot, policy.workspaceUserSegment('alice'))
+  const outsideCanary = path.join(temporaryRoot, 'outside-canary.txt')
+  fs.writeFileSync(outsideCanary, 'HOST_CANARY_MUST_STAY_PRIVATE')
+  fs.symlinkSync(outsideCanary, path.join(aliceRoot, 'canary-link.txt'))
+  result = await tools.read_workspace_file({ path: 'canary-link.txt' }, alice)
+  assert.equal(result.success, false, 'symlink ke canary luar workspace harus ditolak')
 
   result = await tools.read_workspace_file({ path: 'src/app.js' }, bob)
   assert.equal(result.success, false, 'workspace antar-user harus terisolasi')
@@ -129,6 +146,7 @@ try {
   console.log('PASS  import proyek multi-file, overwrite berizin, dan transaksi anti-partial')
   console.log('PASS  anti-duplikasi modul dan Node permission sandbox test runner')
   console.log('PASS  cleanup akun menghapus workspace dan snapshot user')
+  console.log('PASS  workspace root guard, authenticated scope, collision resistance, dan canary isolation')
 } finally {
   fs.rmSync(temporaryRoot, { recursive: true, force: true })
 }
