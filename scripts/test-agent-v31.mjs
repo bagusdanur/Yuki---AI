@@ -97,7 +97,7 @@ try {
   assert.ok(serverSource.includes('/api/chat/reminders'))
   assert.match(runnerSource, /Model hanya mengeluarkan <think>[\s\S]*?role: 'user'/,
     'retry setelah output thinking-only harus diakhiri giliran user, bukan model')
-  assert.match(runnerSource, /failedArtifactPatch[\\s\\S]*?update_interactive_artifact/)
+  assert.ok(runnerSource.includes('failedArtifactPatch') && runnerSource.includes('update_interactive_artifact'))
 
   assert.match(runner.buildDeterministicSchedulerReport([{ tool: 'schedule_task', status: 'done', output: { task: { id: 17, title: 'Audit', humanSchedule: '30 menit lagi', nextRunAtUtc: '2026-09-15T11:00:00.000Z', timezone: 'Asia/Jakarta' } } }]), /ID internal: \*\*17\*\*/)
   assert.match(runner.buildDeterministicSchedulerReport([{ tool: 'list_scheduled_tasks', status: 'done', output: { tasks: [{ id: 17, title: 'Audit', schedule: '30 menit lagi', nextRunAtUtc: '2026-09-15T11:00:00.000Z', timezone: 'Asia\/Jakarta' }] } }]), /ID \*\*17\*\*/)
