@@ -59,13 +59,23 @@ export async function executeRunJavascriptCode({ code }) {
     return {
       success: true,
       result: result !== undefined ? (typeof result === 'object' ? JSON.stringify(result, null, 2) : String(result)) : null,
-      logs: logs.length > 0 ? logs.join('\n') : undefined
+      logs: logs.length > 0 ? logs.join('\n') : undefined,
+      stdout: logs.join('\n'),
+      stderr: '',
+      exitCode: 0,
+      timedOut: false,
+      sandbox: 'node-vm',
+      timeoutMs: 3000
     }
   } catch (err) {
     return {
       success: false,
       error: `Error saat eksekusi kode: ${err.message}`,
-      logs: logs.length > 0 ? logs.join('\n') : undefined
+      logs: logs.length > 0 ? logs.join('\n') : undefined,
+      stdout: logs.join('\n'),
+      stderr: String(err.message || err),
+      exitCode: 1,
+      timedOut: /timed out/i.test(String(err.message || ''))
     }
   }
 

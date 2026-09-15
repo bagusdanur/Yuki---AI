@@ -27,11 +27,12 @@ export interface AgentStep {
   title: string
   input: any
   output?: any
-  status: 'running' | 'done' | 'error'
+  status: 'queued' | 'planning' | 'running' | 'awaiting_approval' | 'resuming' | 'verifying' | 'done' | 'error' | 'cancelled'
   durationMs?: number
   skillName?: string
   skillTitle?: string
   approval?: { id: string; reason: string; status: 'pending' | 'approved' | 'rejected' }
+  evidence?: Array<{ kind: string; value: unknown }>
 }
 
 export interface SkillInfo {
@@ -47,7 +48,10 @@ export interface Message {
   content: string
   mode?: ChatMode
   steps?: AgentStep[]
-  thinking?: string
+  gesture?: string
+  markdown?: string
+  workflowState?: string
+  truncated?: boolean
   artifacts?: ArtifactItem[]
   comics?: ComicRecommendation[]
   messageId?: number
@@ -70,7 +74,12 @@ export interface ChatResponse {
   feeling: string
   mode?: ChatMode
   steps?: AgentStep[]
-  thinking?: string
+  gesture?: string
+  markdown?: string
+  workflowState?: string
+  awaitingApproval?: { id: string; reason: string; status: string }
+  evidence?: Array<{ kind: string; value: unknown }>
+  truncated?: boolean
   artifacts?: ArtifactItem[]
   messageId?: number
   milestones?: Milestone[]
@@ -80,6 +89,7 @@ export interface ChatResponse {
 export interface AgentProgressResponse {
   steps: AgentStep[]
   done: boolean
+  state: string
 }
 
 export interface Session {

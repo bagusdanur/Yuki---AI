@@ -124,6 +124,7 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 .agent-approval-actions small { flex-basis: 100%; color: var(--text-secondary); }
 .agent-approval-actions button { border: 0; border-radius: 7px; padding: 6px 10px; background: #d8b45a; color: #18140b; font-weight: 700; cursor: pointer; }
 .agent-approval-actions button.reject { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+.agent-approval-actions button:disabled { cursor: wait; opacity: .55; }
 .skills-catalog-pill:hover {
   color: #ffffff;
   border-color: #3f3f46;
@@ -841,9 +842,26 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 .message.user { align-self: flex-end; flex-direction: row-reverse; }
 .message-avatar { width: 30px; height: 30px; flex: 0 0 auto; margin-top: 3px; border-radius: 5px; color: #dcdafe; border: 1px solid #484c5a; background: #202331; }
 .message-content { min-width: 0; padding: 13px 15px; overflow-wrap: anywhere; white-space: pre-wrap; border: 1px solid #27272a; border-radius: 8px; color: #f4f4f5; background: #121215; font-size: 14px; line-height: 1.65; }
+.messages > .message { content-visibility: auto; contain-intrinsic-size: auto 120px; }
 .message.user .message-content { border: 1px solid #aaa7ff; border-radius: 8px 4px 4px 8px; color: #121318; background: #aaa7ff; font-weight: 620; }
 .message-content .action { display: block; margin: 0 0 8px; color: #9fa1ac; font-family: Georgia, "Times New Roman", serif; font-size: 13px; line-height: 1.5; }
 .message-content .action::before { content: "// "; color: #8581ea; font-family: ui-monospace, monospace; font-size: 9px; font-style: normal; }
+.markdown-body { white-space: normal; min-width: 0; }
+.markdown-body > :first-child { margin-top: 0; }
+.markdown-body > :last-child { margin-bottom: 0; }
+.markdown-body p, .markdown-body li, .markdown-body blockquote { white-space: pre-wrap; }
+.markdown-body h1, .markdown-body h2, .markdown-body h3 { margin: 1em 0 .45em; line-height: 1.25; }
+.markdown-body h1 { font-size: 1.35em; }
+.markdown-body h2 { font-size: 1.2em; }
+.markdown-body h3 { font-size: 1.08em; }
+.markdown-body ul, .markdown-body ol { margin: .5em 0; padding-left: 1.4em; }
+.markdown-body blockquote { margin: .65em 0; padding: .25em .8em; border-left: 3px solid #8581ea; color: #b8bac5; }
+.markdown-body a { color: #b8b5ff; text-underline-offset: 2px; }
+.markdown-body table { display: block; width: 100%; overflow-x: auto; border-collapse: collapse; }
+.markdown-body th, .markdown-body td { padding: 6px 9px; border: 1px solid #343743; text-align: left; }
+.code-block-wrap { position: relative; display: block; min-width: 0; }
+.code-block-wrap > button { position: absolute; z-index: 1; top: 6px; right: 6px; padding: 4px 7px; border: 1px solid #40434d; border-radius: 5px; color: #c9cbd4; background: #17191f; font-size: 10px; }
+.code-block-wrap > code { display: block; overflow-x: auto; padding-right: 48px; }
 .message-content pre {
   margin: 8px 0;
   padding: 10px 12px;
@@ -1330,6 +1348,8 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 .live-stream-step.error { color: #f87171; }
 .agent-step-item.error .agent-step-check { color: #f87171; border-color: rgba(248,113,113,.45); background: rgba(248,113,113,.12); }
 .agent-step-item.running .agent-step-check { color: #a78bfa; }
+.agent-step-item.awaiting_approval .agent-step-check { color: #e0b85c; border-color: rgba(224,184,92,.5); background: rgba(224,184,92,.1); }
+.agent-step-item.resuming .agent-step-check, .agent-step-item.verifying .agent-step-check { color: #a78bfa; }
 .live-step-status-icon {
   flex: 0 0 14px;
   height: 14px;

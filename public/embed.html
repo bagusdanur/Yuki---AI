@@ -592,6 +592,7 @@
         </p>
         <div style="background: rgba(0, 0, 0, 0.2); border: 1px dashed var(--accent1); border-radius: 8px; padding: 8px; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;">
           <span id="embed-result-code" style="font-family: monospace; font-size: 13.5px; font-weight: 700; color: #fff; letter-spacing: 0.5px;">Belum Terdaftar</span>
+          <button id="embed-reveal-btn" title="Tampilkan Kode" aria-pressed="false" style="background: #1a2233; border: 1px solid var(--line); border-radius: 4px; width: 28px; height: 28px; color: var(--muted); cursor: pointer; display: grid; place-items: center;"><i data-lucide="eye" style="width: 12px; height: 12px;"></i></button>
           <button id="embed-copy-btn" title="Salin Kode" style="background: #1a2233; border: 1px solid var(--line); border-radius: 4px; width: 28px; height: 28px; color: var(--muted); cursor: pointer; display: grid; place-items: center; transition: all 0.15s;"><i data-lucide="copy" style="width: 12px; height: 12px;"></i></button>
         </div>
         
@@ -913,7 +914,8 @@
 
     function openSettingsModal() {
       const code = localStorage.getItem('yuki_access_code_v3') || 'Menyiapkan Kunci...'
-      document.getElementById('embed-result-code').textContent = code
+      document.getElementById('embed-result-code').textContent = code.startsWith('YUKI-') ? `${code.slice(0, 5)}••••-••••` : code
+      document.getElementById('embed-reveal-btn').setAttribute('aria-pressed', 'false')
       document.getElementById('embed-settings-view').style.display = 'block'
       document.getElementById('embed-settings-restore').style.display = 'none'
       document.getElementById('settings-modal').classList.add('open')
@@ -945,8 +947,18 @@
 
     document.getElementById('settings-btn').addEventListener('click', openSettingsModal)
 
+    document.getElementById('embed-reveal-btn').addEventListener('click', (event) => {
+      const button = event.currentTarget
+      const code = localStorage.getItem('yuki_access_code_v3') || 'Menyiapkan Kunci...'
+      const revealed = button.getAttribute('aria-pressed') === 'true'
+      button.setAttribute('aria-pressed', String(!revealed))
+      document.getElementById('embed-result-code').textContent = !revealed || !code.startsWith('YUKI-') ? code : `${code.slice(0, 5)}••••-••••`
+      button.innerHTML = `<i data-lucide="${revealed ? 'eye' : 'eye-off'}" style="width: 12px; height: 12px;"></i>`
+      window.lucide && lucide.createIcons()
+    })
+
     document.getElementById('embed-copy-btn').addEventListener('click', () => {
-      const text = document.getElementById('embed-result-code').textContent
+      const text = localStorage.getItem('yuki_access_code_v3')
       if (!text || text === 'Menyiapkan Kunci...') return
       navigator.clipboard.writeText(text).then(() => {
         const btn = document.getElementById('embed-copy-btn')

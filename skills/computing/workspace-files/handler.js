@@ -205,6 +205,57 @@ export async function create_workspace_file({ path: input, content = '' } = {}, 
   } catch (error) { return { success: false, error: error.message } }
 }
 
+// Digunakan oleh endpoint import proyek. Seluruh input divalidasi sebelum file
+// pertama ditulis agar import bersifat atomik dan tidak meninggalkan proyek
+// setengah jadi ketika salah satu path tidak aman.
+export async function importWorkspaceFiles({ files = [], overwrite = false } = {}, context = {}) {
+  try {
+    if (!Array.isArray(files) || files.length < 1 || files.length > 100) {
+      throw new Error('files harus berisi 1-100 file workspace.')
+    }
+    const seen = new Set()
+    const prepared = files.map((item) => {
+      if (!item || typeof item.path !== 'string' || typeof item.content !== 'string') {
+        throw new Error('Setiap file wajib memiliki path dan content berupa teks.')
+      }
+      const normalized = item.path.replaceAll('\\', '/').toLowerCase()
+      if (seen.has(normalized)) throw new Error(`Path duplikat dalam import: ${item.path}`)
+      seen.add(normalized)
+      if (Buffer.byteLength(item.content) > MAX_BYTES) throw new Error(`${item.path}: file terlalu besar.`)
+      const resolved = resolveTarget(item.path, context, true)
+      const exists = fs.existsSync(resolved.target)
+      if (exists && !overwrite) throw new Error(`${item.path}: file sudah ada; overwrite harus diizinkan eksplisit.`)
+      if (exists && !fs.statSync(resolved.target).isFile()) throw new Error(`${item.path}: target bukan file.`)
+      return { ...resolved, content: item.content, exists, before: exists ? readText(resolved.target) : '' }
+    })
+
+    const transactionId = `${Date.now()}_${crypto.randomBytes(4).toString('hex')}`
+    const written = []
+    try {
+      for (const item of prepared) {
+        const snapshotId = saveSnapshot(context, item.relative, item.before, item.exists ? `import:${transactionId}` : 'create')
+        atomicWrite(item.userRoot, item.target, item.content)
+        written.push({ ...item, snapshotId })
+      }
+    } catch (writeError) {
+      for (const item of written.reverse()) {
+        if (item.exists) atomicWrite(item.userRoot, item.target, item.before)
+        else if (fs.existsSync(item.target)) fs.unlinkSync(item.target)
+      }
+      throw new Error(`Import dibatalkan dan dipulihkan: ${writeError.message}`)
+    }
+    return {
+      success: true,
+      transaction_id: transactionId,
+      imported: prepared.length,
+      files: written.map(item => ({
+        path: item.relative.replaceAll('\\', '/'), hash: digest(item.content),
+        overwritten: item.exists, snapshot_id: item.snapshotId
+      }))
+    }
+  } catch (error) { return { success: false, error: error.message } }
+}
+
 export async function run_workspace_tests({ path: input } = {}, context = {}) {
   try {
     if (!input || !/(^|\/)(test|tests|__tests__)(\/|$)|\.(test|spec)\.[cm]?js$/i.test(String(input).replaceAll('\\', '/'))) {

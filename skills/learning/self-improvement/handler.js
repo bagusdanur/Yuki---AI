@@ -1,79 +1,85 @@
-// skills/learning/self-improvement/handler.js
-import fs from 'node:fs'
+import crypto from 'node:crypto'
 import path from 'node:path'
+import { mkdirSync } from 'node:fs'
+import { DatabaseSync } from 'node:sqlite'
+import { sanitizeOutputSecrets } from '../../../lib/security.js'
 
-const LEARNING_FILE = path.resolve('data/self_improvements.json')
+const FILE = process.env.MEMORY_DB || './data/yuki.db'
+mkdirSync(path.dirname(FILE), { recursive: true })
+const db = new DatabaseSync(FILE)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS self_improvements (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    topic TEXT NOT NULL,
+    skill TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'technical',
+    scope TEXT NOT NULL DEFAULT 'user',
+    summary TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_self_improvements_user_created ON self_improvements(user_id, created_at DESC);
+`)
 
-export async function executeRecordSelfImprovement(params = {}) {
-  const { topic, learning_summary, summary, skill_affected, patch_note } = params
-  const cleanTopic = String(topic || 'General Improvement').trim()
-  const cleanSummary = String(learning_summary || summary || patch_note || '').trim()
-  const cleanSkill = String(skill_affected || 'core').trim()
+const safeUser = context => String(context?.userId || 'anonymous').slice(0, 80)
+const safeText = (value, limit) => sanitizeOutputSecrets(String(value || '').trim()).slice(0, limit)
 
-  if (!cleanSummary) {
-    return { error: 'Parameter "learning_summary" tidak boleh kosong.' }
-  }
+export async function executeRecordSelfImprovement(params = {}, context = {}) {
+  const cleanTopic = safeText(params.topic || 'General Improvement', 160)
+  const cleanSummary = safeText(params.learning_summary || params.summary || params.patch_note, 2400)
+  const cleanSkill = safeText(params.skill_affected || 'core', 100)
+  const category = safeText(params.category || 'technical', 60)
+  if (!cleanSummary) return { success: false, error: 'Parameter "learning_summary" tidak boleh kosong.' }
 
   const record = {
-    id: `imp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    id: `imp_${crypto.randomUUID()}`,
+    userId: safeUser(context),
     timestamp: new Date().toISOString(),
     topic: cleanTopic,
     skill: cleanSkill,
+    category,
+    scope: 'user',
     summary: cleanSummary
   }
-
   try {
-    const dir = path.dirname(LEARNING_FILE)
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-
-    let list = []
-    if (fs.existsSync(LEARNING_FILE)) {
-      try {
-        list = JSON.parse(fs.readFileSync(LEARNING_FILE, 'utf8'))
-      } catch {
-        list = []
-      }
-    }
-    list.unshift(record)
-    // Simpan maksimal 50 catatan pembelajaran terbaru
-    if (list.length > 50) list = list.slice(0, 50)
-    fs.writeFileSync(LEARNING_FILE, JSON.stringify(list, null, 2), 'utf8')
-  } catch (err) {
-    console.warn('[self-improvement] Gagal menyimpan log pembelajaran:', err.message)
-  }
-
-  const reviewMessage = `💾 Self-improvement: Wawasan baru tersimpan di memori — [${cleanSkill}] ${cleanTopic}: ${cleanSummary.slice(0, 100)}`
-
-  return {
-    success: true,
-    message: reviewMessage,
-    data: record
-  }
-}
-
-export async function executeListSelfImprovements() {
-  try {
-    if (!fs.existsSync(LEARNING_FILE)) {
-      return { total: 0, lessons: [], message: 'Belum ada catatan self-improvement yang tersimpan.' }
-    }
-    const list = JSON.parse(fs.readFileSync(LEARNING_FILE, 'utf8'))
+    db.prepare(`INSERT INTO self_improvements (id, user_id, topic, skill, category, scope, summary, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(record.id, record.userId, record.topic, record.skill, record.category, record.scope, record.summary, record.timestamp)
+    const readBack = db.prepare(`SELECT id, topic, skill, category, scope, summary, created_at AS timestamp
+      FROM self_improvements WHERE id = ? AND user_id = ?`).get(record.id, record.userId)
+    if (!readBack) throw new Error('Read-after-write gagal; entry tidak ditemukan.')
     return {
-      total: list.length,
-      lessons: list.slice(0, 15)
+      success: true,
+      learning_entry_id: record.id,
+      category,
+      scope: record.scope,
+      timestamp: record.timestamp,
+      verified: true,
+      entry: readBack,
+      message: `💾 Self-improvement: Wawasan terverifikasi tersimpan — [${cleanSkill}] ${cleanTopic}`
     }
-  } catch (err) {
-    return { error: `Gagal membaca memori pembelajaran: ${err.message}` }
+  } catch (error) {
+    return { success: false, error: `Gagal menyimpan self-improvement: ${error.message}` }
   }
 }
 
-export function getRecentSelfImprovements(limit = 6) {
+export async function executeListSelfImprovements({ limit = 15 } = {}, context = {}) {
   try {
-    if (!fs.existsSync(LEARNING_FILE)) return []
-    const list = JSON.parse(fs.readFileSync(LEARNING_FILE, 'utf8'))
-    return Array.isArray(list) ? list.slice(0, limit) : []
-  } catch {
-    return []
+    const count = Math.max(1, Math.min(50, Number(limit) || 15))
+    const lessons = db.prepare(`SELECT id, topic, skill, category, scope, summary, created_at AS timestamp
+      FROM self_improvements WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`).all(safeUser(context), count)
+    return { success: true, total: lessons.length, lessons, message: lessons.length ? undefined : 'Belum ada catatan self-improvement yang tersimpan.' }
+  } catch (error) {
+    return { success: false, error: `Gagal membaca memori pembelajaran: ${error.message}` }
   }
+}
+
+export function getRecentSelfImprovements(limit = 6, userId = 'anonymous') {
+  try {
+    return db.prepare(`SELECT id, topic, skill, category, scope, summary, created_at AS timestamp
+      FROM self_improvements WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`)
+      .all(String(userId).slice(0, 80), Math.max(1, Math.min(12, Number(limit) || 6)))
+  } catch { return [] }
 }
 
 export default {
