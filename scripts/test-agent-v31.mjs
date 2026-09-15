@@ -84,10 +84,13 @@ try {
 
   const appSource = fs.readFileSync(new URL('../frontend/src/App.tsx', import.meta.url), 'utf8')
   const serverSource = fs.readFileSync(new URL('../server.js', import.meta.url), 'utf8')
+  const runnerSource = fs.readFileSync(new URL('../lib/agent/runner.js', import.meta.url), 'utf8')
   assert.match(appSource, /ReactMarkdown/)
   assert.match(appSource, /rehypeSanitize/)
   assert.doesNotMatch(appSource, /Proses Berpikir Yuki/)
   assert.doesNotMatch(serverSource, /thinking:\s*agentResult/)
+  assert.match(runnerSource, /Model hanya mengeluarkan <think>[\s\S]*?role: 'user'/,
+    'retry setelah output thinking-only harus diakhiri giliran user, bukan model')
 
   console.log('PASS  durable approval state, resume claim, dan anti-double-click')
   console.log('PASS  evidence contract dan false-success guard')
