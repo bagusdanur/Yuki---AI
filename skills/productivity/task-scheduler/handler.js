@@ -1,12 +1,12 @@
 // skills/productivity/task-scheduler/handler.js
 import { createScheduledTask, listScheduledTasks, cancelScheduledTask, parseToCronExpr } from '../../../lib/scheduler.js'
 
-export async function executeScheduleTask({ title, description, schedule }, context = {}) {
+export async function executeScheduleTask({ title, description, schedule, timezone = 'Asia/Jakarta', idempotency_key = '' }, context = {}) {
   const userId = context.userId
   if (!userId) return { error: 'User ID tidak tersedia.' }
   if (!title || !description || !schedule) return { error: 'title, description, dan schedule wajib diisi.' }
 
-  const parsed = parseToCronExpr(schedule)
+  const parsed = parseToCronExpr(schedule, timezone)
   if (!parsed) {
     return {
       error: `Format jadwal tidak dikenali: "${schedule}". Coba: "setiap Senin jam 8", "setiap hari jam 20:00", "30 menit lagi", "besok jam 9".`
@@ -21,12 +21,15 @@ export async function executeScheduleTask({ title, description, schedule }, cont
       cronExpr: parsed.cron,
       humanSchedule: parsed.human,
       runOnce: parsed.runOnce || false,
-      runAt: parsed.runAt || null
+      runAt: parsed.runAt || null,
+      timezone: parsed.timezone || timezone,
+      idempotencyKey: idempotency_key
     })
     return {
       success: true,
       message: `Pengingat "${title}" berhasil dijadwalkan: ${parsed.human}.`,
-      task
+      task,
+      verified: Boolean(task?.verified)
     }
   } catch (err) {
     return { error: `Gagal membuat jadwal: ${err.message}` }
@@ -46,8 +49,9 @@ export async function executeListScheduledTasks(_args, context = {}) {
       title: t.title,
       description: t.description,
       schedule: t.human_schedule,
-      nextRun: t.next_run,
+      nextRunAtUtc: t.next_run_at_utc,
       lastRun: t.last_run || 'belum pernah'
+      , timezone: t.timezone || 'Asia/Jakarta'
     })),
     total: tasks.length
   }

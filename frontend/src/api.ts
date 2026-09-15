@@ -92,9 +92,13 @@ export async function getAgentProgress(requestId: string) {
 }
 
 export async function decideAgentApproval(approvalId: string, decision: 'approve' | 'reject') {
-  return request<{ success: true; status: 'approved' | 'rejected'; tool?: string; result?: unknown }>(`/api/agent/approvals/${encodeURIComponent(approvalId)}`, {
+  return request<ChatResponse & { success: true; status: 'approved' | 'rejected'; state?: string; workflowId?: string; duplicate?: boolean }>(`/api/agent/approvals/${encodeURIComponent(approvalId)}`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ decision })
   }, 30_000, 0)
+}
+
+export async function getPendingAgentWorkflows() {
+  return request<{ workflows: Array<{ id: string; requestId: string; state: string; toolName: string; reason: string; stepId: string; createdAt: string; expiresAt: string }> }>('/api/agent/workflows/pending', { method: 'GET' }, 10_000, 0)
 }
 
 export async function getSkills() {

@@ -1,5 +1,36 @@
 // skills/research/web-search/handler.js
 
+const STOP_WORDS = new Set(['yang', 'dan', 'atau', 'untuk', 'dari', 'di', 'ke', 'the', 'a', 'an', 'of', 'terbaru', 'berita', 'update', 'cari', 'riset'])
+const TOPICS = {
+  anime: ['anime', 'animasi', 'episode', 'season'],
+  game: ['game', 'gaming', 'mobile game', 'playstation', 'xbox', 'nintendo'],
+  manga: ['manga', 'manhwa', 'manhua', 'komik', 'chapter'],
+  finance: ['saham', 'crypto', 'pasar', 'harga', 'ekonomi']
+}
+
+function tokens(value = '') {
+  return String(value).toLowerCase().normalize('NFKD').replace(/[^a-z0-9\s-]/g, ' ').split(/\s+/).filter(token => token.length > 2 && !STOP_WORDS.has(token))
+}
+
+export function scoreSearchRelevance(query, result = {}) {
+  const queryTokens = [...new Set(tokens(query))]
+  const haystack = `${result.title || ''} ${result.snippet || ''}`.toLowerCase()
+  const overlap = queryTokens.filter(token => haystack.includes(token)).length
+  let score = queryTokens.length ? overlap / queryTokens.length : 0
+  const wantedTopics = Object.entries(TOPICS).filter(([, words]) => words.some(word => String(query).toLowerCase().includes(word))).map(([topic]) => topic)
+  if (wantedTopics.length) {
+    const matchesWanted = wantedTopics.some(topic => TOPICS[topic].some(word => haystack.includes(word)))
+    if (!matchesWanted) score -= 0.55
+    const conflicting = Object.keys(TOPICS).filter(topic => !wantedTopics.includes(topic) && TOPICS[topic].some(word => haystack.includes(word)))
+    if (conflicting.length && !matchesWanted) score -= 0.25
+  }
+  return Math.max(0, Math.min(1, Number(score.toFixed(2))))
+}
+
+function publicationDate(text = '') {
+  return String(text).match(/\b(20\d{2}-\d{2}-\d{2}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|Mei|Jun|Jul|Agu|Sep|Okt|Nov|Des)[a-z]*\s+20\d{2})\b/i)?.[1] || null
+}
+
 export async function executeWebSearch({ query, max_results = 4 }) {
   if (!query || !query.trim()) {
     return { error: 'Query pencarian tidak boleh kosong.' }
@@ -67,7 +98,11 @@ export async function executeWebSearch({ query, max_results = 4 }) {
     }
 
     if (results.length > 0) {
-      return { query: cleanQuery, total: results.length, results }
+      const ranked = results.map(result => ({ ...result, publishedAt: publicationDate(`${result.title} ${result.snippet}`), relevance: scoreSearchRelevance(cleanQuery, result) }))
+        .filter(result => result.relevance >= 0.25 && /^https?:\/\//i.test(result.url || ''))
+        .sort((a, b) => b.relevance - a.relevance).slice(0, limit)
+      return { query: cleanQuery, total: ranked.length, rejectedIrrelevant: results.length - ranked.length, results: ranked,
+        relevanceStatus: ranked.length ? 'verified' : 'no_relevant_results' }
     }
 
     // Fallback: DuckDuckGo Instant Answer API
@@ -94,7 +129,10 @@ export async function executeWebSearch({ query, max_results = 4 }) {
         }
       }
       if (fallbackResults.length > 0) {
-        return { query: cleanQuery, total: fallbackResults.length, results: fallbackResults }
+        const ranked = fallbackResults.map(result => ({ ...result, publishedAt: publicationDate(`${result.title} ${result.snippet}`), relevance: scoreSearchRelevance(cleanQuery, result) }))
+          .filter(result => result.relevance >= 0.25 && /^https?:\/\//i.test(result.url || '')).slice(0, limit)
+        return { query: cleanQuery, total: ranked.length, rejectedIrrelevant: fallbackResults.length - ranked.length, results: ranked,
+          relevanceStatus: ranked.length ? 'verified' : 'no_relevant_results' }
       }
     }
 

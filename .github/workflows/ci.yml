@@ -1,0 +1,26 @@
+name: Yuki Agent CI
+
+on:
+  push:
+    branches: [main, 'fix/**']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run test:workspace
+      - run: npm run test:agent-tools
+      - run: npm run test:v31
+      - run: npm run test:skills
+      - run: npm run build

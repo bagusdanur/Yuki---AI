@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import rehypeSanitize from 'rehype-sanitize'
 import {
   Bookmark, BookOpen, Bot, Check, ChevronDown, ChevronUp, Code2, Copy, Download,
   Gamepad2, Globe, Heart, KeyRound, ListTodo, LoaderCircle, Maximize2, MessageSquare,
@@ -7,7 +10,7 @@ import {
 } from 'lucide-react'
 import {
   addBookmark, decideAgentApproval, deleteAccount, getBookmarks, getRelationship,
-  getAgentProgress, getSkills, register, removeBookmark, restore, sendChat, sendFeedback, speak
+  getAgentProgress, getPendingAgentWorkflows, getSkills, register, removeBookmark, restore, sendChat, sendFeedback, speak
 } from './api'
 import type {
   AgentStep, ArtifactItem, BookmarkedComic, ChatMode, ComicRecommendation,
@@ -167,38 +170,10 @@ function ComicCard({ comic, isBookmarked, onToggleBookmark }: {
   )
 }
 
-function AgentThoughtCard({ thinking }: { thinking?: string }) {
-  const [open, setOpen] = useState(false)
-  if (!thinking || !thinking.trim()) return null
-
-  return (
-    <div className="yuki-thought-card">
-      <button
-        type="button"
-        className="yuki-thought-toggle"
-        onClick={() => setOpen(!open)}
-        aria-expanded={open}
-      >
-        <span className="yuki-thought-title">
-          <Sparkles size={13} className="yuki-sparkle-icon" />
-          <span><b>Proses Berpikir Yuki</b> (Analisis Internal)</span>
-        </span>
-        <span className="yuki-thought-chevron">
-          {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-        </span>
-      </button>
-
-      {open && (
-        <div className="yuki-thought-body">
-          <pre>{thinking}</pre>
-        </div>
-      )}
-    </div>
-  )
-}
-
 function AgentStepsCard({ steps, onApproval }: { steps?: AgentStep[]; onApproval?: (id: string, decision: 'approve' | 'reject') => void }) {
-  const [open, setOpen] = useState(true)
+  const active = Boolean(steps?.some(step => ['queued', 'planning', 'running', 'awaiting_approval', 'resuming', 'verifying'].includes(step.status)))
+  const [open, setOpen] = useState(active)
+  const [deciding, setDeciding] = useState<string | null>(null)
   if (!steps || steps.length === 0) return null
   const completed = steps.filter(step => step.status === 'done').length
 
@@ -226,7 +201,7 @@ function AgentStepsCard({ steps, onApproval }: { steps?: AgentStep[]; onApproval
             <div className={`agent-step-item ${step.status || 'done'}`} key={step.id || idx}>
               <div className="agent-step-icon-col">
                 <span className="agent-step-check">
-                  {step.status === 'error' ? <X size={11} /> : step.status === 'running' ? <LoaderCircle size={11} className="spin" /> : <Check size={11} />}
+                  {step.status === 'error' || step.status === 'cancelled' ? <X size={11} /> : ['queued', 'planning', 'running', 'resuming', 'verifying', 'awaiting_approval'].includes(step.status) ? <LoaderCircle size={11} className={step.status === 'awaiting_approval' ? '' : 'spin'} /> : <Check size={11} />}
                 </span>
                 {idx < steps.length - 1 && <span className="agent-step-line" />}
               </div>
@@ -240,8 +215,8 @@ function AgentStepsCard({ steps, onApproval }: { steps?: AgentStep[]; onApproval
                 <div className="agent-step-desc">{step.title}</div>
                 {step.approval?.status === 'pending' && <div className="agent-approval-actions">
                   <small>{step.approval.reason}</small>
-                  <button type="button" onClick={() => onApproval?.(step.approval!.id, 'approve')}>Izinkan sekali</button>
-                  <button type="button" className="reject" onClick={() => onApproval?.(step.approval!.id, 'reject')}>Tolak</button>
+                  <button type="button" disabled={deciding === step.approval.id} onClick={() => { setDeciding(step.approval!.id); onApproval?.(step.approval!.id, 'approve') }}>Izinkan sekali</button>
+                  <button type="button" disabled={deciding === step.approval.id} className="reject" onClick={() => { setDeciding(step.approval!.id); onApproval?.(step.approval!.id, 'reject') }}>Tolak</button>
                 </div>}
               </div>
             </div>
@@ -252,80 +227,28 @@ function AgentStepsCard({ steps, onApproval }: { steps?: AgentStep[]; onApproval
   )
 }
 
-function getContextualAgentPhases(query = ''): string[] {
-  const q = query.toLowerCase()
+function splitLegacyGesture(text: string) {
+  const match = text.match(/^\s*\*(?!\*)([^*\n]{2,120})\*(?!\*)\s*/)
+  return match ? { gesture: match[1].trim(), markdown: text.slice(match[0].length).trim() } : { gesture: '', markdown: text }
+}
 
-  // 1. Bug Fix / Perbaikan / Debugging
-  if (/bug|perbaiki|rusak|error|tembus|loncat|kurang|fix|salah|gagal|benerin|kok gini|gak jalan/i.test(q)) {
-    return [
-      'Menganalisis laporan bug & memeriksa basis kode sebelumnya...',
-      'Menemukan akar masalah & menyusun patch perbaikan...',
-      'Menguji runtime patch & memperbarui memori Self-Improvement...',
-      'Mengompilasi kode yang sudah diperbaiki ke Live Sandbox Viewer...'
-    ]
-  }
-
-  // 2. Game / Platformer / Retro / Canvas / Web Widget
-  if (/game|platformer|retro|canvas|tetris|snake|pong|shooter|kalkulator|widget|animasi|mini[- ]?game/i.test(q)) {
-    return [
-      'Merancang arsitektur game 2D & sistem fisika canvas...',
-      'Menyusun kontrol keyboard + touch mobile & game loop 60 FPS...',
-      'Mengintegrasikan Web Audio synthesizer & rintangan level...',
-      'Mengompilasi Live Sandbox Game Artifact...'
-    ]
-  }
-
-  // 3. Ryukomik / Manga / Manhwa / Komik
-  if (/komik|manga|manhwa|manhua|ryukomik|chapter|baca komik/i.test(q)) {
-    return [
-      'Menghubungkan ke API Ryukomik & query database komik...',
-      'Memfilter update chapter terbaru, rating, & link baca langsung...',
-      'Menyusun kartu rekomendasi komik & daftar chapter...'
-    ]
-  }
-
-  // 4. Jadwal / Pengingat / Scheduler
-  if (/ingatkan|jadwal|jadwalkan|schedule|remind|alarm|besok|menit lagi|setiap/i.test(q)) {
-    return [
-      'Memparsing jadwal waktu (WIB) & mengecek jadwal aktif...',
-      'Mendaftarkan tugas ke SQLite Persistent Task Scheduler...',
-      'Menyiapkan konfirmasi pengingat otomatis...'
-    ]
-  }
-
-  // 5. Browser / Web Search / Riset
-  if (/cari|browsing|browse|search|riset|berita|harga|artikel|web|url|link|http/i.test(q)) {
-    return [
-      'Menjalankan Headless Browser & mengekstrak konten web...',
-      'Menganalisis data temuan & memvalidasi fakta sumber...',
-      'Menyusun intisari ringkasan riset...'
-    ]
-  }
-
-  // 6. Subagent Delegation
-  if (/delegasi|subagent|paralel|bagi tugas|kompleks/i.test(q)) {
-    return [
-      'Membagi task kompleks menjadi subagent paralel...',
-      'Menjalankan child workers & mengagregasi output...',
-      'Mengonsolidasikan laporan multi-aspek...'
-    ]
-  }
-
-  // 7. Coding & Algorithms
-  if (/kode|code|javascript|python|function|script|regex|algoritma|api|database|sql/i.test(q)) {
-    return [
-      'Menganalisis logika algoritma & sintaks kode...',
-      'Menjalankan uji eksekusi di sandbox VM terisolasi...',
-      'Menyusun balasan teknis & optimasi performa...'
-    ]
-  }
-
-  // 8. General Default
-  return [
-    'Menganalisis instruksi tugas & memilih skill yang relevan...',
-    'Menjalankan Yuki ReAct Reasoning Loop & eksekusi tools...',
-    'Menyusun balasan terstruktur & ringkasan hasil...'
-  ]
+function MarkdownMessage({ children }: { children: string }) {
+  return (
+    <div className="markdown-body">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeSanitize]}
+        components={{
+          a: ({ href, children: linkChildren, ...props }) => <a {...props} href={href} target="_blank" rel="noopener noreferrer">{linkChildren}</a>,
+          code: ({ className, children: codeChildren, ...props }) => {
+            const block = /language-/.test(className || '')
+            const value = String(codeChildren).replace(/\n$/, '')
+            return block ? <span className="code-block-wrap"><button type="button" onClick={() => navigator.clipboard.writeText(value)}>Salin</button><code {...props} className={className}>{value}</code></span> : <code {...props} className={className}>{codeChildren}</code>
+          }
+        }}
+      >{children}</ReactMarkdown>
+    </div>
+  )
 }
 
 function LiveAgentWorkingBubble({ steps = [] }: { steps?: AgentStep[] }) {
@@ -774,23 +697,20 @@ function MessageBody({ message, bookmarks, onToggleBookmark, onOpenArtifact, onA
     return true
   }).join('\n')
 
-  // Gestur hanya satu-bintang; jangan salah menangkap isi Markdown bold **...**.
-  const parts = textWithoutSI.split(/((?<!\*)\*(?!\*)[^*\n]{2,100}(?<!\*)\*(?!\*))/g).filter(Boolean)
+  const legacyDisplay = splitLegacyGesture(textWithoutSI)
+  const gesture = message.gesture || legacyDisplay.gesture
+  const markdown = message.markdown || legacyDisplay.markdown
   const bookmarkedUrls = new Set(bookmarks.map(b => b.url))
 
   return <>
-    {message.thinking && (
-      <AgentThoughtCard thinking={message.thinking} />
-    )}
     {message.steps && message.steps.length > 0 && (
       <AgentStepsCard steps={message.steps} onApproval={onApproval} />
     )}
     {selfImprovementLines.map((siText, idx) => (
       <HermesSelfImprovementCard text={siText} key={idx} />
     ))}
-    {parts.map((part, index) => /^\*(?!\*)[^*\n]+\*$/.test(part)
-      ? <em className="action" key={index}>{part.slice(1, -1).trim()}</em>
-      : <span key={index}>{part.replace(/^\s*\*\s*$/gm, '')}</span>)}
+    {gesture && <em className="action">{gesture}</em>}
+    {markdown && <MarkdownMessage>{markdown.replace(/^\s*\*\s*$/gm, '')}</MarkdownMessage>}
     {message.artifacts && message.artifacts.length > 0 && (() => {
       const uniqueList: ArtifactItem[] = []
       const seen = new Set<string>()
@@ -980,6 +900,7 @@ export default function App() {
   const [feeling, setFeeling] = useState(() => localStorage.getItem(SESSION_KEYS.feeling) || 'Lagi kalem, jawab seperlunya.')
   const [chatMode, setChatMode] = useState<ChatMode>(() => EMBED_COMPANION_ONLY ? 'companion' : (localStorage.getItem(SESSION_KEYS.mode) as ChatMode) || 'companion')
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [showAccessCode, setShowAccessCode] = useState(false)
   const [avatarCompact, setAvatarCompact] = useState(false)
   const [blinking, setBlinking] = useState(false)
   const [connection, setConnection] = useState<ConnectionState>(() => navigator.onLine ? 'idle' : 'offline')
@@ -1002,11 +923,33 @@ export default function App() {
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [messages, busy])
   useEffect(() => { if (session) localStorage.setItem(historyKey(session.userId), JSON.stringify(messages.slice(-40))) }, [messages, session])
   useEffect(() => {
+    if (!session?.sessionToken || EMBED_COMPANION_ONLY) return
+    getPendingAgentWorkflows().then(({ workflows }) => {
+      if (!workflows.length) return
+      setMessages(current => {
+        const known = new Set(current.flatMap(message => message.steps || []).map(step => step.approval?.id).filter(Boolean))
+        const restored = workflows.filter(workflow => !known.has(workflow.id)).map(workflow => ({
+          role: 'assistant' as const,
+          mode: 'agent' as const,
+          content: 'Tugas ini menunggu izin dan dapat dilanjutkan setelah halaman dimuat ulang.',
+          workflowState: 'awaiting_approval',
+          steps: [{
+            id: workflow.stepId || workflow.id, tool: workflow.toolName || 'agent_action',
+            title: `Menunggu izin: ${workflow.toolName || 'tindakan agent'}`, input: {}, status: 'awaiting_approval' as const,
+            approval: { id: workflow.id, reason: workflow.reason || 'Tindakan ini membutuhkan izin.', status: 'pending' as const }
+          }]
+        }))
+        return restored.length ? [...current, ...restored] : current
+      })
+    }).catch(() => {})
+  }, [session?.sessionToken])
+  useEffect(() => {
     if (EMBED_COMPANION_ONLY) {
       if (chatMode !== 'companion') setChatMode('companion')
       return
     }
     localStorage.setItem(SESSION_KEYS.mode, chatMode)
+    setSettingsOpen(false)
   }, [chatMode])
 
   useEffect(() => {
@@ -1129,11 +1072,14 @@ export default function App() {
       setMessages([...next, {
         role: 'assistant',
         content: result.reply,
+        gesture: result.gesture,
+        markdown: result.markdown,
+        workflowState: result.workflowState,
+        truncated: result.truncated,
         comics: result.comics || [],
         messageId: result.messageId,
         mode: EMBED_COMPANION_ONLY ? 'companion' : result.mode || effectiveMode,
         steps: result.steps || [],
-        thinking: result.thinking || '',
         artifacts: result.artifacts || []
       }])
       setMood(result.mood || 'tenang'); setBond(result.bond || bond)
@@ -1162,7 +1108,7 @@ export default function App() {
       try {
         const result = await sendChat(session.userId, messages, true, 'companion')
         if (result.reply?.trim()) {
-          setMessages(current => [...current, { role: 'assistant', content: result.reply, messageId: result.messageId }])
+          setMessages(current => [...current, { role: 'assistant', content: result.reply, messageId: result.messageId, truncated: result.truncated }])
           setMood(result.mood || 'tenang'); setFeeling(result.feeling || feeling)
           if (result.milestones) setMilestones(result.milestones)
         }
@@ -1185,9 +1131,15 @@ export default function App() {
       setMessages(current => current.map(message => ({ ...message, steps: message.steps?.map(step => step.approval?.id === id
         ? { ...step, approval: { ...step.approval, status: result.status }, status: result.status === 'approved' ? 'done' : 'error' }
         : step) })))
-      setMessages(current => [...current, { role: 'assistant', mode: 'agent', content: result.status === 'approved'
-        ? '*mengangguk kecil lalu menjalankan tindakan yang kamu izinkan*\n\nTindakan berisiko itu sudah dijalankan satu kali. Hasilnya tercatat pada workspace.'
-        : '*menarik tangannya dari workspace*\n\nBaik, tindakan itu dibatalkan dan tidak dijalankan.' }])
+      if (result.status === 'approved' && result.reply) {
+        setMessages(current => [...current, {
+          role: 'assistant', mode: 'agent', content: result.reply,
+          gesture: result.gesture, markdown: result.markdown, workflowState: result.workflowState,
+          steps: result.steps || [], artifacts: result.artifacts || [], comics: result.comics || [], messageId: result.messageId, truncated: result.truncated
+        }])
+      } else if (result.status === 'rejected') {
+        setMessages(current => [...current, { role: 'assistant', mode: 'agent', content: '*menarik tangannya dari workspace*\n\nBaik, tindakan itu dibatalkan dan tidak dijalankan.', workflowState: 'cancelled' }])
+      }
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Approval gagal diproses.') }
   }
 
@@ -1226,6 +1178,7 @@ export default function App() {
 
   async function removeAccount() {
     if (!window.confirm('Hapus seluruh chat, memori, dan hubungan dengan Yuki secara permanen?')) return
+    if (window.prompt('Tindakan ini tidak dapat dipulihkan. Ketik HAPUS untuk konfirmasi terakhir.') !== 'HAPUS') return
     try { await deleteAccount(); reset() }
     catch (cause) { setError(cause instanceof Error ? cause.message : 'Data belum berhasil dihapus') }
   }
@@ -1265,7 +1218,8 @@ export default function App() {
           <button onClick={() => { setTimelineOpen(true); setSettingsOpen(false) }}><Heart size={15} /><span><b>Perjalanan hubungan</b><small>{milestones.length} momen tersimpan</small></span></button>
           {installPrompt && <button onClick={installApp}><Download size={15} /><span><b>Pasang aplikasi Yuki</b><small>Tambahkan ke layar utama</small></span></button>}
           <button onClick={() => window.open('/privacy', '_blank', 'noopener')}><BookOpen size={15} /><span><b>Privasi pengguna</b><small>Data yang disimpan dan kontrolmu</small></span></button>
-          <button onClick={() => navigator.clipboard.writeText(session?.accessCode || '')}><Copy size={15} /><span><b>Salin kunci ingatan</b><small>{session?.accessCode || 'Belum tersedia'}</small></span></button>
+          <button onClick={() => setShowAccessCode(value => !value)}><KeyRound size={15} /><span><b>{showAccessCode ? 'Sembunyikan' : 'Tampilkan'} kunci ingatan</b><small>{showAccessCode ? (session?.accessCode || 'Belum tersedia') : 'YUKI-••••-••••'}</small></span></button>
+          <button onClick={() => navigator.clipboard.writeText(session?.accessCode || '')}><Copy size={15} /><span><b>Salin kunci ingatan</b><small>Disalin tanpa menampilkannya</small></span></button>
           <button className="danger" onClick={reset}><RotateCcw size={15} /><span><b>Mulai hubungan baru</b><small>Hapus sesi dari perangkat ini</small></span></button>
           <button className="danger" onClick={removeAccount}><X size={15} /><span><b>Hapus seluruh data</b><small>Permanen dari server Yuki</small></span></button>
         </div>}
@@ -1278,6 +1232,7 @@ export default function App() {
             type="button"
             className={`mode-btn ${chatMode === 'companion' ? 'active' : ''}`}
             onClick={() => setChatMode('companion')}
+            aria-label="Aktifkan mode Teman Ngobrol"
           >
             <MessageSquare size={13} />
             <span>Teman Ngobrol</span>
@@ -1286,6 +1241,7 @@ export default function App() {
             type="button"
             className={`mode-btn agent-btn ${chatMode === 'agent' ? 'active' : ''}`}
             onClick={() => setChatMode('agent')}
+            aria-label="Aktifkan mode Yuki Agent"
           >
             <Zap size={13} />
             <span>Yuki Agent</span>
@@ -1366,6 +1322,7 @@ export default function App() {
           </div>
           {message.role === 'assistant' && (
             <div className="message-tools">
+              {message.truncated && <button onClick={() => setInput(`Lanjutkan jawaban sebelumnya dari message ID ${message.messageId || index}, tanpa mengulang bagian yang sudah tampil.`)} aria-label="Lanjutkan jawaban yang terpotong" title="Lanjutkan jawaban"><RefreshCw size={12}/></button>}
               <button
                 className={feedback[index] === 1 ? 'selected' : ''}
                 onClick={() => rateMessage(index, message, 1)}

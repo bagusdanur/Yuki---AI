@@ -54,14 +54,17 @@ export async function executeReadUrl({ url }) {
       .replace(/\s{2,}/g, ' ')
       .trim()
 
-    const preview = cleaned.slice(0, 2500)
+    const preview = cleaned.slice(0, 5000)
+    const looksLikeJsShell = cleaned.length < 160 || /enable javascript|javascript is required|loading\.\.\./i.test(cleaned)
 
     return {
       url,
       title: title || 'Halaman Web',
       content: preview,
       length: preview.length,
-      truncated: cleaned.length > 2500
+      truncated: cleaned.length > 5000,
+      extraction: 'static_html',
+      browserFallback: looksLikeJsShell ? { required: true, reason: 'Konten statis kosong atau hanya shell JavaScript.' } : { required: false, reason: 'Konten HTML statis terbaca.' }
     }
   } catch (err) {
     return { error: `Gagal membaca halaman: ${err.message}` }

@@ -38,7 +38,13 @@ export async function executeValidateInteractiveArtifact(params = {}) {
     try { new vm.Script(source, { filename: `artifact-script-${index + 1}.js` }) }
     catch (error) { issues.push({ script: index + 1, message: error.message }) }
   })
-  return { success: issues.length === 0, valid: issues.length === 0, scripts_checked: scripts.length, issues: issues.length ? issues : undefined,
+  const controlCount = (content.match(/<(?:button|input|select|textarea)\b/gi) || []).length
+  const eventBindings = (content.match(/addEventListener\s*\(|\bon(?:click|input|change|submit|pointerdown|touchstart)\s*=/gi) || []).length
+  const canvasLoops = (content.match(/requestAnimationFrame\s*\(|setInterval\s*\(/gi) || []).length
+  const smokeTest = { mode: 'static-safe', controlsFound: controlCount, eventBindingsFound: eventBindings, animationLoopsFound: canvasLoops,
+    pass: controlCount === 0 || eventBindings > 0 }
+  if (!smokeTest.pass) issues.push({ type: 'InteractionSmokeTest', message: 'Kontrol ditemukan tetapi tidak ada event binding utama.' })
+  return { success: issues.length === 0, valid: issues.length === 0, scripts_checked: scripts.length, smoke_test: smokeTest, issues: issues.length ? issues : undefined,
     error: issues.length ? `Ditemukan ${issues.length} error sintaks JavaScript.` : undefined }
 }
 
@@ -419,6 +425,8 @@ export async function executeBuildInteractiveArtifact(params = {}, context = {})
 
   return {
     success: true,
+    validated: true,
+    validation,
     message: `Artifact "${cleanTitle}" (v${savedRecord.version || 1}) berhasil disimpan di folder "${cleanUsername}/${userFileName}".`,
     design_review: design,
     artifact: {

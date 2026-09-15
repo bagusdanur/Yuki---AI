@@ -46,7 +46,21 @@ export async function http_api_request({ url, method = 'GET', headers = {}, body
       }
     }
 
-    const res = await fetch(targetUrl, fetchOptions)
+    const redirectChain = []
+    let currentUrl = targetUrl
+    let res
+    for (let redirects = 0; redirects <= 5; redirects += 1) {
+      res = await fetch(currentUrl, { ...fetchOptions, redirect: 'manual' })
+      if (![301, 302, 303, 307, 308].includes(res.status)) break
+      const location = res.headers.get('location')
+      if (!location) break
+      const nextUrl = new URL(location, currentUrl).toString()
+      const redirectSafety = await validateSafeOutboundUrl(nextUrl)
+      if (!redirectSafety.safe) return { success: false, error: `[Keamanan Redirect]: ${redirectSafety.reason}`, redirectChain }
+      redirectChain.push({ status: res.status, from: currentUrl, to: redirectSafety.cleanUrl })
+      currentUrl = redirectSafety.cleanUrl
+      if (redirects === 5) return { success: false, error: 'Terlalu banyak redirect (maksimal 5).', redirectChain }
+    }
     const durationMs = Date.now() - startTime
 
     const resHeaders = {}
@@ -66,12 +80,15 @@ export async function http_api_request({ url, method = 'GET', headers = {}, body
 
     return {
       success: true,
-      url: targetUrl,
+      url: currentUrl,
+      requestedUrl: targetUrl,
       method: httpMethod,
       status: res.status,
       statusText: res.statusText,
       durationMs,
       ok: res.ok,
+      responseSize: Buffer.byteLength(text),
+      redirectChain,
       headers: resHeaders,
       json: parsedJson,
       bodyPreview: !parsedJson ? truncatedBody : undefined
