@@ -6,6 +6,9 @@
     "dev": "vite --config vite.config.ts",
     "build": "vite build --config vite.config.ts",
     "eval:character": "node scripts/eval-character.mjs",
+    "test:workspace": "node scripts/test-workspace-security.mjs",
+    "test:agent-progress": "node scripts/test-agent-progress.mjs",
+    "test:agent-tools": "node scripts/test-agent-tools.mjs",
     "backup": "node scripts/backup-db.mjs",
     "load:test": "node scripts/load-test.mjs",
     "start": "node server.js"

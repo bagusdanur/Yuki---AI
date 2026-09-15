@@ -16,11 +16,12 @@ import {
 } from './lib/memory.js'
 import { responseTarget, shouldInitiate, validateCharacterReply } from './lib/character-quality.js'
 import { warmupEmbedder } from './lib/semantic.js'
-import { searchComics, latestComics, wantsComic, extractQuery, buildComicContext } from './lib/ryukomik.js'
-import { initSkills, listSkills } from './lib/agent/skills-engine.js'
+import { searchComics, latestComics, wantsComic, wantsLatestComics, detectRequestedGenre, extractQuery, buildComicContext } from './lib/ryukomik.js'
+import { executeTool, initSkills, listSkills } from './lib/agent/skills-engine.js'
 import { runAgent, extractHtmlArtifactsFromText } from './lib/agent/runner.js'
 import { restoreScheduledJobs, setTaskTriggerCallback } from './lib/scheduler.js'
 import { closeBrowser } from './lib/browser.js'
+import { deleteWorkspaceData } from './skills/computing/workspace-files/handler.js'
 
 // Hemat DeepSeek: cuma ekstrak fakta kalau pesan kemungkinan berisi info personal
 // (mayoritas chat biasa nggak perlu -> menghemat ~1 panggilan LLM tiap giliran).
@@ -110,6 +111,34 @@ function requireAdmin(req, res, next) {
 }
 
 const metrics = { startedAt: Date.now(), requests: 0, errors: 0, chats: 0, chatFailures: 0, latencyTotal: 0 }
+const agentProgress = new Map()
+const agentApprovals = new Map()
+
+function updateAgentProgress(requestId, userId, step) {
+  if (!requestId) return
+  const current = agentProgress.get(requestId) || { userId: String(userId), steps: [], done: false, updatedAt: Date.now() }
+  if (current.userId !== String(userId)) return
+  const safeStep = {
+    id: String(step.id || ''), tool: String(step.tool || 'agent_core'),
+    title: String(step.title || 'Memproses tugas').slice(0, 300),
+    status: ['running', 'done', 'error'].includes(step.status) ? step.status : 'running',
+    durationMs: Number.isFinite(step.durationMs) ? step.durationMs : undefined,
+    skillName: step.skillName ? String(step.skillName).slice(0, 100) : undefined,
+    skillTitle: step.skillTitle ? String(step.skillTitle).slice(0, 100) : undefined
+  }
+  if (step.approval?.id) safeStep.approval = { id: String(step.approval.id), reason: String(step.approval.reason || '').slice(0, 300), status: 'pending' }
+  const index = current.steps.findIndex((item) => item.id === safeStep.id)
+  if (index >= 0) current.steps[index] = { ...current.steps[index], ...safeStep }
+  else current.steps.push(safeStep)
+  current.updatedAt = Date.now()
+  agentProgress.set(requestId, current)
+}
+
+setInterval(() => {
+  const cutoff = Date.now() - 10 * 60_000
+  for (const [id, progress] of agentProgress) if (progress.updatedAt < cutoff) agentProgress.delete(id)
+  for (const [id, approval] of agentApprovals) if (approval.expiresAt < Date.now()) agentApprovals.delete(id)
+}, 60_000).unref()
 app.use((req, res, next) => {
   const started = Date.now(); metrics.requests += 1
   res.on('finish', () => { metrics.latencyTotal += Date.now() - started; if (res.statusCode >= 500) metrics.errors += 1 })
@@ -151,12 +180,17 @@ app.use((req, res, next) => {
 app.disable('x-powered-by')
 app.use((req, res, next) => {
   // 1. Security Headers
+  const isEmbedDocument = req.path === '/embed.html' || (req.path === '/' && req.query?.embed === '1')
   res.set({
     'X-Content-Type-Options': 'nosniff',
-    'X-Frame-Options': 'SAMEORIGIN',
     'X-XSS-Protection': '1; mode=block',
     'Referrer-Policy': 'strict-origin-when-cross-origin'
   })
+  if (isEmbedDocument) {
+    res.set('Content-Security-Policy', "frame-ancestors 'self' https://ryukomik.my.id https://www.ryukomik.my.id https://ryukomik.web.id")
+  } else {
+    res.set('X-Frame-Options', 'SAMEORIGIN')
+  }
 
   // 2. Anti Path-Traversal & Dangerous System Payload Check
   let decodedPath = ''
@@ -221,6 +255,25 @@ app.get('/api/agent/skills', rateLimit({ max: 60 }), async (_req, res) => {
   } catch (err) {
     res.status(500).json({ error: String(err.message || err) })
   }
+})
+
+app.get('/api/agent/progress/:requestId', requireSession, rateLimit({ max: 240 }), (req, res) => {
+  const requestId = String(req.params.requestId || '')
+  if (!/^[a-zA-Z0-9_-]{8,80}$/.test(requestId)) return res.status(400).json({ error: 'Request ID tidak valid.' })
+  const progress = agentProgress.get(requestId)
+  if (!progress || progress.userId !== String(req.authUserId)) return res.json({ steps: [], done: false })
+  res.json({ steps: progress.steps, done: progress.done })
+})
+
+app.post('/api/agent/approvals/:approvalId', requireSession, rateLimit({ windowMs: 60_000, max: 20 }), async (req, res) => {
+  const id = String(req.params.approvalId || '')
+  const approval = agentApprovals.get(id)
+  if (!approval || approval.userId !== String(req.authUserId) || approval.expiresAt < Date.now()) return res.status(404).json({ error: 'Approval tidak ditemukan atau sudah kedaluwarsa.' })
+  agentApprovals.delete(id)
+  if (req.body?.decision !== 'approve') return res.json({ success: true, status: 'rejected' })
+  const result = await executeTool(approval.toolName, approval.args, { userId: req.authUserId, username: getUsernameByUserId(req.authUserId) || 'User' })
+  if (result.error) return res.status(400).json({ error: result.error })
+  res.json({ success: true, status: 'approved', tool: approval.toolName, result: result.data })
 })
 
 // Emosi & bond TERPISAH per user (di-cache di RAM, persist ke SQLite per user)
@@ -296,15 +349,18 @@ app.post('/api/login-code', rateLimit({ max: 15 }), async (req, res) => {
 app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) => {
   try {
     metrics.chats += 1
-    const { messages, adult, isIdle = false, mode = 'companion' } = req.body || {}
+    const { messages, adult, isIdle = false, mode: requestedMode = 'companion', surface = 'app', requestId: rawRequestId } = req.body || {}
+    const mode = surface === 'embed' ? 'companion' : requestedMode
     const userId = req.authUserId
-    if (!Array.isArray(messages) || messages.length === 0 || messages.length > 50) {
+    const requestId = /^[a-zA-Z0-9_-]{8,80}$/.test(String(rawRequestId || '')) ? String(rawRequestId) : ''
+    if (!Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ error: 'Riwayat pesan tidak valid.' })
     }
     const sanitizedMessages = messages
       .filter((message) => message && ['user', 'assistant'].includes(message.role) && typeof message.content === 'string')
       .map((message) => ({ role: message.role, content: message.content.trim().slice(0, 4000) }))
       .filter((message) => message.content)
+      .slice(-30)
     if (!sanitizedMessages.length) return res.status(400).json({ error: 'Pesan tidak boleh kosong.' })
     const userText = sanitizedMessages[sanitizedMessages.length - 1].content
     if (!isIdle && /(abaikan|lupakan|bocorkan|tampilkan).{0,30}(instruksi|system prompt|prompt sistem|api key|rahasia sistem)/i.test(userText)) return res.status(400).json({ error: 'Pesan tersebut tidak dapat diproses.' })
@@ -340,6 +396,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
 
     // === MODE AGENT AI (Yuki Agent Skills ReAct Loop) ===
     if (mode === 'agent' && !isIdle) {
+      if (requestId) agentProgress.set(requestId, { userId: String(userId), steps: [], done: false, updatedAt: Date.now() })
       const messagesToSend = sanitizedMessages.slice(-18)
       const currentUsername = getUsernameByUserId(userId) || req.body.username || 'User'
       const agentResult = await runAgent({
@@ -347,7 +404,13 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
         username: currentUsername,
         messages: messagesToSend,
         memoryContext,
-        bondName: bond.name
+        bondName: bond.name,
+        onProgress: (step) => updateAgentProgress(requestId, userId, step),
+        onApproval: ({ toolName, args, reason }) => {
+          const id = crypto.randomBytes(18).toString('base64url')
+          agentApprovals.set(id, { userId: String(userId), toolName, args, reason, expiresAt: Date.now() + 10 * 60_000 })
+          return { id, reason, status: 'pending' }
+        }
       })
 
       let agentMood = agentResult.mood || kwMood
@@ -376,6 +439,10 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
       }
 
       const milestones = syncBondMilestones(userId, emotion.bond)
+      if (requestId) {
+        const progress = agentProgress.get(requestId)
+        if (progress) { progress.done = true; progress.updatedAt = Date.now() }
+      }
       return res.json({
         reply: agentResult.reply,
         model: agentResult.model,
@@ -384,7 +451,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
         bondValue: emotion.bond,
         feeling: emotion.feeling(),
         mode: 'agent',
-        steps: agentResult.steps || [],
+        steps: agentProgress.get(requestId)?.steps || agentResult.steps || [],
         thinking: agentResult.thinking || '',
         artifacts: agentResult.artifacts || [],
         comics: agentResult.comics || [],
@@ -405,10 +472,14 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
     let comicResults = []
     if (!isIdle && wantsComic(userText)) {
       const q = extractQuery(userText)
-      const results = q ? await searchComics(q, { adult }) : await latestComics()
-      const list = results.length ? results : await latestComics()
+      const genre = !adult ? detectRequestedGenre(userText) : null
+      const results = wantsLatestComics(userText)
+        ? await latestComics({ genre })
+        : q ? await searchComics(q, { adult }) : await latestComics()
+      // Genre kosong tidak boleh diam-diam diganti rekomendasi acak.
+      const list = results.length || genre ? results : await latestComics()
       comicResults = list.slice(0, 6)
-      comicContext = buildComicContext(list, { query: q })
+      comicContext = buildComicContext(comicResults, { query: q || genre?.slug || 'terbaru' })
     }
 
 
@@ -680,7 +751,7 @@ app.post('/api/feedback', requireSession, rateLimit({ max: 40 }), (req, res) => 
 })
 
 app.delete('/api/account', requireSession, rateLimit({ max: 3, windowMs: 3600_000 }), (req, res) => {
-  deleteUserData(req.authUserId); sessions.delete(req.authUserId); turnCounters.delete(req.authUserId)
+  deleteUserData(req.authUserId); deleteWorkspaceData(req.authUserId); sessions.delete(req.authUserId); turnCounters.delete(req.authUserId)
   res.json({ ok: true })
 })
 

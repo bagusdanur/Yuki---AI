@@ -31,6 +31,7 @@ export interface AgentStep {
   durationMs?: number
   skillName?: string
   skillTitle?: string
+  approval?: { id: string; reason: string; status: 'pending' | 'approved' | 'rejected' }
 }
 
 export interface SkillInfo {
@@ -74,6 +75,11 @@ export interface ChatResponse {
   messageId?: number
   milestones?: Milestone[]
   comics?: ComicRecommendation[]
+}
+
+export interface AgentProgressResponse {
+  steps: AgentStep[]
+  done: boolean
 }
 
 export interface Session {

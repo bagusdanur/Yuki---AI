@@ -27,6 +27,9 @@ tools:
         limit:
           type: integer
           description: Jumlah komik yang ingin diambil (default 6)
+        genre:
+          type: string
+          description: Genre opsional untuk update terbaru, misalnya romance atau aksi
 ---
 
 # Ryukomik Expert Skill
@@ -38,4 +41,5 @@ Gunakan skill ini ketika pengguna:
 
 ## Panduan Penggunaan
 - Hubungkan dengan URL https://ryukomik.my.id.
-- Jelaskan genre, format (MANHWA/MANGA/MANHUA), dan chapter terakhir secara menarik.
+- Untuk permintaan genre, jangan campurkan genre lain meskipun API sumber mengembalikannya.
+- Jelaskan genre, format (MANHWA/MANGA/MANHUA), chapter terakhir, dan waktu update secara menarik.

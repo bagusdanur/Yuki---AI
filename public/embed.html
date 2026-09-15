@@ -5,6 +5,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Yuki</title>
+  <script>
+    // Embed memakai aplikasi utama agar desain selalu identik, tetapi dikunci ke mode Teman Ngobrol.
+    (() => {
+      const target = new URL('/', window.location.origin)
+      const current = new URLSearchParams(window.location.search)
+      current.forEach((value, key) => target.searchParams.set(key, value))
+      target.searchParams.set('embed', '1')
+      window.location.replace(target.toString())
+    })()
+  </script>
   <style>
     :root {
       --bg: #0a0e16;

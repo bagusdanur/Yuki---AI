@@ -1,4 +1,4 @@
-import type { BookmarkedComic, ChatMode, ChatResponse, ComicRecommendation, Message, Milestone, SkillInfo } from './types'
+import type { AgentProgressResponse, BookmarkedComic, ChatMode, ChatResponse, ComicRecommendation, Message, Milestone, SkillInfo } from './types'
 
 async function parse<T>(response: Response): Promise<T> {
   const rawText = await response.text()
@@ -62,12 +62,13 @@ export async function restore(accessCode: string) {
   })
 }
 
-export async function sendChat(userId: string, messages: Message[], isIdle = false, mode: ChatMode = 'companion') {
+export async function sendChat(userId: string, messages: Message[], isIdle = false, mode: ChatMode = 'companion', requestId = '') {
   // Padatkan pesan-pesan lampau agar payload ringan dan tidak overload
-  const sanitizedMessages = messages.map((m, idx) => {
+  const recentMessages = messages.slice(-30)
+  const sanitizedMessages = recentMessages.map((m, idx) => {
     let content = m.content || ''
     // Jangan potong pesan terakhir dari user
-    if (idx === messages.length - 1 && m.role === 'user') {
+    if (idx === recentMessages.length - 1 && m.role === 'user') {
       return { role: m.role, content }
     }
     // Ringkas lampiran kode artifact HTML raksasa dari pesan lama
@@ -80,9 +81,20 @@ export async function sendChat(userId: string, messages: Message[], isIdle = fal
     return { role: m.role, content }
   })
 
+  const surface = new URLSearchParams(window.location.search).get('embed') === '1' ? 'embed' : 'app'
   return request<ChatResponse>('/api/chat', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, messages: sanitizedMessages, isIdle, mode }),
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, messages: sanitizedMessages, isIdle, mode, requestId, surface }),
   }, 150_000)
+}
+
+export async function getAgentProgress(requestId: string) {
+  return request<AgentProgressResponse>(`/api/agent/progress/${encodeURIComponent(requestId)}`, { method: 'GET' }, 10_000, 0)
+}
+
+export async function decideAgentApproval(approvalId: string, decision: 'approve' | 'reject') {
+  return request<{ success: true; status: 'approved' | 'rejected'; tool?: string; result?: unknown }>(`/api/agent/approvals/${encodeURIComponent(approvalId)}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ decision })
+  }, 30_000, 0)
 }
 
 export async function getSkills() {

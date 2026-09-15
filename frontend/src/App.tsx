@@ -6,8 +6,8 @@ import {
   Terminal, ThumbsDown, ThumbsUp, Volume2, WifiOff, Wrench, X, Zap
 } from 'lucide-react'
 import {
-  addBookmark, deleteAccount, getBookmarks, getRelationship,
-  getSkills, register, removeBookmark, restore, sendChat, sendFeedback, speak
+  addBookmark, decideAgentApproval, deleteAccount, getBookmarks, getRelationship,
+  getAgentProgress, getSkills, register, removeBookmark, restore, sendChat, sendFeedback, speak
 } from './api'
 import type {
   AgentStep, ArtifactItem, BookmarkedComic, ChatMode, ComicRecommendation,
@@ -18,6 +18,13 @@ const SESSION_KEYS = {
   userId: 'yuki_uid_v3', username: 'yuki_username_v3', accessCode: 'yuki_access_code_v3',
   bond: 'yuki_bond_v3', bondValue: 'yuki_bond_value_v3', mood: 'yuki_mood_v3', feeling: 'yuki_feeling_v3',
   sessionToken: 'yuki_session_token_v3', mode: 'yuki_mode_v3'
+}
+
+const EMBED_COMPANION_ONLY = new URLSearchParams(window.location.search).get('embed') === '1'
+  || /\/embed(?:\.html)?$/i.test(window.location.pathname)
+
+function companionMessages(messages: Message[] = []) {
+  return EMBED_COMPANION_ONLY ? messages.filter(message => message.mode !== 'agent') : messages
 }
 
 const moodImage: Record<string, string> = {
@@ -100,8 +107,27 @@ function ComicCard({ comic, isBookmarked, onToggleBookmark }: {
   isBookmarked: boolean
   onToggleBookmark: (comic: ComicRecommendation) => void
 }) {
+  const openComic = () => {
+    if (!comic.url) return
+    const target = new URL(comic.url, window.location.origin)
+    if (target.protocol !== 'https:' && target.protocol !== 'http:') return
+    window.open(target.toString(), '_blank', 'noopener,noreferrer')
+  }
+
   return (
-    <div className="comic-card">
+    <div
+      className="comic-card"
+      role="link"
+      tabIndex={0}
+      aria-label={`Buka ${comic.title} di Ryukomik`}
+      onClick={openComic}
+      onKeyDown={event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          openComic()
+        }
+      }}
+    >
       <div className="comic-cover">
         {comic.image ? <img src={comic.image} alt="" loading="lazy" referrerPolicy="no-referrer" /> : <BookOpen size={20} />}
       </div>
@@ -124,13 +150,16 @@ function ComicCard({ comic, isBookmarked, onToggleBookmark }: {
         <button
           type="button"
           className={`comic-bookmark-btn ${isBookmarked ? 'saved' : ''}`}
-          onClick={() => onToggleBookmark(comic)}
+          onClick={event => {
+            event.stopPropagation()
+            onToggleBookmark(comic)
+          }}
           aria-label={isBookmarked ? 'Hapus bookmark komik' : 'Simpan komik'}
           title={isBookmarked ? 'Tersimpan' : 'Simpan komik'}
         >
           <Bookmark size={13} fill={isBookmarked ? 'currentColor' : 'none'} />
         </button>
-        <a className="comic-open" href={comic.url} target="_blank" rel="noreferrer">
+        <a className="comic-open" href={comic.url} target="_blank" rel="noreferrer" onClick={event => event.stopPropagation()}>
           BACA
         </a>
       </div>
@@ -168,16 +197,17 @@ function AgentThoughtCard({ thinking }: { thinking?: string }) {
   )
 }
 
-function AgentStepsCard({ steps }: { steps?: AgentStep[] }) {
+function AgentStepsCard({ steps, onApproval }: { steps?: AgentStep[]; onApproval?: (id: string, decision: 'approve' | 'reject') => void }) {
   const [open, setOpen] = useState(true)
   if (!steps || steps.length === 0) return null
+  const completed = steps.filter(step => step.status === 'done').length
 
   return (
     <div className="agent-steps-card">
       <div className="agent-steps-header">
         <span className="agent-steps-title">
           <Zap size={13} className="agent-zap-icon" />
-          <span><b>Proses Eksekusi Agent</b> ({steps.length} langkah tuntas)</span>
+          <span><b>Todo &amp; Progress Agent</b> ({completed}/{steps.length} selesai)</span>
         </span>
         <button
           type="button"
@@ -195,7 +225,9 @@ function AgentStepsCard({ steps }: { steps?: AgentStep[] }) {
           {steps.map((step, idx) => (
             <div className={`agent-step-item ${step.status || 'done'}`} key={step.id || idx}>
               <div className="agent-step-icon-col">
-                <span className="agent-step-check"><Check size={11} /></span>
+                <span className="agent-step-check">
+                  {step.status === 'error' ? <X size={11} /> : step.status === 'running' ? <LoaderCircle size={11} className="spin" /> : <Check size={11} />}
+                </span>
                 {idx < steps.length - 1 && <span className="agent-step-line" />}
               </div>
               <div className="agent-step-main-col">
@@ -206,6 +238,11 @@ function AgentStepsCard({ steps }: { steps?: AgentStep[] }) {
                   )}
                 </div>
                 <div className="agent-step-desc">{step.title}</div>
+                {step.approval?.status === 'pending' && <div className="agent-approval-actions">
+                  <small>{step.approval.reason}</small>
+                  <button type="button" onClick={() => onApproval?.(step.approval!.id, 'approve')}>Izinkan sekali</button>
+                  <button type="button" className="reject" onClick={() => onApproval?.(step.approval!.id, 'reject')}>Tolak</button>
+                </div>}
               </div>
             </div>
           ))}
@@ -291,7 +328,7 @@ function getContextualAgentPhases(query = ''): string[] {
   ]
 }
 
-function LiveAgentWorkingBubble({ userQuery = '' }: { userQuery?: string }) {
+function LiveAgentWorkingBubble({ steps = [] }: { steps?: AgentStep[] }) {
   const [seconds, setSeconds] = useState(0)
 
   useEffect(() => {
@@ -299,8 +336,10 @@ function LiveAgentWorkingBubble({ userQuery = '' }: { userQuery?: string }) {
     return () => clearInterval(timer)
   }, [])
 
-  const phases = useMemo(() => getContextualAgentPhases(userQuery), [userQuery])
-  const activeIndex = Math.min(Math.floor(seconds / 2.6), phases.length - 1)
+  const visibleSteps = steps.length ? steps : [{
+    id: 'request_start', tool: 'agent_core', skillTitle: 'Yuki Agent',
+    title: 'Mengirim tugas ke agent', status: 'running' as const, input: {}
+  }]
 
   return (
     <article className="message assistant agent-msg live-agent-working-bubble">
@@ -310,20 +349,21 @@ function LiveAgentWorkingBubble({ userQuery = '' }: { userQuery?: string }) {
       <div className="message-content live-agent-working-content">
         <div className="live-agent-badge-row">
           <span className="live-pulse-dot" />
-          <span><b>Working</b> — {seconds}s — Yuki Agent Process</span>
+          <span><b>Todo &amp; Progress</b> — {seconds}s — proses aktual</span>
         </div>
         <div className="live-agent-steps-stream">
-          {phases.slice(0, activeIndex + 1).map((phaseText, idx) => {
-            const isCompleted = idx < activeIndex
+          {visibleSteps.map((step, idx) => {
+            const isCompleted = step.status === 'done'
+            const isError = step.status === 'error'
             return (
               <div
-                className={`live-stream-step ${isCompleted ? 'completed' : 'current'}`}
-                key={idx}
+                className={`live-stream-step ${isCompleted ? 'completed' : isError ? 'error' : 'current'}`}
+                key={step.id || idx}
               >
                 <span className="live-step-status-icon">
-                  {isCompleted ? <Check size={12} className="check-icon" /> : <LoaderCircle size={12} className="spin" />}
+                  {isCompleted ? <Check size={12} className="check-icon" /> : isError ? <X size={12} /> : <LoaderCircle size={12} className="spin" />}
                 </span>
-                <span className="live-step-label">{phaseText}</span>
+                <span className="live-step-label">{step.title}</span>
               </div>
             )
           })}
@@ -687,6 +727,9 @@ function cleanMessageContent(text: string) {
   clean = clean.replace(/```(?:json)?\s*\{[\s\S]*?"(?:name|tool)":\s*"(?:html-canvas-builder|build_interactive_artifact)"[\s\S]*?```/gi, '')
   clean = clean.replace(/```(?:html|xml)?\s*\n\s*(?:<!DOCTYPE|<html)[\s\S]*?(?:```|$)/gi, '')
   clean = clean.replace(/<tool_call>[\s\S]*?<\/tool_call>/gi, '')
+  clean = clean.replace(/<call:[^>]{1,180}>[\s\S]*?<\\?\/call:[^>]{1,180}>\s*(?:Response\s*:\s*)?/gi, '')
+  clean = clean.replace(/\\?<call:(?:default_api:)?[a-z][a-z0-9_]{2,60}\s*\{[\s\S]*$/gi, '')
+  clean = clean.replace(/(?:^|\n)\s*(?:style|call):default_api:[a-z][a-z0-9_]{2,60}\s*\{[\s\S]*$/gi, '')
   return clean.trim()
 }
 
@@ -709,11 +752,12 @@ function HermesSelfImprovementCard({ text }: { text: string }) {
   )
 }
 
-function MessageBody({ message, bookmarks, onToggleBookmark, onOpenArtifact }: {
+function MessageBody({ message, bookmarks, onToggleBookmark, onOpenArtifact, onApproval }: {
   message: Message
   bookmarks: BookmarkedComic[]
   onToggleBookmark: (comic: ComicRecommendation) => void
   onOpenArtifact: (artifact: ArtifactItem) => void
+  onApproval?: (id: string, decision: 'approve' | 'reject') => void
 }) {
   const legacy = legacyComics(message.content)
   const comics = message.comics?.length ? message.comics : legacy.comics
@@ -730,7 +774,8 @@ function MessageBody({ message, bookmarks, onToggleBookmark, onOpenArtifact }: {
     return true
   }).join('\n')
 
-  const parts = textWithoutSI.split(/(\*[^*\n]{2,100}\*)/g).filter(Boolean)
+  // Gestur hanya satu-bintang; jangan salah menangkap isi Markdown bold **...**.
+  const parts = textWithoutSI.split(/((?<!\*)\*(?!\*)[^*\n]{2,100}(?<!\*)\*(?!\*))/g).filter(Boolean)
   const bookmarkedUrls = new Set(bookmarks.map(b => b.url))
 
   return <>
@@ -738,12 +783,12 @@ function MessageBody({ message, bookmarks, onToggleBookmark, onOpenArtifact }: {
       <AgentThoughtCard thinking={message.thinking} />
     )}
     {message.steps && message.steps.length > 0 && (
-      <AgentStepsCard steps={message.steps} />
+      <AgentStepsCard steps={message.steps} onApproval={onApproval} />
     )}
     {selfImprovementLines.map((siText, idx) => (
       <HermesSelfImprovementCard text={siText} key={idx} />
     ))}
-    {parts.map((part, index) => part.startsWith('*') && part.endsWith('*')
+    {parts.map((part, index) => /^\*(?!\*)[^*\n]+\*$/.test(part)
       ? <em className="action" key={index}>{part.slice(1, -1).trim()}</em>
       : <span key={index}>{part.replace(/^\s*\*\s*$/gm, '')}</span>)}
     {message.artifacts && message.artifacts.length > 0 && (() => {
@@ -925,7 +970,7 @@ function Onboarding({ onReady }: { onReady: (session: Session, history?: Message
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(() => getSession())
-  const [messages, setMessages] = useState<Message[]>(() => loadHistory(getSession()?.userId))
+  const [messages, setMessages] = useState<Message[]>(() => companionMessages(loadHistory(getSession()?.userId)))
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -933,7 +978,7 @@ export default function App() {
   const [bond, setBond] = useState(() => localStorage.getItem(SESSION_KEYS.bond) || 'orang asing')
   const [bondValue, setBondValue] = useState(() => Number(localStorage.getItem(SESSION_KEYS.bondValue)) || 0)
   const [feeling, setFeeling] = useState(() => localStorage.getItem(SESSION_KEYS.feeling) || 'Lagi kalem, jawab seperlunya.')
-  const [chatMode, setChatMode] = useState<ChatMode>(() => (localStorage.getItem(SESSION_KEYS.mode) as ChatMode) || 'companion')
+  const [chatMode, setChatMode] = useState<ChatMode>(() => EMBED_COMPANION_ONLY ? 'companion' : (localStorage.getItem(SESSION_KEYS.mode) as ChatMode) || 'companion')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [avatarCompact, setAvatarCompact] = useState(false)
   const [blinking, setBlinking] = useState(false)
@@ -949,13 +994,20 @@ export default function App() {
   const [skillsModalOpen, setSkillsModalOpen] = useState(false)
   const [selectedArtifact, setSelectedArtifact] = useState<ArtifactItem | null>(null)
   const [feedback, setFeedback] = useState<Record<number, 1 | -1>>({})
+  const [liveAgentSteps, setLiveAgentSteps] = useState<AgentStep[]>([])
   const endRef = useRef<HTMLDivElement>(null)
   const currentAudio = useRef<HTMLAudioElement | null>(null)
   const requestTimers = useRef<number[]>([])
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [messages, busy])
   useEffect(() => { if (session) localStorage.setItem(historyKey(session.userId), JSON.stringify(messages.slice(-40))) }, [messages, session])
-  useEffect(() => { localStorage.setItem(SESSION_KEYS.mode, chatMode) }, [chatMode])
+  useEffect(() => {
+    if (EMBED_COMPANION_ONLY) {
+      if (chatMode !== 'companion') setChatMode('companion')
+      return
+    }
+    localStorage.setItem(SESSION_KEYS.mode, chatMode)
+  }, [chatMode])
 
   useEffect(() => {
     const online = () => setConnection('idle')
@@ -989,7 +1041,7 @@ export default function App() {
       setBond(data.bond); setBondValue(data.bondValue)
     }).catch(() => {})
     getBookmarks().then(data => setBookmarks(data.bookmarks || [])).catch(() => {})
-    getSkills().then(data => setSkills(data.skills || [])).catch(() => {})
+    if (!EMBED_COMPANION_ONLY) getSkills().then(data => setSkills(data.skills || [])).catch(() => {})
   }, [session?.userId, session?.sessionToken])
 
   const avatarExpression = useMemo(() => moodImage[mood] || 'tenang', [mood])
@@ -1022,7 +1074,7 @@ export default function App() {
   }, [avatarExpression, canBlink])
 
   function ready(next: Session, restored: Message[] = [], restoredBond = 0, restoredMilestones: Milestone[] = []) {
-    saveSession(next); setSession(next); setMessages(restored); setError('')
+    saveSession(next); setSession(next); setMessages(companionMessages(restored)); setError('')
     setMilestones(restoredMilestones)
     if (restoredBond > 0) {
       const restoredName = bondNameFromValue(restoredBond)
@@ -1052,23 +1104,34 @@ export default function App() {
     const content = input.trim()
     if (!content || busy || !session) return
     navigator.vibrate?.(10)
-    const next: Message[] = [...messages, { role: 'user', content, mode: chatMode }]
-    setMessages(next); setInput(''); setBusy(true); setError(''); setConnection('thinking')
+    const effectiveMode: ChatMode = EMBED_COMPANION_ONLY ? 'companion' : chatMode
+    const next: Message[] = [...messages, { role: 'user', content, mode: effectiveMode }]
+    setMessages(next); setInput(''); setBusy(true); setError(''); setConnection('thinking'); setLiveAgentSteps([])
     requestTimers.current.forEach(window.clearTimeout)
     requestTimers.current = [
       window.setTimeout(() => setConnection('slow'), 8_000),
       window.setTimeout(() => setConnection('retrying'), 22_000)
     ]
     let failed = false
+    const requestId = effectiveMode === 'agent' ? `agent_${crypto.randomUUID().replaceAll('-', '')}` : ''
+    let progressTimer: number | undefined
     try {
-      const result = await sendChat(session.userId, next, false, chatMode)
+      if (requestId) {
+        progressTimer = window.setInterval(async () => {
+          try {
+            const progress = await getAgentProgress(requestId)
+            if (progress.steps.length) setLiveAgentSteps(progress.steps)
+          } catch {}
+        }, 500)
+      }
+      const result = await sendChat(session.userId, next, false, effectiveMode, requestId)
       if (!result.reply?.trim()) throw new Error('Yuki mengirim balasan kosong. Coba lagi.')
       setMessages([...next, {
         role: 'assistant',
         content: result.reply,
         comics: result.comics || [],
         messageId: result.messageId,
-        mode: result.mode || chatMode,
+        mode: EMBED_COMPANION_ONLY ? 'companion' : result.mode || effectiveMode,
         steps: result.steps || [],
         thinking: result.thinking || '',
         artifacts: result.artifacts || []
@@ -1085,8 +1148,9 @@ export default function App() {
       setError(cause instanceof Error ? cause.message : 'Yuki sedang tidak bisa menjawab')
       window.setTimeout(() => setConnection(navigator.onLine ? 'idle' : 'offline'), 4_000)
     } finally {
+      if (progressTimer !== undefined) window.clearInterval(progressTimer)
       requestTimers.current.forEach(window.clearTimeout); requestTimers.current = []
-      setBusy(false); if (!failed) setConnection(navigator.onLine ? 'idle' : 'offline')
+      setBusy(false); setLiveAgentSteps([]); if (!failed) setConnection(navigator.onLine ? 'idle' : 'offline')
     }
   }
 
@@ -1113,6 +1177,18 @@ export default function App() {
     setFeedback(current => ({ ...current, [index]: rating }))
     try { await sendFeedback(session.userId, message.messageId, rating) }
     catch { setFeedback(current => { const next = { ...current }; delete next[index]; return next }) }
+  }
+
+  async function handleAgentApproval(id: string, decision: 'approve' | 'reject') {
+    try {
+      const result = await decideAgentApproval(id, decision)
+      setMessages(current => current.map(message => ({ ...message, steps: message.steps?.map(step => step.approval?.id === id
+        ? { ...step, approval: { ...step.approval, status: result.status }, status: result.status === 'approved' ? 'done' : 'error' }
+        : step) })))
+      setMessages(current => [...current, { role: 'assistant', mode: 'agent', content: result.status === 'approved'
+        ? '*mengangguk kecil lalu menjalankan tindakan yang kamu izinkan*\n\nTindakan berisiko itu sudah dijalankan satu kali. Hasilnya tercatat pada workspace.'
+        : '*menarik tangannya dari workspace*\n\nBaik, tindakan itu dibatalkan dan tidak dijalankan.' }])
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Approval gagal diproses.') }
   }
 
   async function installApp() {
@@ -1184,7 +1260,7 @@ export default function App() {
           <button onClick={() => setSettingsOpen(!settingsOpen)} aria-label="Pengaturan"><Settings size={17} /></button>
         </div>
         {settingsOpen && <div className="settings-card">
-          <button onClick={() => { setSkillsModalOpen(true); setSettingsOpen(false) }}><Wrench size={15} /><span><b>Katalog Skills Yuki Agent</b><small>{skills.length || 14} skills aktif</small></span></button>
+          {!EMBED_COMPANION_ONLY && <button onClick={() => { setSkillsModalOpen(true); setSettingsOpen(false) }}><Wrench size={15} /><span><b>Katalog Skills Yuki Agent</b><small>{skills.length || 14} skills aktif</small></span></button>}
           <button onClick={() => { setBookmarksOpen(true); setSettingsOpen(false) }}><Bookmark size={15} /><span><b>Komik tersimpan</b><small>{bookmarks.length} judul tersimpan</small></span></button>
           <button onClick={() => { setTimelineOpen(true); setSettingsOpen(false) }}><Heart size={15} /><span><b>Perjalanan hubungan</b><small>{milestones.length} momen tersimpan</small></span></button>
           {installPrompt && <button onClick={installApp}><Download size={15} /><span><b>Pasang aplikasi Yuki</b><small>Tambahkan ke layar utama</small></span></button>}
@@ -1195,8 +1271,8 @@ export default function App() {
         </div>}
       </header>
 
-      {/* Mode Switcher Bar */}
-      <div className="mode-switcher-bar">
+      {/* Embed dikunci sebagai companion-only; switcher hanya tersedia di aplikasi penuh. */}
+      {!EMBED_COMPANION_ONLY && <div className="mode-switcher-bar">
         <div className="mode-switcher-pill" role="tablist">
           <button
             type="button"
@@ -1216,7 +1292,7 @@ export default function App() {
           </button>
         </div>
 
-        {chatMode === 'agent' && (
+        {chatMode === 'agent' && <div className="agent-workspace-actions">
           <button
             type="button"
             className="skills-catalog-pill"
@@ -1224,16 +1300,16 @@ export default function App() {
             title="Lihat seluruh Skills aktif Yuki Agent"
           >
             <Wrench size={12} />
-            <span>{skills.length || 14} Skills</span>
+            <span>{skills.length || 16} Skills</span>
           </button>
-        )}
-      </div>
+        </div>}
+      </div>}
 
-      {skillsModalOpen && (
+      {!EMBED_COMPANION_ONLY && skillsModalOpen && (
         <SkillsCatalogModal skills={skills} onClose={() => setSkillsModalOpen(false)} />
       )}
 
-      {selectedArtifact && (
+      {!EMBED_COMPANION_ONLY && selectedArtifact && (
         <CodexArtifactModal artifact={selectedArtifact} onClose={() => setSelectedArtifact(null)} />
       )}
 
@@ -1285,6 +1361,7 @@ export default function App() {
               bookmarks={bookmarks}
               onToggleBookmark={handleToggleBookmark}
               onOpenArtifact={art => setSelectedArtifact(art)}
+              onApproval={handleAgentApproval}
             />
           </div>
           {message.role === 'assistant' && (
@@ -1310,7 +1387,7 @@ export default function App() {
         </article>)}
         {busy && (
           chatMode === 'agent' ? (
-            <LiveAgentWorkingBubble userQuery={messages.filter(m => m.role === 'user').slice(-1)[0]?.content || input || ''} />
+            <LiveAgentWorkingBubble steps={liveAgentSteps} />
           ) : (
             <>
               <div className={`request-status ${connection}`}>

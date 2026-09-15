@@ -856,11 +856,11 @@
         </svg>
         Kunci Ingatan
       </a>
-      <a href="#yuki-agent" class="nav-item" data-sec="yuki-agent" style="color: #00f2fe; border-color: rgba(0, 242, 254, 0.2); background: rgba(0, 242, 254, 0.05);">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="stroke: #00f2fe;">
+      <a href="#yuki-agent" class="nav-item" data-sec="yuki-agent">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
         </svg>
-        Yuki Agent (14 Skills)
+        Yuki Agent (16 Skills)
       </a>
       <a href="#versi-3" class="nav-item" data-sec="versi-3">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18m9-9H3" /></svg>
@@ -1256,90 +1256,97 @@
 
     <!-- ==================== YUKI AGENT ==================== -->
     <section id="yuki-agent">
-      <div class="version-chip" style="color: #00f2fe; border-color: rgba(0, 242, 254, 0.4); background: rgba(0, 242, 254, 0.1);">AUTONOMOUS AI AGENT / 14 SKILLS & 22 TOOLS</div>
-      <h2>Yuki Agent — Mode Eksekusi Tugas, Tools & Subagents</h2>
-      <div class="subtitle">Asisten cerdas otonom berkemampuan level Hermes dengan Browser Automation, Parallel Subagents & Persistent Scheduler</div>
+      <div class="version-chip">AGENT RUNTIME / 16 SKILLS / 39 TOOLS</div>
+      <h2>Yuki Agent</h2>
+      <div class="subtitle">Mode eksekusi tugas dengan progress nyata, approval, dan workspace terisolasi</div>
 
       <p>
-        <strong>Yuki Agent</strong> adalah mode kerja otonom tingkat lanjut. Berbeda dari mode obrolan biasa (<em>Teman Ngobrol</em>), dalam mode Agent Yuki dibekali penalaran multi-langkah (<em>multi-step reasoning loop</em>), kemampuan delegasi paralel ke child subagents, manipulasi browser headless nyata, penjadwalan tugas otomatis, dan perakitan mini-aplikasi interaktif (Live Artifact Sandbox).
+        <strong>Yuki Agent</strong> dipakai untuk pekerjaan yang membutuhkan langkah terstruktur: menganalisis kode,
+        memperbaiki artifact yang sama, melakukan riset, menguji API, membuat agenda, atau menjalankan beberapa
+        subtask secara paralel. Persona Yuki tetap hadir, tetapi proses kerja dan hasil akhirnya ditampilkan secara jelas.
       </p>
 
-      <div class="card accent" style="border-color: rgba(0, 242, 254, 0.3); background: rgba(0, 242, 254, 0.03);">
-        <h3 style="color: #00f2fe;">Daftar 14 Skills Aktif Yuki Agent (22 Tools)</h3>
-        <p style="font-size: 13px; color: var(--muted); margin-bottom: 16px;">Setiap skill terisolasi dan bekerja secara mandiri melalui function calling yang teroptimasi token dan dilengkapi guardrail:</p>
-        <div class="persona-grid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
-          <div class="p-item"><div class="p-label" style="color: #00f2fe;">1. 🌐 BROWSER AGENT</div><div class="p-val">Membuka halaman web nyata dengan headless browser, merender JavaScript (SPA/React/Vue), mengambil screenshot, dan mengekstrak elemen CSS.</div></div>
-          <div class="p-item"><div class="p-label" style="color: #00f2fe;">2. 🤖 SUBAGENT DELEGATION</div><div class="p-val">Membagi tugas kompleks menjadi 2–4 subtask independen yang dikerjakan paralel oleh child workers, lalu merangkum hasilnya.</div></div>
-          <div class="p-item"><div class="p-label" style="color: #00f2fe;">3. ⏰ TASK SCHEDULER</div><div class="p-val">Membuat pengingat otomatis berulang (harian/mingguan) atau sekali waktu berbasis natural language yang persisten di database SQLite.</div></div>
-          <div class="p-item"><div class="p-label" style="color: #00f2fe;">4. 🎮 HTML/CANVAS BUILDER</div><div class="p-val">Merakit mini-game 2D, kalkulator, widget, chart visual, dan simulasi interaktif ke Live Artifact Sandbox.</div></div>
-          <div class="p-item"><div class="p-label" style="color: #00f2fe;">5. 🔍 CODE ANALYZER</div><div class="p-val">Mendeteksi bug, error stack trace, validasi sintaks (JS, TS, Python, JSON, SQL, HTML), dan rekomendasi refactoring.</div></div>
-          <div class="p-item"><div class="p-label" style="color: #00f2fe;">6. ⚡ REST API TESTER</div><div class="p-val">Melakukan live testing endpoint REST API / Webhook (GET, POST, PUT, DELETE) dengan metrik latency ms & response JSON.</div></div>
-          <div class="p-item"><div class="p-label" style="color: #00f2fe;">7. 📝 CODE SCRATCHPAD</div><div class="p-val">Mengeksekusi logika JavaScript kecil, manipulasi data, regex, dan simulasi algoritma di sandbox terisolasi.</div></div>
-          <div class="p-item"><div class="p-label" style="color: #00f2fe;">8. 🧮 SAFE CALCULATOR</div><div class="p-val">Kalkulasi matematika presisi, persentase diskon, trigonometri, dan perhitungan angka tanpa bias LLM.</div></div>
-          <div class="p-item"><div class="p-label" style="color: #00f2fe;">9. 📚 RYUKOMIK EXPERT</div><div class="p-val">Pencarian manga/manhwa/manhua, pemeriksaan update chapter terbaru, dan kurasi komik di Ryukomik.</div></div>
-          <div class="p-item"><div class="p-label" style="color: #00f2fe;">10. 📋 TASK & NOTES PLANNER</div><div class="p-val">Menyimpan dan mengelola to-do list, catatan belajar, dan agenda pengguna ke database persisten SQLite.</div></div>
-          <div class="p-item"><div class="p-label" style="color: #00f2fe;">11. 📅 DATETIME & TIMEZONE</div><div class="p-val">Pengecekan waktu presisi (WIB/WITA/WIT), kalender hari, selisih hari, dan hitung mundur tanggal target.</div></div>
-          <div class="p-item"><div class="p-label" style="color: #00f2fe;">12. 🔎 WEB SEARCH ENGINE</div><div class="p-val">Riset berita aktual, artikel anime terkini, jadwal rilis, dan informasi real-time dari internet.</div></div>
-          <div class="p-item"><div class="p-label" style="color: #00f2fe;">13. 📄 URL READER</div><div class="p-val">Membaca dan mengekstrak teks ringkas dari tautan web atau artikel online secara instan.</div></div>
-          <div class="p-item"><div class="p-label" style="color: #00f2fe;">14. 🧠 SELF-IMPROVEMENT</div><div class="p-val">Mencatat evaluasi mandiri, wawasan coding, dan pembaruan pengalaman agar Yuki semakin pintar di masa depan.</div></div>
+      <div class="card agent-summary">
+        <div class="section-heading">
+          <span class="section-icon"><i data-lucide="blocks"></i></span>
+          <div>
+            <h3>16 skills aktif</h3>
+            <p>Tool dipilih berdasarkan intent agar konteks tetap ringkas dan pemakaian token tidak boros.</p>
+          </div>
+        </div>
+        <div class="persona-grid skill-grid">
+          <div class="p-item"><div class="p-label"><i data-lucide="globe-2"></i>BROWSER AGENT</div><div class="p-val">Membuka halaman berbasis JavaScript, mengambil screenshot, dan mengekstrak bagian halaman yang relevan.</div></div>
+          <div class="p-item"><div class="p-label"><i data-lucide="network"></i>SUBAGENT DELEGATION</div><div class="p-val">Membagi pekerjaan independen ke beberapa worker paralel, lalu menyatukan hasil tanpa menggandakan tugas.</div></div>
+          <div class="p-item"><div class="p-label"><i data-lucide="calendar-clock"></i>TASK SCHEDULER</div><div class="p-val">Membuat pengingat sekali jalan atau berulang yang tetap tersimpan setelah layanan dimulai ulang.</div></div>
+          <div class="p-item"><div class="p-label"><i data-lucide="panel-top"></i>HTML/CANVAS BUILDER</div><div class="p-val">Membuat dan memperbarui mini-game, widget, chart, dan aplikasi interaktif pada artifact aktif yang sama.</div></div>
+          <div class="p-item"><div class="p-label"><i data-lucide="scan-search"></i>CODE ANALYZER</div><div class="p-val">Memeriksa sintaks, menelusuri akar bug, dan menyarankan patch minimal untuk kode terkait.</div></div>
+          <div class="p-item"><div class="p-label"><i data-lucide="terminal-square"></i>CODE SCRATCHPAD</div><div class="p-val">Menjalankan potongan JavaScript kecil di sandbox untuk regex, transformasi data, dan simulasi algoritma.</div></div>
+          <div class="p-item"><div class="p-label"><i data-lucide="folder-code"></i>ISOLATED WORKSPACE</div><div class="p-val">Membaca, mencari, membuat, dan memperbaiki file hanya di ruang kerja pengguna yang terisolasi.</div></div>
+          <div class="p-item"><div class="p-label"><i data-lucide="calculator"></i>SAFE CALCULATOR</div><div class="p-val">Menghitung angka, persentase, dan ekspresi matematika dengan evaluasi yang dibatasi.</div></div>
+          <div class="p-item"><div class="p-label"><i data-lucide="book-open"></i>RYUKOMIK EXPERT</div><div class="p-val">Mencari komik berdasarkan judul atau genre, memfilter hasil, serta menyertakan chapter dan waktu update.</div></div>
+          <div class="p-item"><div class="p-label"><i data-lucide="list-checks"></i>TASK & NOTES</div><div class="p-val">Menyimpan dan mengelola catatan, agenda, serta to-do pengguna secara persisten.</div></div>
+          <div class="p-item"><div class="p-label"><i data-lucide="clock-3"></i>DATETIME</div><div class="p-val">Memeriksa waktu, zona waktu, selisih tanggal, kalender, dan hitung mundur secara presisi.</div></div>
+          <div class="p-item"><div class="p-label"><i data-lucide="search"></i>WEB SEARCH</div><div class="p-val">Mencari informasi aktual dan memilih sumber yang relevan untuk kebutuhan pengguna.</div></div>
+          <div class="p-item"><div class="p-label"><i data-lucide="file-text"></i>URL READER</div><div class="p-val">Membaca dan meringkas isi halaman atau artikel dari tautan yang diberikan.</div></div>
+          <div class="p-item"><div class="p-label"><i data-lucide="activity"></i>API TESTER</div><div class="p-val">Menguji endpoint HTTP dengan status, latency, header, dan respons yang aman ditampilkan.</div></div>
+          <div class="p-item"><div class="p-label"><i data-lucide="refresh-cw"></i>SELF-IMPROVEMENT</div><div class="p-val">Menyimpan evaluasi teknis yang terkontrol tanpa membocorkan detail sistem atau rahasia server.</div></div>
+          <div class="p-item"><div class="p-label"><i data-lucide="shield-check"></i>SKILL HEALTH</div><div class="p-val">Memeriksa registrasi skill, schema tool, dan handler runtime secara read-only.</div></div>
         </div>
       </div>
 
-      <div class="card" style="margin-top: 24px;">
-        <h3>3 Pilar Kemampuan Agent Tingkat Lanjut (Hermes-Level Architecture)</h3>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 14px;">
-          <div style="background: rgba(15, 23, 42, 0.5); padding: 16px; border-radius: 12px; border: 1px solid var(--line);">
-            <h4 style="color: #00f2fe; margin-top: 0; font-size: 16px;">🌐 Headless Browser Engine</h4>
-            <p style="font-size: 13.5px; color: var(--ink); margin: 0; line-height: 1.6;">
-              Mampu menjelajahi website yang membutuhkan rendering JavaScript, mengambil screenshot visual halaman, dan mengekstrak data tabel/harga secara terstruktur.
-            </p>
-          </div>
-          <div style="background: rgba(15, 23, 42, 0.5); padding: 16px; border-radius: 12px; border: 1px solid var(--line);">
-            <h4 style="color: #00f2fe; margin-top: 0; font-size: 16px;">🤖 Parallel Subagent Delegation</h4>
-            <p style="font-size: 13.5px; color: var(--ink); margin: 0; line-height: 1.6;">
-              Tugas kompleks dipecah menjadi beberapa subtask terisolasi yang dieksekusi bersamaan, meningkatkan kecepatan penyelesaian riset multi-sumber secara drastis.
-            </p>
-          </div>
-          <div style="background: rgba(15, 23, 42, 0.5); padding: 16px; border-radius: 12px; border: 1px solid var(--line);">
-            <h4 style="color: #00f2fe; margin-top: 0; font-size: 16px;">⏰ Persistent Task Scheduler</h4>
-            <p style="font-size: 13.5px; color: var(--ink); margin: 0; line-height: 1.6;">
-              Penjadwalan tugas dan pengingat yang tetap aktif meski server restart. Saat waktu tiba, Yuki otomatis meninggalkan pesan pengingat di chatbox pengguna.
-            </p>
-          </div>
+      <div class="persona-grid agent-capability-grid">
+        <div class="p-item">
+          <div class="p-label"><i data-lucide="list-todo"></i>TODO & PROGRESS</div>
+          <div class="p-val">Langkah kerja, durasi, status berhasil atau gagal, dan proses yang sedang berjalan ditampilkan langsung di chat.</div>
+        </div>
+        <div class="p-item">
+          <div class="p-label"><i data-lucide="shield-alert"></i>APPROVAL UI</div>
+          <div class="p-val">Tindakan berisiko meminta persetujuan. Yuki tidak menganggap tugas selesai jika perubahan belum benar-benar tersimpan.</div>
+        </div>
+        <div class="p-item">
+          <div class="p-label"><i data-lucide="box"></i>SANDBOX & PATCH</div>
+          <div class="p-val">Perbaikan memprioritaskan patch pada file atau artifact aktif, disertai validasi dan rollback saat memungkinkan.</div>
         </div>
       </div>
 
-      <div class="card" style="margin-top: 24px;">
-        <h3>Fitur Unggulan Live Artifact Sandbox</h3>
+      <div class="card">
+        <div class="section-heading">
+          <span class="section-icon"><i data-lucide="panel-top-open"></i></span>
+          <div>
+            <h3>Live Artifact Workspace</h3>
+            <p>Hasil visual tetap berada pada artifact yang sama agar iterasi tidak membuat proyek duplikat.</p>
+          </div>
+        </div>
         <ul>
-          <li><strong>Live Interactive Preview</strong>: Membuka mini-app atau game HTML5 Canvas langsung di atas obrolan chat.</li>
-          <li><strong>Fullscreen Mode</strong>: Tombol layar penuh untuk memainkan game atau visualisasi Canvas tanpa terdistraksi.</li>
-          <li><strong>Restart Sandbox</strong>: Memuat ulang simulasi game secara instan dengan satu klik tombol reload.</li>
-          <li><strong>1-Click Export .HTML & Copy Code</strong>: Unduh file kode aplikasi mandiri untuk dijalankan secara offline di komputer atau browser manapun.</li>
+          <li><strong>Live preview:</strong> menjalankan HTML dan Canvas langsung dari kartu hasil.</li>
+          <li><strong>Patch minimal:</strong> membaca file aktif sebelum mengubah bagian yang berkaitan dengan permintaan.</li>
+          <li><strong>Validasi:</strong> memeriksa sintaks dan memastikan penyimpanan berhasil sebelum membuat laporan akhir.</li>
+          <li><strong>Ekspor:</strong> artifact dapat dimainkan, dibuka penuh, dan diunduh sebagai HTML mandiri.</li>
         </ul>
       </div>
 
-      <div class="info-box" style="border-left-color: #00f2fe; background: rgba(0, 242, 254, 0.05); margin-top: 20px;">
+      <div class="info-box">
         <p>
-          <strong>Cara Berpindah ke Mode Agent:</strong> Klik tombol pill <strong>"⚡ Yuki Agent"</strong> di bagian atas chat. Kamu bisa langsung mengetik perintah seperti <em>"Buatkan mini game Tetris Canvas"</em>, <em>"Ingatkan aku setiap Senin jam 8 pagi"</em>, <em>"Buka dan screenshot web https://example.com"</em>, atau <em>"Bandingkan 3 anime musim ini dari berbagai aspek"</em>.
+          <strong>Menggunakan mode Agent:</strong> pilih <strong>Yuki Agent</strong> pada aplikasi penuh, lalu tulis hasil
+          yang kamu inginkan. Versi embed Ryukomik hanya menyediakan <strong>Teman Ngobrol</strong> dan tidak memuat
+          tool Agent.
         </p>
       </div>
     </section>
 
     <section id="versi-3">
-      <div class="version-chip">SYSTEM NOTES / 3.0</div>
+      <div class="version-chip">SYSTEM NOTES / YUKI 3.0</div>
       <h2>Apa yang Baru di Yuki 3.0?</h2>
-      <div class="subtitle">Percakapan yang lebih alami, konsisten, dan personal</div>
+      <div class="subtitle">Percakapan lebih alami, konsisten, personal, dan dapat dikendalikan pengguna</div>
       <div class="persona-grid v3-grid">
-        <div class="p-item"><div class="p-label">MEMORI</div><div class="p-val">Yuki dapat mengingat kesukaanmu, orang-orang penting, momen emosional, dan cerita yang ingin kamu lanjutkan nanti.</div></div>
-        <div class="p-item"><div class="p-label">EMOSI</div><div class="p-val">Perasaannya tidak langsung berubah setiap pesan. Rasa kesal, sedih, malu, atau senang akan mereda secara alami.</div></div>
-        <div class="p-item"><div class="p-label">RELASI</div><div class="p-val">Perhatian yang tulus, konflik, dan permintaan maaf memberi dampak berbeda pada hubungan kalian.</div></div>
-        <div class="p-item"><div class="p-label">KUALITAS CHAT</div><div class="p-val">Balasan lebih utuh, bervariasi, tidak mudah terpotong, dan tidak mengarang kenangan yang belum pernah terjadi.</div></div>
-        <div class="p-item"><div class="p-label">KEANDALAN</div><div class="p-val">Jika balasan mengalami gangguan, Yuki akan mencoba memulihkannya agar percakapan dapat terus berjalan.</div></div>
-        <div class="p-item"><div class="p-label">PONSEL</div><div class="p-val">Tampilan Yuki menyesuaikan saat keyboard terbuka, avatar dapat dikecilkan, dan ekspresi berganti dengan lebih halus.</div></div>
+        <div class="p-item"><div class="p-label"><i data-lucide="brain"></i>MEMORI</div><div class="p-val">Yuki mengingat preferensi, orang penting, momen emosional, dan cerita lanjutan dengan pemisahan data per pengguna.</div></div>
+        <div class="p-item"><div class="p-label"><i data-lucide="heart-pulse"></i>EMOSI</div><div class="p-val">Perasaan berubah secara bertahap. Gesture singkat tetap mengikuti persona tanpa menggantikan isi jawaban.</div></div>
+        <div class="p-item"><div class="p-label"><i data-lucide="users"></i>RELASI</div><div class="p-val">Perhatian, konflik, dan permintaan maaf memengaruhi bond secara berbeda dan tersimpan lintas sesi.</div></div>
+        <div class="p-item"><div class="p-label"><i data-lucide="messages-square"></i>KUALITAS CHAT</div><div class="p-val">Balasan lebih utuh, tidak berulang, tidak membocorkan tool-call, dan tidak mengarang perubahan yang belum tersimpan.</div></div>
+        <div class="p-item"><div class="p-label"><i data-lucide="book-marked"></i>RYUKOMIK</div><div class="p-val">Rekomendasi mengenali genre secara ketat serta menampilkan chapter dan waktu update terbaru bila tersedia.</div></div>
+        <div class="p-item"><div class="p-label"><i data-lucide="panel-right"></i>EMBED</div><div class="p-val">Embed memakai desain aplikasi penuh tetapi dikunci sebagai Teman Ngobrol tanpa Yuki Agent.</div></div>
       </div>
     </section>
-
   </main>
 
   <script>
@@ -1444,6 +1451,8 @@
       }
     })
   </script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>window.lucide?.createIcons({ attrs: { 'stroke-width': 1.8 } })</script>
 </body>
 
 </html>

@@ -1,5 +1,6 @@
 // skills/computing/code-analyzer/handler.js
 import vm from 'node:vm'
+import { stripTypeScriptTypes } from 'node:module'
 
 export async function analyze_code_syntax({ code, language = 'javascript' }) {
   if (!code || typeof code !== 'string') {
@@ -27,11 +28,21 @@ export async function analyze_code_syntax({ code, language = 'javascript' }) {
       })
       summary = `JSON tidak valid: ${e.message}`
     }
-  } else if (lang === 'javascript' || lang === 'js' || lang === 'typescript' || lang === 'ts') {
+  } else if (lang === 'typescript' || lang === 'ts') {
+    try {
+      const javascript = stripTypeScriptTypes(code, { mode: 'transform' })
+      new vm.Script(javascript, { produceCachedData: false })
+      summary = 'Sintaks dasar TypeScript valid.'
+    } catch (error) {
+      isValid = false
+      issues.push({ type: 'TypeScriptSyntaxError', message: error.message })
+      summary = `TypeScript tidak valid: ${error.message}`
+    }
+  } else if (lang === 'javascript' || lang === 'js') {
     try {
       // Periksa sintaks JavaScript tanpa mengeksekusi kode
       new vm.Script(code, { produceCachedData: false })
-      summary = 'Sintaks JavaScript/TypeScript valid tanpa error kompilasi dasar.'
+      summary = 'Sintaks JavaScript valid tanpa error kompilasi dasar.'
     } catch (e) {
       isValid = false
       const matchLine = e.stack?.match(/evalmachine\.<anonymous>:(\d+)/)

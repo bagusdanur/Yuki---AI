@@ -51,16 +51,32 @@ code, .badge { border-radius: 4px !important; }
 .mobile-header { background: rgba(10,12,17,.94) !important; border-color: #292d36 !important; }
 .btn-menu-toggle { border: 1px solid #30343e !important; border-radius: 6px !important; color: #aaa7ff !important; background: #14171d !important; }
 
+/* Agent dan Yuki 3.0 mengikuti bahasa visual section lain. */
+#yuki-agent .agent-summary { margin-top: 24px; }
+#yuki-agent .skill-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+#yuki-agent .agent-capability-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; margin: 10px 0 24px; }
+.section-heading { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 18px; }
+.section-heading h3 { margin: 1px 0 6px !important; }
+.section-heading p { margin: 0 !important; font-size: 13px !important; }
+.section-icon { flex: 0 0 auto; width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid #3b3d55; border-radius: 6px; color: #aaa7ff; background: #191b27; }
+.section-icon svg { width: 17px; height: 17px; }
+#yuki-agent .p-label, #versi-3 .p-label { display: flex; align-items: center; gap: 8px; }
+#yuki-agent .p-label svg, #versi-3 .p-label svg { flex: 0 0 auto; width: 14px; height: 14px; color: #aaa7ff; }
+#yuki-agent .card + .card { margin-top: 24px; }
+#yuki-agent .info-box { margin-top: 20px; }
+
 @media (max-width: 960px) {
   .main-container { width: 100% !important; margin-left: 0 !important; padding: 104px 18px 70px !important; }
   .sidebar { padding-top: 92px !important; }
   section { margin-bottom: 64px !important; }
   .v3-grid { grid-template-columns: 1fr !important; }
   h1 { font-size: clamp(36px, 11vw, 54px) !important; }
+  #yuki-agent .agent-capability-grid { grid-template-columns: 1fr !important; }
 }
 
 @media (max-width: 520px) {
   .main-container { padding-inline: 13px !important; }
   .card, .p-item, .bond-card { padding: 15px !important; }
   p, li { font-size: 13px !important; }
+  #yuki-agent .skill-grid { grid-template-columns: 1fr !important; }
 }

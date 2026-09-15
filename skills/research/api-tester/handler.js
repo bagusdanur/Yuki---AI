@@ -13,7 +13,7 @@ export async function http_api_request({ url, method = 'GET', headers = {}, body
   // 🛡️ SECURITY CHECK: Blokir SSRF ke localhost, IP internal, cloud metadata, dan port terlarang
   const securityCheck = await validateSafeOutboundUrl(targetUrl)
   if (!securityCheck.safe) {
-    return { error: `[Keamanan VPS]: ${securityCheck.reason}` }
+    return { error: `[Keamanan Jaringan]: ${securityCheck.reason}` }
   }
   targetUrl = securityCheck.cleanUrl
 

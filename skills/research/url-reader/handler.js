@@ -8,7 +8,7 @@ export async function executeReadUrl({ url }) {
   // 🛡️ SECURITY CHECK: Blokir SSRF ke internal VPS
   const securityCheck = await validateSafeOutboundUrl(url)
   if (!securityCheck.safe) {
-    return { error: `[Keamanan VPS]: ${securityCheck.reason}` }
+    return { error: `[Keamanan Jaringan]: ${securityCheck.reason}` }
   }
   const safeUrl = securityCheck.cleanUrl
 

@@ -1,4 +1,4 @@
-const CACHE = 'yuki-shell-v3.3'
+const CACHE = 'yuki-shell-v3.6'
 const CORE = [
   '/', '/manifest.webmanifest', '/yuki-icon.svg',
   '/expressions/tenang.png', '/expressions/senang.png', '/expressions/malu.png',

@@ -1,8 +1,48 @@
 // skills/computing/html-canvas-builder/handler.js
 import fs from 'node:fs'
 import path from 'node:path'
+import vm from 'node:vm'
 
-export async function executeBuildInteractiveArtifact(params = {}) {
+export function inspectArtifactDesign(content = '') {
+  const css = String(content)
+  const issues = []
+  const gradients = (css.match(/(?:linear|radial|conic)-gradient\s*\(/gi) || []).length
+  const largeGlows = (css.match(/(?:box-shadow|text-shadow)\s*:[^;]*(?:#[0-9a-f]{3,8}|rgba?\()[^;]*(?:20px|2[1-9]px|[3-9]\dpx)/gi) || []).length
+  if (/(?:#00ffff|#0ff\b|#ff00ff|#f0f\b|neon|cyberpunk)/i.test(css)) issues.push('palet neon/cyberpunk generik')
+  if (gradients >= 3) issues.push(`${gradients} gradient dekoratif`)
+  if (largeGlows >= 2 || (css.match(/text-shadow\s*:/gi) || []).length >= 2) issues.push('glow/text-shadow berlebihan')
+  if ((css.match(/backdrop-filter\s*:/gi) || []).length >= 2) issues.push('glassmorphism berulang')
+  if ((css.match(/border-radius\s*:\s*(?:2[4-9]|[3-9]\d)px/gi) || []).length >= 4) issues.push('terlalu banyak bentuk pill')
+  return { pass: issues.length < 2, issues, score: issues.length }
+}
+
+export async function executeValidateInteractiveArtifact(params = {}) {
+  const rawCode = params.html_content || params.code || params.content
+  if (!rawCode || !String(rawCode).trim()) return { success: false, error: 'Kode artifact tidak boleh kosong.' }
+  const content = String(rawCode)
+  const openScripts = (content.match(/<script\b/gi) || []).length
+  const closeScripts = (content.match(/<\/script>/gi) || []).length
+  const openStyles = (content.match(/<style\b/gi) || []).length
+  const closeStyles = (content.match(/<\/style>/gi) || []).length
+  if (openScripts !== closeScripts) return { success: false, error: `Tag script tidak seimbang (${openScripts} buka, ${closeScripts} tutup).` }
+  if (openStyles !== closeStyles) return { success: false, error: `Tag style tidak seimbang (${openStyles} buka, ${closeStyles} tutup).` }
+  const issues = []
+  const scripts = [...content.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/gi)]
+  scripts.forEach((match, index) => {
+    const attributes = match[1] || ''
+    if (/type\s*=\s*['"](?:application\/json|importmap)['"]/i.test(attributes)) return
+    let source = match[2]
+    if (/type\s*=\s*['"]module['"]/i.test(attributes)) {
+      source = source.replace(/^\s*import[\s\S]*?from\s+['"][^'"]+['"]\s*;?\s*$/gm, '').replace(/\bexport\s+(?:default\s+)?/g, '')
+    }
+    try { new vm.Script(source, { filename: `artifact-script-${index + 1}.js` }) }
+    catch (error) { issues.push({ script: index + 1, message: error.message }) }
+  })
+  return { success: issues.length === 0, valid: issues.length === 0, scripts_checked: scripts.length, issues: issues.length ? issues : undefined,
+    error: issues.length ? `Ditemukan ${issues.length} error sintaks JavaScript.` : undefined }
+}
+
+export async function executeBuildInteractiveArtifact(params = {}, context = {}) {
   const { title, type = 'html', html_content, code, content } = params
   const cleanTitle = String(title || 'Interactive Canvas App').trim()
   const cleanType = ['html', 'javascript', 'svg'].includes(type) ? type : 'html'
@@ -13,6 +53,13 @@ export async function executeBuildInteractiveArtifact(params = {}) {
   }
 
   const rawContent = String(rawCode).trim()
+  const validation = await executeValidateInteractiveArtifact({ html_content: rawContent })
+  if (!validation.success) return validation
+  const design = inspectArtifactDesign(rawContent)
+  const explicitlyNeon = /\b(neon|cyberpunk|synthwave|glow)\b/i.test(cleanTitle)
+  if (!params.id && !design.pass && !explicitlyNeon) {
+    return { success: false, error: `DESIGN_QUALITY: desain terdeteksi memakai pola AI-slop (${design.issues.join(', ')}). Gunakan hierarchy, token semantik, satu aksen, dan efek yang lebih terkendali.`, design }
+  }
 
   // Helper universal script & styling for mobile responsiveness & precision touch controls
   const universalMobileEngine = `
@@ -29,7 +76,7 @@ export async function executeBuildInteractiveArtifact(params = {}) {
       padding: 6px !important;
       overflow-y: auto !important;
       overflow-x: hidden !important;
-      background: #08090c !important;
+      background: #f4f4f1 !important;
       display: flex !important;
       flex-direction: column !important;
       align-items: center !important;
@@ -57,7 +104,7 @@ export async function executeBuildInteractiveArtifact(params = {}) {
       height: auto !important;
       object-fit: contain !important;
       touch-action: none !important;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.8) !important;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.12) !important;
     }
     .controls {
       display: flex !important;
@@ -78,7 +125,7 @@ export async function executeBuildInteractiveArtifact(params = {}) {
       font-size: 11px;
       pointer-events: none;
       z-index: 9999;
-      background: rgba(0,0,0,0.6);
+      background: rgba(24,24,22,0.86);
       padding: 3px 10px;
       border-radius: 12px;
       border: 1px solid rgba(255,255,255,0.1);
@@ -292,7 +339,10 @@ export async function executeBuildInteractiveArtifact(params = {}) {
 
 
   let finalCode
-  if (rawContent.toLowerCase().includes('<!doctype') || rawContent.toLowerCase().includes('<html')) {
+  const alreadyEnhanced = rawContent.includes('_yuki_touch_guide')
+  if (alreadyEnhanced) {
+    finalCode = rawContent
+  } else if (rawContent.toLowerCase().includes('<!doctype') || rawContent.toLowerCase().includes('<html')) {
     // Inject mobile engine tepat sebelum </body> atau di akhir dokumen
     if (/<\/body>/i.test(rawContent)) {
       finalCode = rawContent.replace(/<\/body>/i, universalMobileEngine + '\n</body>')
@@ -309,7 +359,8 @@ export async function executeBuildInteractiveArtifact(params = {}) {
   <title>${cleanTitle}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { width: 100%; height: 100%; background: #09090b; color: #f4f4f5; font-family: system-ui, sans-serif; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    :root { --background: #f7f7f5; --foreground: #1d1d1b; --surface: #fff; --muted: #6f706b; --border: #deded8; --primary: #3f4f3b; --radius: 10px; }
+    html, body { width: 100%; height: 100%; background: var(--background); color: var(--foreground); font-family: Inter, ui-sans-serif, system-ui, sans-serif; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; }
   </style>
 </head>
 <body>
@@ -369,6 +420,7 @@ export async function executeBuildInteractiveArtifact(params = {}) {
   return {
     success: true,
     message: `Artifact "${cleanTitle}" (v${savedRecord.version || 1}) berhasil disimpan di folder "${cleanUsername}/${userFileName}".`,
+    design_review: design,
     artifact: {
       id: savedRecord.id || artifactId,
       title: savedRecord.title || cleanTitle,
@@ -474,10 +526,35 @@ export async function executeUpdateInteractiveArtifact(params = {}, context = {}
   return buildResult
 }
 
+export async function executePatchInteractiveArtifact(params = {}, context = {}) {
+  const userId = context?.userId || params?.userId
+  const { getLatestUserArtifact, getUserArtifactById } = await import('../../../lib/memory.js')
+  const targetId = params.id || context?.activeArtifactId
+  const active = targetId ? getUserArtifactById(userId, targetId) : getLatestUserArtifact(userId)
+  if (!active) return { success: false, error: 'Artifact aktif tidak ditemukan.' }
+  const edits = Array.isArray(params.replacements) ? params.replacements : [{ old_text: params.old_text, new_text: params.new_text }]
+  if (edits.length < 1 || edits.length > 20 || edits.some(edit => typeof edit.old_text !== 'string' || !edit.old_text.length)) {
+    return { success: false, error: 'Patch membutuhkan 1-20 pasangan old_text dan new_text.' }
+  }
+  let updated = String(active.content || '')
+  for (const edit of edits) {
+    const count = updated.split(edit.old_text).length - 1
+    if (count !== 1) return { success: false, error: `old_text harus cocok tepat satu kali; ditemukan ${count}. Artifact tidak diubah.` }
+    updated = updated.replace(edit.old_text, String(edit.new_text || ''))
+  }
+  const result = await executeUpdateInteractiveArtifact({
+    id: active.id, title: active.title, html_content: updated,
+    patch_note: params.patch_note || `Patch minimal pada ${edits.length} bagian artifact aktif`
+  }, { ...context, activeArtifactId: active.id })
+  if (result.success) result.replacements = edits.length
+  return result
+}
+
 export default {
+  validate_interactive_artifact: executeValidateInteractiveArtifact,
   build_interactive_artifact: executeBuildInteractiveArtifact,
   get_active_artifact: executeGetActiveArtifact,
   read_artifact_file: executeReadArtifactFile,
-  update_interactive_artifact: executeUpdateInteractiveArtifact
+  update_interactive_artifact: executeUpdateInteractiveArtifact,
+  patch_interactive_artifact: executePatchInteractiveArtifact
 }
-

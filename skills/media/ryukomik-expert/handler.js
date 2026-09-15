@@ -17,6 +17,7 @@ export async function executeSearchRyukomik({ query, filter_special = false }) {
         format: c.format || 'KOMIK',
         type: c.type || '',
         chapter: c.chapter || '',
+        updated: c.updated || '',
         score: c.score || '',
         image: c.image || ''
       }))
@@ -26,9 +27,9 @@ export async function executeSearchRyukomik({ query, filter_special = false }) {
   }
 }
 
-export async function executeGetLatestComics({ limit = 6 }) {
+export async function executeGetLatestComics({ limit = 6, genre = '' }) {
   try {
-    const list = await latestComics()
+    const list = await latestComics({ genre })
     const count = Math.min(Math.max(Number(limit) || 6, 1), 10)
     return {
       total: list.length,
@@ -38,6 +39,7 @@ export async function executeGetLatestComics({ limit = 6 }) {
         format: c.format || 'KOMIK',
         type: c.type || '',
         chapter: c.chapter || '',
+        updated: c.updated || '',
         score: c.score || '',
         image: c.image || ''
       }))
