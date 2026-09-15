@@ -12,7 +12,7 @@ import {
   countChatMessages, summarizeAndTrimHistory, captureStructuredMemory,
   recordConversationEvent, syncBondMilestones, saveResponseFeedback,
   consumeRateLimit, pruneRateLimits, deleteUserData, getAdminStats, userExists,
-  saveComicBookmark, getComicBookmarks, deleteComicBookmark
+  saveComicBookmark, getComicBookmarks, deleteComicBookmark, getScheduledReminderMessages
 } from './lib/memory.js'
 import { responseTarget, shouldInitiate, validateCharacterReply } from './lib/character-quality.js'
 import { warmupEmbedder } from './lib/semantic.js'
@@ -409,6 +409,13 @@ app.post('/api/login-code', rateLimit({ max: 15 }), async (req, res) => {
     console.error(e)
     res.status(500).json({ error: String(e.message || e) })
   }
+})
+
+// Sinkronisasi pesan scheduler untuk sesi yang tetap login. Client melakukan
+// polling ringan dan juga refresh saat tab kembali aktif.
+app.get('/api/chat/reminders', requireSession, rateLimit({ windowMs: 60_000, max: 30 }), (req, res) => {
+  const afterId = Math.max(0, Number(req.query.after || 0) || 0)
+  res.json({ reminders: getScheduledReminderMessages(req.authUserId, afterId) })
 })
 
 // Endpoint chat -> balasan dari Qwen/DeepSeek (dengan emosi + kedekatan + memori + agent skills)
