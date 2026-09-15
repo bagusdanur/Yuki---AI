@@ -67,6 +67,9 @@ try {
   const secondNote = memory.saveUserNote('alice', { title: 'Tes', content: 'Satu kali', category: 'todo', idempotencyKey: 'same-request' })
   assert.equal(firstNote.id, secondNote.id)
   assert.equal(secondNote.idempotent, true)
+  const reminderMessageId = memory.saveChatMessage('alice', 'assistant', '*[Pengingat Terjadwal: Bangun]*\\n\\nJam 7 pagi')
+  assert.equal(memory.getScheduledReminderMessages('alice', reminderMessageId - 1)[0].messageId, reminderMessageId)
+  assert.equal(memory.getScheduledReminderMessages('bob', 0).length, 0)
 
   const parsed = scheduler.parseToCronExpr('besok jam 9', 'Asia/Jakarta', new Date('2026-09-15T04:00:00.000Z'))
   assert.equal(parsed.runAt, '2026-09-16T02:00:00.000Z')
@@ -88,9 +91,13 @@ try {
   assert.match(appSource, /ReactMarkdown/)
   assert.match(appSource, /rehypeSanitize/)
   assert.doesNotMatch(appSource, /Proses Berpikir Yuki/)
+  assert.match(appSource, /_yuki_touch_guide/)
+  assert.match(appSource, /getScheduledReminders/)
   assert.doesNotMatch(serverSource, /thinking:\s*agentResult/)
+  assert.match(serverSource, /api\\/chat\\/reminders/)
   assert.match(runnerSource, /Model hanya mengeluarkan <think>[\s\S]*?role: 'user'/,
     'retry setelah output thinking-only harus diakhiri giliran user, bukan model')
+  assert.match(runnerSource, /failedArtifactPatch[\\s\\S]*?update_interactive_artifact/)
 
   assert.match(runner.buildDeterministicSchedulerReport([{ tool: 'schedule_task', status: 'done', output: { task: { id: 17, title: 'Audit', humanSchedule: '30 menit lagi', nextRunAtUtc: '2026-09-15T11:00:00.000Z', timezone: 'Asia/Jakarta' } } }]), /ID internal: \*\*17\*\*/)
   assert.match(runner.buildDeterministicSchedulerReport([{ tool: 'list_scheduled_tasks', status: 'done', output: { tasks: [{ id: 17, title: 'Audit', schedule: '30 menit lagi', nextRunAtUtc: '2026-09-15T11:00:00.000Z', timezone: 'Asia\/Jakarta' }] } }]), /ID \*\*17\*\*/)
