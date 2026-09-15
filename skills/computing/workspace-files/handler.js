@@ -4,8 +4,9 @@ import path from 'node:path'
 import vm from 'node:vm'
 import { stripTypeScriptTypes } from 'node:module'
 import { spawn } from 'node:child_process'
+import { assertSafeWorkspaceRoot, legacyWorkspaceUserSegment, workspaceUserSegment } from '../../../lib/agent/workspace-policy.js'
 
-const ROOT = path.resolve(process.env.YUKI_AGENT_WORKSPACE || 'agent-workspace')
+const ROOT = assertSafeWorkspaceRoot(process.env.YUKI_AGENT_WORKSPACE || 'agent-workspace')
 const MAX_BYTES = 512 * 1024
 const BLOCKED_NAMES = new Set([
   '.env', '.git', '.ssh', '.runtime-secrets', 'node_modules', 'data', 'backups',
@@ -14,8 +15,31 @@ const BLOCKED_NAMES = new Set([
 const BLOCKED_EXTENSIONS = new Set(['.pem', '.key', '.p12', '.pfx', '.sqlite', '.sqlite3', '.db'])
 const HISTORY_ROOT = path.join(ROOT, '.yuki-history')
 
-const userSegment = (value) => String(value || 'anonymous').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 80) || 'anonymous'
 const digest = (content) => crypto.createHash('sha256').update(content).digest('hex').slice(0, 16)
+
+function userDirectory(context = {}) {
+  const segment = workspaceUserSegment(context.userId)
+  const target = path.join(ROOT, segment)
+  const legacySegment = legacyWorkspaceUserSegment(context.userId)
+  const legacy = legacySegment ? path.join(ROOT, legacySegment) : ''
+  if (!fs.existsSync(target) && legacy && fs.existsSync(legacy)) {
+    if (fs.lstatSync(legacy).isSymbolicLink()) throw new Error('Workspace lama berupa symlink dan ditolak.')
+    fs.renameSync(legacy, target)
+  }
+  return { segment, target }
+}
+
+function userHistoryDirectory(context = {}) {
+  const segment = workspaceUserSegment(context.userId)
+  const target = path.join(HISTORY_ROOT, segment)
+  const legacySegment = legacyWorkspaceUserSegment(context.userId)
+  const legacy = legacySegment ? path.join(HISTORY_ROOT, legacySegment) : ''
+  if (!fs.existsSync(target) && legacy && fs.existsSync(legacy)) {
+    if (fs.lstatSync(legacy).isSymbolicLink()) throw new Error('Riwayat workspace lama berupa symlink dan ditolak.')
+    fs.renameSync(legacy, target)
+  }
+  return target
+}
 
 function assertAllowed(relative) {
   for (const part of relative.split(path.sep).filter(Boolean)) {
@@ -38,7 +62,7 @@ function ensureNoSymlink(root, target, allowMissing = false) {
 }
 
 function resolveTarget(input = '.', context = {}, allowMissing = false) {
-  const userRoot = path.join(ROOT, userSegment(context.userId))
+  const userRoot = userDirectory(context).target
   fs.mkdirSync(userRoot, { recursive: true, mode: 0o700 })
   const raw = String(input || '.').replaceAll('\\', '/')
   if (raw.includes('\0') || path.isAbsolute(raw)) throw new Error('Path absolut ditolak.')
@@ -68,7 +92,7 @@ function atomicWrite(userRoot, target, content) {
 }
 
 function saveSnapshot(context, relative, content, action = 'edit') {
-  const directory = path.join(HISTORY_ROOT, userSegment(context.userId))
+  const directory = userHistoryDirectory(context)
   fs.mkdirSync(directory, { recursive: true, mode: 0o700 })
   const record = {
     id: `${Date.now()}_${crypto.randomBytes(4).toString('hex')}`,
@@ -81,7 +105,7 @@ function saveSnapshot(context, relative, content, action = 'edit') {
 }
 
 function snapshots(context, relative = '') {
-  const directory = path.join(HISTORY_ROOT, userSegment(context.userId))
+  const directory = userHistoryDirectory(context)
   if (!fs.existsSync(directory)) return []
   return fs.readdirSync(directory).filter(name => name.endsWith('.json')).sort().reverse().map(name => {
     try { return JSON.parse(fs.readFileSync(path.join(directory, name), 'utf8')) } catch { return null }
@@ -364,13 +388,16 @@ export async function patch_workspace_files({ patches = [] } = {}, context = {})
 
 // Dipanggil hanya oleh endpoint penghapusan akun yang sudah diautentikasi.
 export function deleteWorkspaceData(userId) {
-  const segment = userSegment(userId)
+  const segment = workspaceUserSegment(userId)
   const workspace = path.join(ROOT, segment)
   const history = path.join(HISTORY_ROOT, segment)
-  for (const target of [workspace, history]) {
+  const legacySegment = legacyWorkspaceUserSegment(userId)
+  const legacyWorkspace = legacySegment ? path.join(ROOT, legacySegment) : ''
+  const legacyHistory = legacySegment ? path.join(HISTORY_ROOT, legacySegment) : ''
+  for (const target of [workspace, history, legacyWorkspace, legacyHistory].filter(Boolean)) {
     const relative = path.relative(ROOT, target)
     if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) throw new Error('Target cleanup workspace tidak valid.')
-    if (fs.existsSync(target)) fs.rmSync(target, { recursive: true, force: true })
+    if (fs.existsSync(target) && !fs.lstatSync(target).isSymbolicLink()) fs.rmSync(target, { recursive: true, force: true })
   }
 }
 
