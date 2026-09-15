@@ -51,7 +51,7 @@ code, .badge { border-radius: 4px !important; }
 .mobile-header { background: rgba(10,12,17,.94) !important; border-color: #292d36 !important; }
 .btn-menu-toggle { border: 1px solid #30343e !important; border-radius: 6px !important; color: #aaa7ff !important; background: #14171d !important; }
 
-/* Agent dan Yuki 3.0 mengikuti bahasa visual section lain. */
+/* Agent dan Yuki 3.1 mengikuti bahasa visual section lain. */
 #yuki-agent .agent-summary { margin-top: 24px; }
 #yuki-agent .skill-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
 #yuki-agent .agent-capability-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; margin: 10px 0 24px; }
