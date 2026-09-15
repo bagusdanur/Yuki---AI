@@ -101,6 +101,10 @@ export async function getPendingAgentWorkflows() {
   return request<{ workflows: Array<{ id: string; requestId: string; state: string; toolName: string; reason: string; stepId: string; createdAt: string; expiresAt: string }> }>('/api/agent/workflows/pending', { method: 'GET' }, 10_000, 0)
 }
 
+export async function getScheduledReminders(afterId = 0) {
+  return request<{ reminders: Message[] }>(`/api/chat/reminders?after=${Math.max(0, afterId)}`, { method: 'GET' }, 10_000, 0)
+}
+
 export async function getSkills() {
   return request<{ skills: SkillInfo[] }>('/api/agent/skills', { method: 'GET' })
 }
