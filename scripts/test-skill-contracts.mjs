@@ -58,6 +58,11 @@ try {
   result = await executeTool('schedule_task', { title: 'Kontrak', description: 'Tes', schedule: '30 menit lagi', idempotency_key: 'contract-schedule', timezone: 'Asia/Jakarta' }, { userId: 'alice' })
   assert.equal(result.contract.status, 'succeeded')
   assert.ok(result.data.task.nextRunAtUtc)
+  const scheduledTaskId = result.data.task.id
+  result = await executeTool('cancel_scheduled_task', { task_id: scheduledTaskId }, { userId: 'alice' })
+  assert.equal(result.contract.status, 'succeeded')
+  assert.equal(result.data.id, scheduledTaskId)
+  assert.ok(result.evidence.some(item => item.kind === 'record'))
   result = await executeTool('record_self_improvement', { topic: 'Contract', learning_summary: 'Bukti record wajib ada.' }, { userId: 'alice' })
   assert.equal(result.data.verified, true)
   stopScheduler()
