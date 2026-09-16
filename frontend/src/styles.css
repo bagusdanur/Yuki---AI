@@ -1317,6 +1317,20 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   font-weight: 500;
   color: #d4d4d8;
 }
+.agent-stop-button {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid #3f3f46;
+  border-radius: 5px;
+  background: #18181b;
+  color: #fca5a5;
+  padding: 3px 6px;
+  font: inherit;
+  cursor: pointer;
+}
+.agent-stop-button:hover { background: #27272a; }
 .live-pulse-dot {
   width: 6px;
   height: 6px;
