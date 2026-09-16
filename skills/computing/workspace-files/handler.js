@@ -3,8 +3,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import vm from 'node:vm'
 import { stripTypeScriptTypes } from 'node:module'
-import { spawn } from 'node:child_process'
 import { assertSafeWorkspaceRoot, legacyWorkspaceUserSegment, workspaceUserSegment } from '../../../lib/agent/workspace-policy.js'
+import { runSandboxedNodeTest } from '../../../lib/agent/sandbox-runner.js'
 
 const ROOT = assertSafeWorkspaceRoot(process.env.YUKI_AGENT_WORKSPACE || 'agent-workspace')
 const MAX_BYTES = 512 * 1024
@@ -287,18 +287,8 @@ export async function run_workspace_tests({ path: input } = {}, context = {}) {
     }
     const { userRoot, target, relative } = resolveTarget(input, context)
     if (!fs.statSync(target).isFile()) throw new Error('Test runner hanya menerima satu file test.')
-    const result = await new Promise((resolve) => {
-      const child = spawn(process.execPath, ['--permission', `--allow-fs-read=${userRoot}`, target], {
-        cwd: userRoot, env: { PATH: process.env.PATH || '' }, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe']
-      })
-      let stdout = ''; let stderr = ''; let timedOut = false
-      const collect = chunk => { if (stdout.length + stderr.length < 16000) return chunk.toString().slice(0, 16000 - stdout.length - stderr.length); return '' }
-      child.stdout.on('data', chunk => { stdout += collect(chunk) })
-      child.stderr.on('data', chunk => { stderr += collect(chunk) })
-      const timer = setTimeout(() => { timedOut = true; child.kill('SIGKILL') }, 10_000)
-      child.on('close', code => { clearTimeout(timer); resolve({ code, stdout, stderr, timedOut }) })
-    })
-    return { success: !result.timedOut && result.code === 0, path: relative.replaceAll('\\', '/'), sandbox: 'node-permission-model', network: false, child_process: false, timeout_ms: 10000, ...result }
+    const result = await runSandboxedNodeTest({ entry: target, workspaceRoot: userRoot })
+    return { success: !result.timedOut && !result.outputTruncated && result.code === 0, path: relative.replaceAll('\\', '/'), timeout_ms: result.policy.timeoutMs, ...result }
   } catch (error) { return { success: false, error: error.message } }
 }
 
