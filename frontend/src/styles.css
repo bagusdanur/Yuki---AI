@@ -1275,13 +1275,20 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 }
 
 /* Phase 4 — mobile-first agenda & notification center */
+.agenda-backdrop {
+  position: fixed;
+  z-index: 999;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(5, 6, 9, 0.78);
+  animation: fade-in .16s ease-out;
+}
 .agenda-modal { width: min(620px, 96vw); height: auto; max-height: min(760px, 88dvh); }
 .agenda-floating-panel {
-  position: fixed;
-  z-index: 1000;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  position: relative;
+  z-index: 1;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.62);
 }
 .agenda-toolbar { display: grid; gap: 8px; padding: 12px 16px; border-bottom: 1px solid #27272a; background: #0b0d12; }
@@ -1334,13 +1341,8 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   .settings-card { position: fixed; top: 168px; right: 12px; bottom: auto; width: min(310px, calc(100vw - 36px)); max-height: min(430px, calc(100dvh - 210px - env(safe-area-inset-bottom))); padding: 7px; border-radius: 10px; }
   .settings-card button { padding: 9px; }
   .agenda-modal { width: auto; height: auto; max-height: calc(100dvh - 108px); border-radius: 14px; }
-  .agenda-floating-panel {
-    top: auto;
-    left: 12px;
-    right: 12px;
-    bottom: max(12px, env(safe-area-inset-bottom));
-    transform: none;
-  }
+  .agenda-backdrop { align-items: end; padding: 0 12px max(12px, env(safe-area-inset-bottom)); }
+  .agenda-floating-panel { width: 100%; }
   .agenda-item-head { display: grid; }
   .agenda-item-head > span { justify-self: start; }
   .agenda-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }

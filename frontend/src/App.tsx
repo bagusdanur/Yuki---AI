@@ -875,8 +875,9 @@ function AgendaModal({ onClose }: { onClose: () => void }) {
     } catch (error) { setNotice(error instanceof Error ? error.message : 'Notifikasi belum berhasil diaktifkan.') }
   }
   const localTime = (value?: string) => value ? new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) + ' WIB' : 'Belum dijadwalkan'
-  return <section className="timeline-card agenda-modal agenda-floating-panel" role="dialog" aria-modal="false" aria-label="Agenda Yuki">
-    <header><div><small>Asia/Jakarta · durable scheduler</small><h2>Agenda Yuki</h2></div><button type="button" onClick={event => { event.stopPropagation(); onClose() }} aria-label="Tutup agenda"><X size={17}/></button></header>
+  return <div className="agenda-backdrop" onClick={onClose}>
+    <section className="timeline-card agenda-modal agenda-floating-panel" role="dialog" aria-modal="true" aria-label="Agenda Yuki" onClick={event => event.stopPropagation()}>
+      <header><div><small>Asia/Jakarta · durable scheduler</small><h2>Agenda Yuki</h2></div><button type="button" onClick={onClose} aria-label="Tutup agenda"><X size={17}/></button></header>
     <div className="agenda-toolbar"><button onClick={enablePush}><Bell size={15}/>Aktifkan notifikasi HP</button><span>{notice}</span></div>
     <div className="agenda-list">
       {!agenda && !notice && <div className="agenda-empty"><LoaderCircle className="spin" size={18}/> Memuat agenda…</div>}
@@ -893,7 +894,8 @@ function AgendaModal({ onClose }: { onClose: () => void }) {
       </article>)}
       {!!agenda?.deliveries.length && <div className="delivery-history"><h3>Riwayat pengiriman</h3>{agenda.deliveries.slice(0, 10).map(item => <div key={item.id}><span>{item.title}</span><b className={`delivery-${item.status}`}>{item.status}</b><small>{localTime(item.delivered_at || item.scheduled_for)}{item.attempt_count > 1 ? ` · ${item.attempt_count} percobaan` : ''}</small></div>)}</div>}
     </div>
-  </section>
+    </section>
+  </div>
 }
 
 function MemoryCenterModal({ onClose }: { onClose: () => void }) {

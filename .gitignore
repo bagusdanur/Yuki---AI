@@ -18,3 +18,6 @@ tts-service/venv/
 tts-service/*.onnx
 tts-service/*.json
 tts-service/*.wav
+ecosystem.config.cjs
+data/*.db*
+data/self_improvements.json
