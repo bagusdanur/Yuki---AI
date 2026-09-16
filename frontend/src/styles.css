@@ -810,7 +810,7 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   font-family: inherit;
 }
 
-.settings-card { position: absolute; top: 66px; right: 20px; width: 260px; padding: 8px; border: 1px solid #333741; border-radius: 8px; background: #14171d; box-shadow: 0 22px 60px rgba(0,0,0,.55); }
+.settings-card { position: absolute; z-index: 60; top: 66px; right: 20px; width: 280px; max-height: min(620px, calc(100dvh - 92px)); padding: 8px; overflow-y: auto; overscroll-behavior: contain; border: 1px solid #333741; border-radius: 8px; background: #14171d; box-shadow: 0 22px 60px rgba(0,0,0,.55); scrollbar-width: thin; }
 
 .settings-card button { width: 100%; display: flex; gap: 11px; align-items: center; padding: 11px; border: 0; border-radius: 6px; color: #dbdae0; background: transparent; text-align: left; }
 .settings-card button:hover { background: #1c1f27; }
@@ -1273,11 +1273,11 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 }
 
 /* Phase 4 — mobile-first agenda & notification center */
-.agenda-modal { width: min(620px, 96vw); }
+.agenda-modal { width: min(620px, 96vw); height: auto; max-height: min(760px, 88dvh); }
 .agenda-toolbar { display: grid; gap: 8px; padding: 12px 16px; border-bottom: 1px solid #27272a; background: #0b0d12; }
 .agenda-toolbar button { min-height: 42px; display: flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid #514e8b; border-radius: 7px; color: #e8e7ff; background: #24233a; font-weight: 700; }
 .agenda-toolbar span { min-height: 14px; color: #9a9eaa; font-size: 11px; line-height: 1.4; }
-.agenda-list { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px calc(18px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; }
+.agenda-list { flex: 0 1 auto; min-height: 120px; max-height: 58dvh; overflow-y: auto; padding: 14px 16px calc(18px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; }
 .agenda-empty { padding: 28px 12px; display: flex; justify-content: center; gap: 8px; color: #858995; font-size: 12px; text-align: center; }
 .agenda-item { padding: 13px; border: 1px solid #30333d; border-radius: 8px; background: #11141a; }
 .agenda-item.status-paused { opacity: .76; border-style: dashed; }
@@ -1299,13 +1299,39 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 .delivery-history b { font: 700 8px/1 ui-monospace, monospace; text-transform: uppercase; }
 .delivery-history small { grid-column: 1 / -1; color: #737783; font-size: 9px; }
 .delivery-delivered { color: #67d6a2; }.delivery-failed { color: #ff8f96; }.delivery-retrying { color: #f2c96d; }
+.memory-modal { width: min(660px, 96vw); height: auto; max-height: min(780px, 90dvh); }
+.memory-tabs { display: flex; gap: 5px; padding: 10px 14px; overflow-x: auto; border-bottom: 1px solid #27272a; }
+.memory-tabs button { flex: 0 0 auto; padding: 7px 11px; border: 1px solid #32343d; border-radius: 6px; color: #898d98; background: #15171d; font: 700 9px/1 ui-monospace, monospace; text-transform: uppercase; }
+.memory-tabs button.active { color: #ecebff; border-color: #625ea4; background: #292641; }
+.memory-control { padding: 11px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid #252831; }
+.memory-control label { display: flex; align-items: center; gap: 8px; color: #dedde3; font-size: 12px; font-weight: 700; }
+.memory-control input { accent-color: #aaa7ff; width: 17px; height: 17px; }
+.memory-control small { color: #757985; font-size: 9px; text-align: right; }
+.memory-notice { margin: 10px 14px 0; padding: 9px 10px; border: 1px solid #594348; border-radius: 6px; color: #e7b3b8; background: #1d1417; font-size: 10px; }
+.memory-list { min-height: 150px; max-height: 58dvh; padding: 12px 14px calc(18px + env(safe-area-inset-bottom)); overflow-y: auto; display: flex; flex-direction: column; gap: 9px; }
+.memory-item { padding: 12px; border: 1px solid #2f333d; border-radius: 8px; background: #11141a; }
+.memory-item > div { display: flex; justify-content: space-between; gap: 10px; }
+.memory-item > div span { color: #bbb8ff; font: 700 9px/1 ui-monospace, monospace; text-transform: uppercase; }
+.memory-item > div b { color: #777c88; font: 700 8px/1 ui-monospace, monospace; text-transform: uppercase; }
+.memory-item p { margin: 9px 0 7px; color: #d1d1d7; font-size: 12px; line-height: 1.5; }
+.memory-item > small { display: block; overflow: hidden; color: #747986; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.memory-item footer { margin-top: 11px; display: flex; gap: 7px; flex-wrap: wrap; }
+.memory-item footer button, .new-skill { min-height: 36px; padding: 0 11px; border: 1px solid #3c404b; border-radius: 6px; color: #c9cad1; background: #1a1d24; font-size: 10px; font-weight: 700; touch-action: manipulation; }
+.memory-item footer button.danger { color: #efa4a8; border-color: #59363b; }
+.new-skill { width: 100%; display: flex; align-items: center; justify-content: center; gap: 7px; color: #e3e1ff; border-color: #555184; background: #242238; }
 
 @media (max-width: 520px) {
-  .agenda-modal { width: 100%; height: min(88dvh, 760px); max-height: 88dvh; align-self: flex-end; border-radius: 14px 14px 0 0; }
+  .settings-card { position: fixed; top: 76px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); width: min(340px, calc(100vw - 24px)); max-height: none; }
+  .agenda-modal { width: 100%; height: auto; max-height: 88dvh; align-self: flex-end; border-radius: 14px 14px 0 0; }
   .timeline-overlay:has(.agenda-modal) { align-items: flex-end; padding: 0; }
   .agenda-item-head { display: grid; }
   .agenda-item-head > span { justify-self: start; }
   .agenda-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .memory-modal { width: 100%; max-height: 90dvh; align-self: flex-end; border-radius: 14px 14px 0 0; }
+  .timeline-overlay:has(.memory-modal) { align-items: flex-end; padding: 0; }
+  .memory-control { align-items: flex-start; }
+  .memory-control small { max-width: 48%; }
+  .memory-item footer button { flex: 1; }
 }
 
 /* ==========================================================================
