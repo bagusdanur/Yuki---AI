@@ -3,7 +3,7 @@ name: delegate-task
 category: computing
 title: Yuki Subagent — Paralel Task Delegation
 description: Membagi task kompleks menjadi beberapa subtask yang dikerjakan secara paralel oleh subagent terisolasi, lalu hasilnya dirangkum.
-version: 1.0.0
+version: 1.1.0
 author: Yuki Agent Team
 tools:
   - name: delegate_tasks
@@ -40,6 +40,9 @@ Gunakan skill ini ketika:
 - Subtask 3: "Cari review penonton dan skor MAL untuk kedua anime tersebut"
 
 ## Batasan
-- Maksimal 4 subtask paralel
+- Maksimal 4 subtask; paling banyak 2 worker aktif bersamaan agar RAM/CPU VPS tetap aman
 - Setiap subagent timeout setelah 45 detik
 - Subagent tidak bisa spawn subagent lagi
+- Tool worker hanya read-only dan tetap memakai scope user parent
+- Hasil worker terstruktur dan diverifikasi agent utama
+- Worker gagal/timeout tidak merusak hasil worker lain

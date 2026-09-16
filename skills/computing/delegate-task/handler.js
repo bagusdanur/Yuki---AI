@@ -11,7 +11,10 @@ export async function executeDelegateTasks({ tasks, shared_context = '' }, conte
     return { error: 'Maksimal 4 subtask untuk delegation.' }
   }
 
-  const result = await delegateTasks({ tasks, userId, sharedContext: shared_context })
+  const result = await delegateTasks({
+    tasks, userId, sharedContext: shared_context,
+    shouldCancel: typeof context.shouldCancel === 'function' ? context.shouldCancel : () => false
+  })
   return result
 }
 
