@@ -1,4 +1,4 @@
-const CACHE = 'yuki-shell-v3.6'
+const CACHE = 'yuki-shell-v3.7'
 const CORE = [
   '/', '/manifest.webmanifest', '/yuki-icon.svg',
   '/expressions/tenang.png', '/expressions/senang.png', '/expressions/malu.png',
@@ -44,4 +44,24 @@ self.addEventListener('fetch', event => {
       return response
     })))
   }
+})
+
+self.addEventListener('push', event => {
+  let data = {}
+  try { data = event.data?.json() || {} } catch { data = { body: event.data?.text() || 'Yuki punya pengingat untukmu.' } }
+  event.waitUntil(self.registration.showNotification(data.title || '⏰ Pengingat Yuki', {
+    body: data.body || 'Hmph, waktunya melakukan hal yang sudah kamu jadwalkan.',
+    icon: '/yuki-icon.svg', badge: '/yuki-icon.svg', tag: data.tag || 'yuki-reminder',
+    renotify: true, data: { url: data.url || '/' }, actions: [{ action: 'open', title: 'Buka Yuki' }]
+  }))
+})
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close()
+  const target = new URL(event.notification.data?.url || '/', self.location.origin).toString()
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+    const client = clients.find(item => item.url.startsWith(self.location.origin))
+    if (client) { client.navigate(target); return client.focus() }
+    return self.clients.openWindow(target)
+  }))
 })

@@ -102,3 +102,32 @@ export interface Session {
   accessCode: string
   sessionToken: string
 }
+
+export interface AgendaTask {
+  id: number
+  title: string
+  description: string
+  human_schedule: string
+  next_run_at_utc?: string
+  last_run?: string
+  status: 'active' | 'paused' | 'done' | 'failed' | 'cancelled'
+  timezone: string
+  run_once: number
+}
+
+export interface AgendaDelivery {
+  id: string
+  task_id: number
+  title: string
+  scheduled_for: string
+  status: 'pending' | 'delivering' | 'retrying' | 'delivered' | 'failed'
+  attempt_count: number
+  last_error?: string
+  delivered_at?: string
+}
+
+export interface AgendaResponse {
+  timezone: string
+  tasks: AgendaTask[]
+  deliveries: AgendaDelivery[]
+}
