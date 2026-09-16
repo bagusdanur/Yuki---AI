@@ -87,9 +87,13 @@ export interface ChatResponse {
 }
 
 export interface AgentProgressResponse {
+  requestId?: string
   steps: AgentStep[]
   done: boolean
   state: string
+  result?: ChatResponse
+  errorCode?: string
+  cancelRequested?: boolean
 }
 
 export interface Session {
