@@ -875,9 +875,14 @@ function AgendaModal({ onClose }: { onClose: () => void }) {
     } catch (error) { setNotice(error instanceof Error ? error.message : 'Notifikasi belum berhasil diaktifkan.') }
   }
   const localTime = (value?: string) => value ? new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) + ' WIB' : 'Belum dijadwalkan'
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
   return <div className="agenda-backdrop" onClick={onClose}>
     <section className="timeline-card agenda-modal agenda-floating-panel" role="dialog" aria-modal="true" aria-label="Agenda Yuki" onClick={event => event.stopPropagation()}>
-      <header><div><small>Asia/Jakarta · durable scheduler</small><h2>Agenda Yuki</h2></div><button type="button" onClick={onClose} aria-label="Tutup agenda"><X size={17}/></button></header>
+      <header><div><small>Asia/Jakarta · durable scheduler</small><h2>Agenda Yuki</h2></div><button type="button" onClick={event => { event.stopPropagation(); onClose() }} aria-label="Tutup agenda"><X size={17}/></button></header>
     <div className="agenda-toolbar"><button onClick={enablePush}><Bell size={15}/>Aktifkan notifikasi HP</button><span>{notice}</span></div>
     <div className="agenda-list">
       {!agenda && !notice && <div className="agenda-empty"><LoaderCircle className="spin" size={18}/> Memuat agenda…</div>}

@@ -1283,7 +1283,7 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   place-items: center;
   padding: 18px;
   background: rgba(5, 6, 9, 0.78);
-  animation: fade-in .16s ease-out;
+  animation: modalFadeIn .16s ease-out;
 }
 .agenda-modal { width: min(620px, 96vw); height: auto; max-height: min(760px, 88dvh); }
 .agenda-floating-panel {
