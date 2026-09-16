@@ -854,8 +854,8 @@ function AgendaModal({ onClose }: { onClose: () => void }) {
   const [agenda, setAgenda] = useState<AgendaResponse | null>(null)
   const [busyId, setBusyId] = useState<number | null>(null)
   const [notice, setNotice] = useState('')
-  const load = () => getAgenda().then(setAgenda).catch(error => setNotice(error.message))
-  useEffect(load, [])
+  const load = () => { getAgenda().then(setAgenda).catch(error => setNotice(error instanceof Error ? error.message : 'Agenda belum berhasil dimuat.')) }
+  useEffect(() => { void load() }, [])
   const action = async (id: number, body: Record<string, unknown>) => {
     setBusyId(id); setNotice('')
     try { await updateAgendaTask(id, body); await load() }
