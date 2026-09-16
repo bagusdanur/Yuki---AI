@@ -8,6 +8,7 @@ process.env.YUKI_AGENT_WORKSPACE = temporaryRoot
 
 const tools = await import('../skills/computing/workspace-files/handler.js')
 const policy = await import('../lib/agent/workspace-policy.js')
+const sandbox = await import('../lib/agent/sandbox-runner.js')
 const alice = { userId: 'alice' }
 const bob = { userId: 'bob' }
 
@@ -131,6 +132,32 @@ try {
   result = await tools.run_workspace_tests({ path: 'tests/smoke.test.js' }, alice)
   assert.equal(result.success, true, result.error || result.stderr)
   assert.match(result.stdout, /sandbox-pass/)
+  const canaryPath = path.join(temporaryRoot, 'outside-canary.txt')
+  fs.writeFileSync(canaryPath, 'HOST_SECRET_CANARY')
+  result = await tools.create_workspace_file({ path: 'tests/read-outside.test.js', content: `import fs from 'node:fs'; console.log(fs.readFileSync(${JSON.stringify(canaryPath)}, 'utf8'))\n` }, alice)
+  assert.equal(result.success, true)
+  result = await tools.run_workspace_tests({ path: 'tests/read-outside.test.js' }, alice)
+  assert.equal(result.success, false)
+  assert.doesNotMatch(result.stdout + result.stderr, /HOST_SECRET_CANARY/)
+  result = await tools.create_workspace_file({ path: 'tests/network.test.js', content: `await import('node:net'); console.log('network-open')\n` }, alice)
+  assert.equal(result.success, true)
+  result = await tools.run_workspace_tests({ path: 'tests/network.test.js' }, alice)
+  assert.equal(result.success, false)
+  assert.match(result.stderr, /SANDBOX_NETWORK_DENIED/)
+  result = await tools.create_workspace_file({ path: 'tests/process.test.js', content: `const { execFileSync } = await import('node:child_process'); execFileSync(process.execPath, ['-e', 'console.log(1)']); console.log('child-open')\n` }, alice)
+  assert.equal(result.success, true)
+  result = await tools.run_workspace_tests({ path: 'tests/process.test.js' }, alice)
+  assert.equal(result.success, false)
+  assert.doesNotMatch(result.stdout, /child-open/)
+  result = await tools.create_workspace_file({ path: 'tests/env.test.js', content: `console.log(Object.keys(process.env).sort().join(','))\n` }, alice)
+  assert.equal(result.success, true)
+  result = await tools.run_workspace_tests({ path: 'tests/env.test.js' }, alice)
+  assert.equal(result.success, true)
+  assert.equal(result.stdout.trim(), 'LANG,TZ')
+  result = await tools.create_workspace_file({ path: 'tests/loop.test.js', content: `while (true) {}\n` }, alice)
+  assert.equal(result.success, true)
+  const bounded = await sandbox.runSandboxedNodeTest({ entry: path.join(aliceRoot, 'tests/loop.test.js'), workspaceRoot: aliceRoot, limits: { timeoutMs: 150, cpuSeconds: 1 } })
+  assert.equal(bounded.timedOut, true)
   result = await tools.run_workspace_tests({ path: 'src/app.js' }, alice)
   assert.equal(result.success, false, 'file non-test tidak boleh dieksekusi')
 
@@ -145,6 +172,7 @@ try {
   console.log('PASS  diff, snapshot, rollback, patch multi-file, dan validasi statis')
   console.log('PASS  import proyek multi-file, overwrite berizin, dan transaksi anti-partial')
   console.log('PASS  anti-duplikasi modul dan Node permission sandbox test runner')
+  console.log('PASS  sandbox memblokir host canary, network, child process, env secret, dan runaway timeout')
   console.log('PASS  cleanup akun menghapus workspace dan snapshot user')
   console.log('PASS  workspace root guard, authenticated scope, collision resistance, dan canary isolation')
 } finally {

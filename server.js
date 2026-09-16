@@ -211,7 +211,9 @@ initSkills().catch((err) => console.error('[skills-engine] Inisialisasi gagal:',
 // Inisialisasi Scheduled Tasks Engine & Callback Notifikasi
 setTaskTriggerCallback((userId, task) => {
   try {
-    const reminderMsg = `*[Pengingat Terjadwal: ${task.title}]*\n\n${task.description}\n\n*menatapmu*\nJangan sampai lupa tugas ini ya!`
+    const generic = !task.description || /^Pengingat:\s*Pengingat$/i.test(task.description.trim())
+    const detail = generic ? 'Waktunya melakukan hal yang tadi kamu minta Yuki ingatkan.' : task.description.trim()
+    const reminderMsg = `[YUKI_REMINDER]\n*mengetuk layar dua kali agar kamu memperhatikan*\n\n### ⏰ ${task.title}\n\n${detail}\n\nHmph, Yuki sudah menepati janji mengingatkanmu. Sekarang jangan malah diabaikan, ya.\n\n[emosi: kesal]`
     saveChatMessage(userId, 'assistant', reminderMsg)
     console.info(`[scheduler] Notifikasi pengingat disimpan untuk user ${userId}: "${task.title}"`)
   } catch (err) {

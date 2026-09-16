@@ -115,7 +115,10 @@ try {
   assert.match(runnerSource, /failedArtifactPatch[\s\S]*?update_interactive_artifact/)
   assert.doesNotMatch(runnerSource, /conversation\.push\(\{ role: 'assistant',[\s\S]{0,500}conversation\.push\(\{ role: 'system'/,
     'retry paksa setelah giliran assistant tidak boleh memakai system turn pada gateway Gemini')
-  assert.match(runner.buildDeterministicSchedulerReport([{ tool: 'schedule_task', status: 'done', output: { task: { id: 17, title: 'Audit', humanSchedule: '30 menit lagi', nextRunAtUtc: '2026-09-15T11:00:00.000Z', timezone: 'Asia/Jakarta' } } }]), /ID internal: \*\*17\*\*/)
+  const localizedReminder = runner.buildDeterministicSchedulerReport([{ tool: 'schedule_task', status: 'done', output: { task: { id: 17, title: 'Audit', humanSchedule: '30 menit lagi', nextRunAtUtc: '2026-09-15T11:00:00.000Z', timezone: 'Asia/Jakarta' } } }])
+  assert.match(localizedReminder, /WIB/)
+  assert.match(localizedReminder, /Hmph/)
+  assert.doesNotMatch(localizedReminder, /UTC|ID internal/)
   assert.match(runner.buildDeterministicSchedulerReport([{ tool: 'list_scheduled_tasks', status: 'done', output: { tasks: [{ id: 17, title: 'Audit', schedule: '30 menit lagi', nextRunAtUtc: '2026-09-15T11:00:00.000Z', timezone: 'Asia\/Jakarta' }] } }]), /ID \*\*17\*\*/)
   assert.match(runner.buildDeterministicSchedulerReport([{ tool: 'schedule_task', status: 'error', title: 'Menjadwalkan tugas' }]), /belum berhasil disimpan/)
   assert.match(runner.guardGroundedFinalResponse('Jadwal pengingatnya sudah Yuki ubah.', [], [{ tool: 'schedule_task', status: 'error' }]), /belum dapat dinyatakan selesai/)
