@@ -9,7 +9,7 @@ import {
   Terminal, ThumbsDown, ThumbsUp, Volume2, WifiOff, Wrench, X, Zap
 } from 'lucide-react'
 import {
-  addBookmark, decideAgentApproval, deleteAccount, getBookmarks, getRelationship,
+  addBookmark, cancelAgentRun, decideAgentApproval, deleteAccount, getActiveAgentRun, getBookmarks, getRelationship,
   getAgentProgress, getPendingAgentWorkflows, getScheduledReminders, getSkills, register, removeBookmark, restore, sendChat, sendFeedback, speak
 } from './api'
 import type {
@@ -251,7 +251,7 @@ function MarkdownMessage({ children }: { children: string }) {
   )
 }
 
-function LiveAgentWorkingBubble({ steps = [] }: { steps?: AgentStep[] }) {
+function LiveAgentWorkingBubble({ steps = [], onStop }: { steps?: AgentStep[]; onStop?: () => void }) {
   const [seconds, setSeconds] = useState(0)
 
   useEffect(() => {
@@ -273,6 +273,7 @@ function LiveAgentWorkingBubble({ steps = [] }: { steps?: AgentStep[] }) {
         <div className="live-agent-badge-row">
           <span className="live-pulse-dot" />
           <span><b>Todo &amp; Progress</b> — {seconds}s — proses aktual</span>
+          {onStop && <button type="button" className="agent-stop-button" onClick={onStop}><X size={11} /> Hentikan</button>}
         </div>
         <div className="live-agent-steps-stream">
           {visibleSteps.map((step, idx) => {
@@ -510,7 +511,9 @@ function prepareArtifactHtml(rawHtml = '') {
   })();
   </script>`
 
-  // Artifact tersimpan sudah membawa _yuki_touch_guide; cegah listener touch/click ganda.
+  // Artifact yang disimpan server sudah membawa _yuki_touch_guide. Jangan
+  // suntik engine kedua karena listener touch/click ganda membuat game berat
+  // dan satu sentuhan dapat dihitung beberapa kali.
   if (!html.includes('_yuki_injected_script') && !html.includes('_yuki_touch_guide')) {
     if (/<\/body>/i.test(html)) {
       html = html.replace(/<\/body>/i, `${mobileTouchEngine}\n</body>`)
@@ -917,6 +920,7 @@ export default function App() {
   const [selectedArtifact, setSelectedArtifact] = useState<ArtifactItem | null>(null)
   const [feedback, setFeedback] = useState<Record<number, 1 | -1>>({})
   const [liveAgentSteps, setLiveAgentSteps] = useState<AgentStep[]>([])
+  const [activeAgentRequestId, setActiveAgentRequestId] = useState('')
   const endRef = useRef<HTMLDivElement>(null)
   const currentAudio = useRef<HTMLAudioElement | null>(null)
   const requestTimers = useRef<number[]>([])
@@ -924,6 +928,37 @@ export default function App() {
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [messages, busy])
   useEffect(() => { if (session) localStorage.setItem(historyKey(session.userId), JSON.stringify(messages.slice(-40))) }, [messages, session])
+  useEffect(() => {
+    if (!session?.sessionToken || EMBED_COMPANION_ONLY) return
+    let stopped = false
+    let timer: number | undefined
+    const localKey = `yuki_active_agent_run_${session.userId}`
+    const restoreRun = async () => {
+      try {
+        const remembered = localStorage.getItem(localKey) || ''
+        const progress = remembered ? await getAgentProgress(remembered) : (await getActiveAgentRun()).run
+        if (!progress?.requestId && !remembered) return
+        const requestId = progress?.requestId || remembered
+        if (!requestId || stopped) return
+        setActiveAgentRequestId(requestId)
+        setLiveAgentSteps(progress?.steps || [])
+        if (progress?.done) {
+          localStorage.removeItem(localKey); setActiveAgentRequestId(''); setBusy(false)
+          if (progress.result?.reply) setMessages(current => current.some(message => message.messageId && message.messageId === progress.result?.messageId) ? current : [...current, {
+            role: 'assistant', content: progress.result!.reply, gesture: progress.result!.gesture, markdown: progress.result!.markdown,
+            workflowState: progress.result!.workflowState, truncated: progress.result!.truncated, comics: progress.result!.comics || [],
+            messageId: progress.result!.messageId, mode: 'agent', steps: progress.result!.steps || [], artifacts: progress.result!.artifacts || []
+          }])
+          if (progress.errorCode === 'PROCESS_RESTARTED') setError('Run terhenti karena service restart. Langkah sebelumnya tetap tercatat dan aman untuk dicoba ulang.')
+          return
+        }
+        localStorage.setItem(localKey, requestId); setBusy(true); setConnection('thinking')
+        timer = window.setTimeout(restoreRun, 700)
+      } catch { timer = window.setTimeout(restoreRun, 1500) }
+    }
+    restoreRun()
+    return () => { stopped = true; if (timer !== undefined) window.clearTimeout(timer) }
+  }, [session?.sessionToken, session?.userId])
   useEffect(() => {
     if (!session?.sessionToken || EMBED_COMPANION_ONLY) return
     getPendingAgentWorkflows().then(({ workflows }) => {
@@ -975,7 +1010,6 @@ export default function App() {
       window.removeEventListener('focus', syncReminders)
     }
   }, [session?.sessionToken])
-
   useEffect(() => {
     if (EMBED_COMPANION_ONLY) {
       if (chatMode !== 'companion') setChatMode('companion')
@@ -1093,6 +1127,8 @@ export default function App() {
     let progressTimer: number | undefined
     try {
       if (requestId) {
+        setActiveAgentRequestId(requestId)
+        localStorage.setItem(`yuki_active_agent_run_${session.userId}`, requestId)
         progressTimer = window.setInterval(async () => {
           try {
             const progress = await getAgentProgress(requestId)
@@ -1128,8 +1164,20 @@ export default function App() {
       window.setTimeout(() => setConnection(navigator.onLine ? 'idle' : 'offline'), 4_000)
     } finally {
       if (progressTimer !== undefined) window.clearInterval(progressTimer)
+      if (requestId) { localStorage.removeItem(`yuki_active_agent_run_${session.userId}`); setActiveAgentRequestId('') }
       requestTimers.current.forEach(window.clearTimeout); requestTimers.current = []
       setBusy(false); setLiveAgentSteps([]); if (!failed) setConnection(navigator.onLine ? 'idle' : 'offline')
+    }
+  }
+
+  async function stopAgentRun() {
+    if (!activeAgentRequestId) return
+    try {
+      const { run } = await cancelAgentRun(activeAgentRequestId)
+      setLiveAgentSteps(run.steps || [])
+      setConnection('idle')
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Gagal menghentikan run agent')
     }
   }
 
@@ -1377,7 +1425,7 @@ export default function App() {
         </article>)}
         {busy && (
           chatMode === 'agent' ? (
-            <LiveAgentWorkingBubble steps={liveAgentSteps} />
+            <LiveAgentWorkingBubble steps={liveAgentSteps} onStop={activeAgentRequestId ? stopAgentRun : undefined} />
           ) : (
             <>
               <div className={`request-status ${connection}`}>
