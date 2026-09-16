@@ -119,6 +119,7 @@ try {
   assert.match(runner.buildDeterministicSchedulerReport([{ tool: 'list_scheduled_tasks', status: 'done', output: { tasks: [{ id: 17, title: 'Audit', schedule: '30 menit lagi', nextRunAtUtc: '2026-09-15T11:00:00.000Z', timezone: 'Asia\/Jakarta' }] } }]), /ID \*\*17\*\*/)
   assert.match(runner.buildDeterministicSchedulerReport([{ tool: 'schedule_task', status: 'error', title: 'Menjadwalkan tugas' }]), /belum berhasil disimpan/)
   assert.match(runner.guardGroundedFinalResponse('Jadwal pengingatnya sudah Yuki ubah.', [], [{ tool: 'schedule_task', status: 'error' }]), /belum dapat dinyatakan selesai/)
+  assert.match(runner.guardGroundedFinalResponse('Pengingat pukul 09.17 sudah Yuki pasang.', [], []), /bukti yang valid/)
 
   console.log('PASS  durable approval state, resume claim, dan anti-double-click')
   console.log('PASS  evidence contract dan false-success guard')
