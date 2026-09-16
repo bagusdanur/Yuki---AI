@@ -875,7 +875,7 @@ function AgendaModal({ onClose }: { onClose: () => void }) {
     } catch (error) { setNotice(error instanceof Error ? error.message : 'Notifikasi belum berhasil diaktifkan.') }
   }
   const localTime = (value?: string) => value ? new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) + ' WIB' : 'Belum dijadwalkan'
-  return <div className="timeline-overlay agenda-overlay" onPointerDown={event => { if (event.target === event.currentTarget) onClose() }}><section className="timeline-card agenda-modal" onPointerDown={event => event.stopPropagation()}>
+  return <section className="timeline-card agenda-modal agenda-floating-panel" role="dialog" aria-modal="false" aria-label="Agenda Yuki">
     <header><div><small>Asia/Jakarta · durable scheduler</small><h2>Agenda Yuki</h2></div><button type="button" onClick={event => { event.stopPropagation(); onClose() }} aria-label="Tutup agenda"><X size={17}/></button></header>
     <div className="agenda-toolbar"><button onClick={enablePush}><Bell size={15}/>Aktifkan notifikasi HP</button><span>{notice}</span></div>
     <div className="agenda-list">
@@ -893,7 +893,7 @@ function AgendaModal({ onClose }: { onClose: () => void }) {
       </article>)}
       {!!agenda?.deliveries.length && <div className="delivery-history"><h3>Riwayat pengiriman</h3>{agenda.deliveries.slice(0, 10).map(item => <div key={item.id}><span>{item.title}</span><b className={`delivery-${item.status}`}>{item.status}</b><small>{localTime(item.delivered_at || item.scheduled_for)}{item.attempt_count > 1 ? ` · ${item.attempt_count} percobaan` : ''}</small></div>)}</div>}
     </div>
-  </section></div>
+  </section>
 }
 
 function MemoryCenterModal({ onClose }: { onClose: () => void }) {
@@ -1446,7 +1446,7 @@ export default function App() {
       {!EMBED_COMPANION_ONLY && skillsModalOpen && (
         <SkillsCatalogModal skills={skills} onClose={() => setSkillsModalOpen(false)} />
       )}
-      {!EMBED_COMPANION_ONLY && agendaOpen && <AgendaModal onClose={closeOverlays} />}
+      {!EMBED_COMPANION_ONLY && agendaOpen && <AgendaModal onClose={() => setAgendaOpen(false)} />}
       {!EMBED_COMPANION_ONLY && memoryOpen && <MemoryCenterModal onClose={closeOverlays} />}
 
       {!EMBED_COMPANION_ONLY && selectedArtifact && (
