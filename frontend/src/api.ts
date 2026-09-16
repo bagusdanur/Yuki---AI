@@ -1,4 +1,4 @@
-import type { AgentProgressResponse, BookmarkedComic, ChatMode, ChatResponse, ComicRecommendation, Message, Milestone, SkillInfo } from './types'
+import type { AgendaResponse, AgentProgressResponse, BookmarkedComic, ChatMode, ChatResponse, ComicRecommendation, Message, Milestone, SkillInfo } from './types'
 
 async function parse<T>(response: Response): Promise<T> {
   const rawText = await response.text()
@@ -111,6 +111,26 @@ export async function getPendingAgentWorkflows() {
 
 export async function getScheduledReminders(afterId = 0) {
   return request<{ reminders: Message[] }>(`/api/chat/reminders?after=${Math.max(0, afterId)}`, { method: 'GET' }, 10_000, 0)
+}
+
+export async function getAgenda() {
+  return request<AgendaResponse>('/api/agenda', { method: 'GET' }, 10_000, 0)
+}
+
+export async function updateAgendaTask(taskId: number, body: Record<string, unknown>) {
+  return request<{ success: true }>(`/api/agenda/${taskId}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+  }, 10_000, 0)
+}
+
+export async function getPushConfig() {
+  return request<{ enabled: boolean; publicKey: string }>('/api/push/config', { method: 'GET' }, 10_000, 0)
+}
+
+export async function savePushSubscription(subscription: PushSubscriptionJSON) {
+  return request<{ success: true }>('/api/push/subscriptions', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subscription })
+  }, 10_000, 0)
 }
 
 export async function getSkills() {

@@ -3,17 +3,17 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeSanitize from 'rehype-sanitize'
 import {
-  Bookmark, BookOpen, Bot, Check, ChevronDown, ChevronUp, Code2, Copy, Download,
+  Bell, Bookmark, BookOpen, Bot, Check, ChevronDown, ChevronUp, Clock3, Code2, Copy, Download,
   Gamepad2, Globe, Heart, KeyRound, ListTodo, LoaderCircle, Maximize2, MessageSquare,
-  Minimize2, Play, Radio, RefreshCw, RotateCcw, Save, Send, Settings, Sparkles, Star,
+  Minimize2, Pause, Play, Radio, RefreshCw, RotateCcw, Save, Send, Settings, Sparkles, Star,
   Terminal, ThumbsDown, ThumbsUp, Volume2, WifiOff, Wrench, X, Zap
 } from 'lucide-react'
 import {
-  addBookmark, cancelAgentRun, decideAgentApproval, deleteAccount, getActiveAgentRun, getBookmarks, getRelationship,
-  getAgentProgress, getPendingAgentWorkflows, getScheduledReminders, getSkills, register, removeBookmark, restore, sendChat, sendFeedback, speak
+  addBookmark, cancelAgentRun, decideAgentApproval, deleteAccount, getActiveAgentRun, getAgenda, getBookmarks, getPushConfig, getRelationship,
+  getAgentProgress, getPendingAgentWorkflows, getScheduledReminders, getSkills, register, removeBookmark, restore, savePushSubscription, sendChat, sendFeedback, speak, updateAgendaTask
 } from './api'
 import type {
-  AgentStep, ArtifactItem, BookmarkedComic, ChatMode, ComicRecommendation,
+  AgendaResponse, AgentStep, ArtifactItem, BookmarkedComic, ChatMode, ComicRecommendation,
   Message, Milestone, Session, SkillInfo
 } from './types'
 
@@ -845,6 +845,57 @@ function SkillsCatalogModal({ skills, onClose }: { skills: SkillInfo[]; onClose:
   )
 }
 
+function pushKey(value: string) {
+  const padded = `${value}${'='.repeat((4 - value.length % 4) % 4)}`.replace(/-/g, '+').replace(/_/g, '/')
+  return Uint8Array.from(atob(padded), char => char.charCodeAt(0))
+}
+
+function AgendaModal({ onClose }: { onClose: () => void }) {
+  const [agenda, setAgenda] = useState<AgendaResponse | null>(null)
+  const [busyId, setBusyId] = useState<number | null>(null)
+  const [notice, setNotice] = useState('')
+  const load = () => getAgenda().then(setAgenda).catch(error => setNotice(error.message))
+  useEffect(load, [])
+  const action = async (id: number, body: Record<string, unknown>) => {
+    setBusyId(id); setNotice('')
+    try { await updateAgendaTask(id, body); await load() }
+    catch (error) { setNotice(error instanceof Error ? error.message : 'Agenda belum berhasil diperbarui.') }
+    finally { setBusyId(null) }
+  }
+  const enablePush = async () => {
+    try {
+      const config = await getPushConfig()
+      if (!config.enabled) throw new Error('VAPID belum dikonfigurasi di server.')
+      const permission = await Notification.requestPermission()
+      if (permission !== 'granted') throw new Error('Izin notifikasi belum diberikan.')
+      const registration = await navigator.serviceWorker.ready
+      const subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: pushKey(config.publicKey) })
+      await savePushSubscription(subscription.toJSON())
+      setNotice('Notifikasi HP aktif. Yuki tetap bisa mengingatkan saat browser ditutup.')
+    } catch (error) { setNotice(error instanceof Error ? error.message : 'Notifikasi belum berhasil diaktifkan.') }
+  }
+  const localTime = (value?: string) => value ? new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) + ' WIB' : 'Belum dijadwalkan'
+  return <div className="timeline-overlay" onClick={onClose}><section className="timeline-card agenda-modal" onClick={event => event.stopPropagation()}>
+    <header><div><small>Asia/Jakarta · durable scheduler</small><h2>Agenda Yuki</h2></div><button onClick={onClose}><X size={17}/></button></header>
+    <div className="agenda-toolbar"><button onClick={enablePush}><Bell size={15}/>Aktifkan notifikasi HP</button><span>{notice}</span></div>
+    <div className="agenda-list">
+      {!agenda && !notice && <div className="agenda-empty"><LoaderCircle className="spin" size={18}/> Memuat agenda…</div>}
+      {agenda?.tasks.length === 0 && <div className="agenda-empty">Belum ada pengingat. Minta Yuki menjadwalkannya lewat chat.</div>}
+      {agenda?.tasks.map(task => <article className={`agenda-item status-${task.status}`} key={task.id}>
+        <div className="agenda-item-head"><div><strong>{task.title}</strong><small>{task.status}</small></div><span><Clock3 size={12}/>{localTime(task.next_run_at_utc)}</span></div>
+        <p>{task.description || 'Pengingat dari Yuki'}</p><code>{task.human_schedule} · {task.timezone || 'Asia/Jakarta'}</code>
+        <div className="agenda-actions">
+          {task.status === 'active' && <button disabled={busyId === task.id} onClick={() => action(task.id, { action: 'pause' })}><Pause size={13}/>Jeda</button>}
+          {task.status === 'paused' && <button disabled={busyId === task.id} onClick={() => action(task.id, { action: 'resume' })}><Play size={13}/>Lanjutkan</button>}
+          {!['done','cancelled'].includes(task.status) && <button disabled={busyId === task.id} onClick={() => action(task.id, { action: 'snooze', minutes: 10 })}><Clock3 size={13}/>Tunda 10m</button>}
+          {!['done','cancelled'].includes(task.status) && <button disabled={busyId === task.id} onClick={() => { const schedule = window.prompt('Jadwal baru, contoh: besok jam 7 atau setiap hari jam 07:00', task.human_schedule); if (schedule) void action(task.id, { action: 'edit', schedule, timezone: 'Asia/Jakarta' }) }}><Settings size={13}/>Edit</button>}
+        </div>
+      </article>)}
+      {!!agenda?.deliveries.length && <div className="delivery-history"><h3>Riwayat pengiriman</h3>{agenda.deliveries.slice(0, 10).map(item => <div key={item.id}><span>{item.title}</span><b className={`delivery-${item.status}`}>{item.status}</b><small>{localTime(item.delivered_at || item.scheduled_for)}{item.attempt_count > 1 ? ` · ${item.attempt_count} percobaan` : ''}</small></div>)}</div>}
+    </div>
+  </section></div>
+}
+
 function Onboarding({ onReady }: { onReady: (session: Session, history?: Message[], bondValue?: number, milestones?: Milestone[]) => void }) {
   const [mode, setMode] = useState<'register' | 'restore'>('register')
   const [value, setValue] = useState('')
@@ -917,6 +968,7 @@ export default function App() {
   const [bookmarksOpen, setBookmarksOpen] = useState(false)
   const [skills, setSkills] = useState<SkillInfo[]>([])
   const [skillsModalOpen, setSkillsModalOpen] = useState(false)
+  const [agendaOpen, setAgendaOpen] = useState(false)
   const [selectedArtifact, setSelectedArtifact] = useState<ArtifactItem | null>(null)
   const [feedback, setFeedback] = useState<Record<number, 1 | -1>>({})
   const [liveAgentSteps, setLiveAgentSteps] = useState<AgentStep[]>([])
@@ -1295,6 +1347,7 @@ export default function App() {
         </div>
         {settingsOpen && <div className="settings-card">
           {!EMBED_COMPANION_ONLY && <button onClick={() => { setSkillsModalOpen(true); setSettingsOpen(false) }}><Wrench size={15} /><span><b>Katalog Skills Yuki Agent</b><small>{skills.length || 14} skills aktif</small></span></button>}
+          {!EMBED_COMPANION_ONLY && <button onClick={() => { setAgendaOpen(true); setSettingsOpen(false) }}><Bell size={15} /><span><b>Agenda & Pengingat</b><small>Jadwal, status, dan notifikasi HP</small></span></button>}
           <button onClick={() => { setBookmarksOpen(true); setSettingsOpen(false) }}><Bookmark size={15} /><span><b>Komik tersimpan</b><small>{bookmarks.length} judul tersimpan</small></span></button>
           <button onClick={() => { setTimelineOpen(true); setSettingsOpen(false) }}><Heart size={15} /><span><b>Perjalanan hubungan</b><small>{milestones.length} momen tersimpan</small></span></button>
           {installPrompt && <button onClick={installApp}><Download size={15} /><span><b>Pasang aplikasi Yuki</b><small>Tambahkan ke layar utama</small></span></button>}
@@ -1345,6 +1398,7 @@ export default function App() {
       {!EMBED_COMPANION_ONLY && skillsModalOpen && (
         <SkillsCatalogModal skills={skills} onClose={() => setSkillsModalOpen(false)} />
       )}
+      {!EMBED_COMPANION_ONLY && agendaOpen && <AgendaModal onClose={() => setAgendaOpen(false)} />}
 
       {!EMBED_COMPANION_ONLY && selectedArtifact && (
         <CodexArtifactModal artifact={selectedArtifact} onClose={() => setSelectedArtifact(null)} />

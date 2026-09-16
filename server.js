@@ -23,7 +23,8 @@ import { runAgent, extractHtmlArtifactsFromText } from './lib/agent/runner.js'
 import { cancelWorkflow, claimWorkflow, createApprovalCheckpoint, deleteUserWorkflows, getWorkflow, listPendingWorkflows, setWorkflowState } from './lib/agent/workflow-store.js'
 import { claimAgentRun, createOrGetAgentRun, deleteUserAgentRuns, getActiveAgentRun, getAgentRun, isAgentRunCancellationRequested, recoverInterruptedAgentRuns, requestAgentRunCancellation, setAgentRunState, upsertAgentRunStep } from './lib/agent/run-store.js'
 import { traceEvent } from './lib/agent/observability.js'
-import { deleteScheduledTasks, restoreScheduledJobs, setTaskTriggerCallback, shutdownScheduler } from './lib/scheduler.js'
+import { deleteScheduledTasks, getAgenda, restoreScheduledJobs, setScheduledTaskStatus, setTaskTriggerCallback, shutdownScheduler, snoozeScheduledTask, updateScheduledTask } from './lib/scheduler.js'
+import { deletePushSubscriptions, getPushConfig, removePushSubscription, savePushSubscription, sendPushToUser } from './lib/push.js'
 import { closeBrowser } from './lib/browser.js'
 import { deleteWorkspaceData, importWorkspaceFiles } from './skills/computing/workspace-files/handler.js'
 
@@ -209,13 +210,20 @@ warmupEmbedder().catch(() => {})
 initSkills().catch((err) => console.error('[skills-engine] Inisialisasi gagal:', err.message))
 
 // Inisialisasi Scheduled Tasks Engine & Callback Notifikasi
-setTaskTriggerCallback((userId, task) => {
+setTaskTriggerCallback(async (userId, task) => {
   try {
     const generic = !task.description || /^Pengingat:\s*Pengingat$/i.test(task.description.trim())
     const detail = generic ? 'Waktunya melakukan hal yang tadi kamu minta Yuki ingatkan.' : task.description.trim()
     const reminderMsg = `[YUKI_REMINDER]\n*mengetuk layar dua kali agar kamu memperhatikan*\n\n### ⏰ ${task.title}\n\n${detail}\n\nHmph, Yuki sudah menepati janji mengingatkanmu. Sekarang jangan malah diabaikan, ya.\n\n[emosi: kesal]`
     saveChatMessage(userId, 'assistant', reminderMsg)
+    const push = await sendPushToUser(userId, {
+      title: `⏰ ${task.title}`,
+      body: `${detail} — Hmph, jangan diabaikan ya.`,
+      tag: `yuki-reminder-${task.occurrenceId || task.id}`,
+      url: '/', occurrenceId: task.occurrenceId
+    })
     console.info(`[scheduler] Notifikasi pengingat disimpan untuk user ${userId}: "${task.title}"`)
+    if (push.failed) console.warn(`[push] ${push.failed} subscription gagal untuk user ${userId}`)
   } catch (err) {
     console.error('[server] Gagal simpan notifikasi scheduled task:', err.message)
   }
@@ -410,6 +418,32 @@ app.post('/api/login-code', rateLimit({ max: 15 }), async (req, res) => {
 app.get('/api/chat/reminders', requireSession, rateLimit({ windowMs: 60_000, max: 30 }), (req, res) => {
   const afterId = Math.max(0, Number(req.query.after || 0) || 0)
   res.json({ reminders: getScheduledReminderMessages(req.authUserId, afterId) })
+})
+
+app.get('/api/agenda', requireSession, rateLimit({ max: 60 }), (req, res) => {
+  res.json(getAgenda(req.authUserId))
+})
+
+app.patch('/api/agenda/:taskId', requireSession, rateLimit({ windowMs: 60_000, max: 30 }), (req, res) => {
+  const taskId = Number(req.params.taskId)
+  if (!Number.isInteger(taskId) || taskId < 1) return res.status(400).json({ error: 'ID pengingat tidak valid.' })
+  const action = String(req.body?.action || '')
+  let result
+  if (action === 'pause' || action === 'resume') result = setScheduledTaskStatus(taskId, req.authUserId, action === 'pause' ? 'paused' : 'active')
+  else if (action === 'snooze') result = snoozeScheduledTask(taskId, req.authUserId, req.body?.minutes)
+  else if (action === 'edit') result = updateScheduledTask({ taskId, userId: req.authUserId, title: req.body?.title, description: req.body?.description, schedule: req.body?.schedule, timezone: req.body?.timezone })
+  else return res.status(400).json({ error: 'Aksi agenda tidak dikenali.' })
+  if (!result.success) return res.status(404).json({ error: result.error || 'Pengingat tidak ditemukan.' })
+  res.json(result)
+})
+
+app.get('/api/push/config', requireSession, rateLimit({ max: 30 }), (_req, res) => res.json(getPushConfig()))
+app.post('/api/push/subscriptions', requireSession, rateLimit({ windowMs: 60_000, max: 10 }), (req, res) => {
+  try { res.json(savePushSubscription(req.authUserId, req.body?.subscription)) }
+  catch { res.status(400).json({ error: 'Subscription notifikasi tidak valid.' }) }
+})
+app.delete('/api/push/subscriptions', requireSession, rateLimit({ windowMs: 60_000, max: 10 }), (req, res) => {
+  res.json(removePushSubscription(req.authUserId, req.body?.endpoint))
 })
 
 // Endpoint chat -> balasan dari Qwen/DeepSeek (dengan emosi + kedekatan + memori + agent skills)
@@ -823,7 +857,7 @@ app.post('/api/feedback', requireSession, rateLimit({ max: 40 }), (req, res) => 
 })
 
 app.delete('/api/account', requireSession, rateLimit({ max: 3, windowMs: 3600_000 }), (req, res) => {
-  deleteScheduledTasks(req.authUserId); deleteUserWorkflows(req.authUserId); deleteUserAgentRuns(req.authUserId); deleteUserData(req.authUserId); deleteWorkspaceData(req.authUserId); sessions.delete(req.authUserId); turnCounters.delete(req.authUserId)
+  deleteScheduledTasks(req.authUserId); deletePushSubscriptions(req.authUserId); deleteUserWorkflows(req.authUserId); deleteUserAgentRuns(req.authUserId); deleteUserData(req.authUserId); deleteWorkspaceData(req.authUserId); sessions.delete(req.authUserId); turnCounters.delete(req.authUserId)
   res.json({ ok: true })
 })
 
