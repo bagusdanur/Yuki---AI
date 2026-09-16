@@ -91,6 +91,14 @@ export async function getAgentProgress(requestId: string) {
   return request<AgentProgressResponse>(`/api/agent/progress/${encodeURIComponent(requestId)}`, { method: 'GET' }, 10_000, 0)
 }
 
+export async function getActiveAgentRun() {
+  return request<{ run: AgentProgressResponse | null }>('/api/agent/runs/active', { method: 'GET' }, 10_000, 0)
+}
+
+export async function cancelAgentRun(requestId: string) {
+  return request<{ success: true; run: AgentProgressResponse }>(`/api/agent/runs/${encodeURIComponent(requestId)}/cancel`, { method: 'POST' }, 10_000, 0)
+}
+
 export async function decideAgentApproval(approvalId: string, decision: 'approve' | 'reject') {
   return request<ChatResponse & { success: true; status: 'approved' | 'rejected'; state?: string; workflowId?: string; duplicate?: boolean }>(`/api/agent/approvals/${encodeURIComponent(approvalId)}`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ decision })
