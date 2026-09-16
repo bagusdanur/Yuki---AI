@@ -880,8 +880,8 @@ function AgendaModal({ onClose }: { onClose: () => void }) {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
-  return <div className="agenda-backdrop" onClick={onClose}>
-    <section className="timeline-card agenda-modal agenda-floating-panel" role="dialog" aria-modal="true" aria-label="Agenda Yuki" onClick={event => event.stopPropagation()}>
+  return <div className="timeline-overlay" onClick={onClose} style={{ zIndex: 1000 }}>
+    <section className="timeline-card agenda-modal" role="dialog" aria-modal="true" aria-label="Agenda Yuki" onClick={event => event.stopPropagation()}>
       <header><div><small>Asia/Jakarta · durable scheduler</small><h2>Agenda Yuki</h2></div><button type="button" onClick={event => { event.stopPropagation(); onClose() }} aria-label="Tutup agenda"><X size={17}/></button></header>
     <div className="agenda-toolbar"><button onClick={enablePush}><Bell size={15}/>Aktifkan notifikasi HP</button><span>{notice}</span></div>
     <div className="agenda-list">
