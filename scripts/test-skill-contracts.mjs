@@ -58,6 +58,9 @@ try {
   result = await executeTool('schedule_task', { title: 'Kontrak', description: 'Tes', schedule: '30 menit lagi', idempotency_key: 'contract-schedule', timezone: 'Asia/Jakarta' }, { userId: 'alice' })
   assert.equal(result.contract.status, 'succeeded')
   assert.ok(result.data.task.nextRunAtUtc)
+  result = await executeTool('schedule_task', { schedule: '2 menit lagi', idempotency_key: 'contract-schedule-minimal' }, { userId: 'alice' })
+  assert.equal(result.contract.status, 'succeeded', 'scheduler harus menerima schedule meski model tidak mengirim description')
+  assert.ok(result.data.task.id)
   const scheduledTaskId = result.data.task.id
   result = await executeTool('reschedule_task', { task_id: scheduledTaskId, schedule: '45 menit lagi', timezone: 'Asia/Jakarta' }, { userId: 'alice' })
   assert.equal(result.contract.status, 'succeeded')
