@@ -23,6 +23,7 @@ async function load() {
     $('positive').textContent = fmt(data.feedbackPositive); $('negative').textContent = fmt(data.feedbackNegative)
     $('uptime').textContent = `${fmt(data.runtime.uptime / 3600)} jam`; $('requests').textContent = fmt(data.runtime.requests)
     $('failures').textContent = fmt(data.runtime.chatFailures); $('latency').textContent = `${fmt(data.runtime.averageLatency)} ms`
+    renderProviders(data.providers || { providers: [], alerts: [], totals: {} })
     $('recent').innerHTML = data.recent.map((item, index) => userRow(item, index)).join('')
     $('updated').textContent = `Diperbarui ${new Date().toLocaleTimeString('id-ID')}`
     clearTimeout(timer); timer = setTimeout(load, 30_000)
@@ -30,6 +31,25 @@ async function load() {
     error.textContent = cause.message; sessionStorage.removeItem('yuki_admin_session')
     login.hidden = false; dashboard.hidden = true
   }
+}
+
+function renderProviders(operations) {
+  const totals = operations.totals || {}
+  $('llm-calls').textContent = fmt(totals.calls)
+  $('llm-tokens').textContent = fmt(totals.tokens)
+  $('llm-cost').textContent = `$${Number(totals.estimatedCostUsd || 0).toFixed(4)}`
+  $('open-circuits').textContent = fmt(totals.openCircuits)
+  const router = $('router-status')
+  router.classList.toggle('danger', Number(totals.openCircuits) > 0)
+  router.lastChild.textContent = Number(totals.openCircuits) > 0 ? ' attention' : ' healthy'
+  $('providers').innerHTML = (operations.providers || []).map(item => `
+    <article class="provider-card ${escapeHtml(item.state)}">
+      <div><strong>${escapeHtml(item.name)}</strong><span class="circuit">${escapeHtml(item.state)}</span></div>
+      <small>${escapeHtml(item.model)}</small>
+      <dl><div><dt>Success</dt><dd>${fmt(item.successRate)}%</dd></div><div><dt>Latency</dt><dd>${fmt(item.averageLatencyMs)} ms</dd></div><div><dt>Calls</dt><dd>${fmt(item.calls)}</dd></div><div><dt>Tokens</dt><dd>${fmt(item.totalTokens)}</dd></div></dl>
+      ${item.lastError ? `<p>${escapeHtml(item.lastError)}</p>` : ''}
+    </article>`).join('') || '<p class="empty">Provider belum menerima request sejak restart.</p>'
+  $('alerts').innerHTML = (operations.alerts || []).map(item => `<div class="alert"><span>${escapeHtml(item.type)}</span><strong>${escapeHtml(item.provider)}</strong><p>${escapeHtml(item.message)}</p><time>${new Date(item.at).toLocaleString('id-ID')}</time></div>`).join('') || '<p class="empty">Belum ada alert.</p>'
 }
 
 function escapeHtml(value) { const node = document.createElement('span'); node.textContent = value; return node.innerHTML }
