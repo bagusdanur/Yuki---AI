@@ -131,3 +131,29 @@ export interface AgendaResponse {
   tasks: AgendaTask[]
   deliveries: AgendaDelivery[]
 }
+
+export interface AgentMemory {
+  id: number
+  scopeType: 'user' | 'project' | 'task' | 'lesson'
+  scopeId: string
+  category: string
+  content: string
+  importance: number
+  confidence: number
+  sourceMessageId?: number
+  evidence: Array<{ kind: string; ref: string }>
+  status: 'active' | 'resolved' | 'archived'
+  updatedAt: string
+}
+
+export interface DynamicSkill {
+  id: string
+  name: string
+  version: string
+  description: string
+  instructions: string
+  toolAllowlist: string[]
+  status: 'draft' | 'pending_approval' | 'active' | 'disabled'
+  validation: { valid?: boolean; deniedTools?: string[]; forbiddenInstruction?: boolean }
+  updatedAt: string
+}

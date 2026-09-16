@@ -1,4 +1,4 @@
-import type { AgendaResponse, AgentProgressResponse, BookmarkedComic, ChatMode, ChatResponse, ComicRecommendation, Message, Milestone, SkillInfo } from './types'
+import type { AgendaResponse, AgentMemory, AgentProgressResponse, BookmarkedComic, ChatMode, ChatResponse, ComicRecommendation, DynamicSkill, Message, Milestone, SkillInfo } from './types'
 
 async function parse<T>(response: Response): Promise<T> {
   const rawText = await response.text()
@@ -131,6 +131,28 @@ export async function savePushSubscription(subscription: PushSubscriptionJSON) {
   return request<{ success: true }>('/api/push/subscriptions', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subscription })
   }, 10_000, 0)
+}
+
+export async function getMemories(scopeType = '') {
+  return request<{ memories: AgentMemory[]; settings: { autoCapture: boolean } }>(`/api/memories${scopeType ? `?scopeType=${encodeURIComponent(scopeType)}` : ''}`, { method: 'GET' }, 10_000, 0)
+}
+export async function setMemoryAutoCapture(autoCapture: boolean) {
+  return request<{ settings: { autoCapture: boolean } }>('/api/memories/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ autoCapture }) }, 10_000, 0)
+}
+export async function updateMemory(id: number, body: Record<string, unknown>) {
+  return request<{ success: true; memory: AgentMemory }>(`/api/memories/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, 10_000, 0)
+}
+export async function deleteMemory(id: number) {
+  return request<{ success: true }>(`/api/memories/${id}`, { method: 'DELETE' }, 10_000, 0)
+}
+export async function getDynamicSkills() {
+  return request<{ skills: DynamicSkill[] }>('/api/agent/dynamic-skills', { method: 'GET' }, 10_000, 0)
+}
+export async function createDynamicSkill(body: Record<string, unknown>) {
+  return request<{ success: true; skill: DynamicSkill }>('/api/agent/dynamic-skills', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, 10_000, 0)
+}
+export async function dynamicSkillAction(id: string, action: 'validate' | 'approve' | 'disable') {
+  return request<{ success: true; skill?: DynamicSkill }>(`/api/agent/dynamic-skills/${encodeURIComponent(id)}/${action}`, { method: 'POST' }, 10_000, 0)
 }
 
 export async function getSkills() {

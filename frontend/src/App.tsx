@@ -3,17 +3,17 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeSanitize from 'rehype-sanitize'
 import {
-  Bell, Bookmark, BookOpen, Bot, Check, ChevronDown, ChevronUp, Clock3, Code2, Copy, Download,
+  Bell, Bookmark, BookOpen, Bot, Brain, Check, ChevronDown, ChevronUp, Clock3, Code2, Copy, Download,
   Gamepad2, Globe, Heart, KeyRound, ListTodo, LoaderCircle, Maximize2, MessageSquare,
   Minimize2, Pause, Play, Radio, RefreshCw, RotateCcw, Save, Send, Settings, Sparkles, Star,
   Terminal, ThumbsDown, ThumbsUp, Volume2, WifiOff, Wrench, X, Zap
 } from 'lucide-react'
 import {
-  addBookmark, cancelAgentRun, decideAgentApproval, deleteAccount, getActiveAgentRun, getAgenda, getBookmarks, getPushConfig, getRelationship,
-  getAgentProgress, getPendingAgentWorkflows, getScheduledReminders, getSkills, register, removeBookmark, restore, savePushSubscription, sendChat, sendFeedback, speak, updateAgendaTask
+  addBookmark, cancelAgentRun, createDynamicSkill, decideAgentApproval, deleteAccount, deleteMemory, dynamicSkillAction, getActiveAgentRun, getAgenda, getBookmarks, getDynamicSkills, getMemories, getPushConfig, getRelationship,
+  getAgentProgress, getPendingAgentWorkflows, getScheduledReminders, getSkills, register, removeBookmark, restore, savePushSubscription, sendChat, sendFeedback, setMemoryAutoCapture, speak, updateAgendaTask, updateMemory
 } from './api'
 import type {
-  AgendaResponse, AgentStep, ArtifactItem, BookmarkedComic, ChatMode, ComicRecommendation,
+  AgendaResponse, AgentMemory, AgentStep, ArtifactItem, BookmarkedComic, ChatMode, ComicRecommendation, DynamicSkill,
   Message, Milestone, Session, SkillInfo
 } from './types'
 
@@ -896,6 +896,47 @@ function AgendaModal({ onClose }: { onClose: () => void }) {
   </section></div>
 }
 
+function MemoryCenterModal({ onClose }: { onClose: () => void }) {
+  const [tab, setTab] = useState<'user' | 'project' | 'task' | 'lesson' | 'skills'>('user')
+  const [memories, setMemories] = useState<AgentMemory[]>([])
+  const [skills, setSkills] = useState<DynamicSkill[]>([])
+  const [autoCapture, setAutoCapture] = useState(true)
+  const [notice, setNotice] = useState('')
+  const load = async () => {
+    try {
+      const [memoryData, skillData] = await Promise.all([getMemories(), getDynamicSkills()])
+      setMemories(memoryData.memories); setAutoCapture(memoryData.settings.autoCapture); setSkills(skillData.skills)
+    } catch (error) { setNotice(error instanceof Error ? error.message : 'Data belum berhasil dimuat.') }
+  }
+  useEffect(() => { void load() }, [])
+  const run = async (action: () => Promise<unknown>) => { setNotice(''); try { await action(); await load() } catch (error) { setNotice(error instanceof Error ? error.message : 'Perubahan belum berhasil.') } }
+  const draftSkill = () => {
+    const name = window.prompt('Nama skill, contoh: ringkas-catatan'); if (!name) return
+    const description = window.prompt('Deskripsi singkat skill'); if (!description) return
+    const instructions = window.prompt('Instruksi skill (tanpa akses VPS, shell, credential, atau project lain)'); if (!instructions) return
+    void run(() => createDynamicSkill({ name, description, instructions, toolAllowlist: [] }))
+  }
+  const shown = memories.filter(item => item.scopeType === tab)
+  return <div className="timeline-overlay" onClick={onClose}><section className="timeline-card memory-modal" onClick={event => event.stopPropagation()}>
+    <header><div><small>Scoped · private · evidence-backed</small><h2>Memory & Skills Yuki</h2></div><button onClick={onClose}><X size={17}/></button></header>
+    <div className="memory-tabs">{(['user','project','task','lesson','skills'] as const).map(item => <button className={tab === item ? 'active' : ''} onClick={() => setTab(item)} key={item}>{item}</button>)}</div>
+    <div className="memory-control"><label><input type="checkbox" checked={autoCapture} onChange={event => { const value = event.target.checked; setAutoCapture(value); void run(() => setMemoryAutoCapture(value)) }}/><span>Memory otomatis</span></label><small>Hanya dari pesanmu, dapat dikoreksi atau dihapus.</small></div>
+    {notice && <div className="memory-notice">{notice}</div>}
+    <div className="memory-list">
+      {tab !== 'skills' && shown.length === 0 && <div className="agenda-empty">Belum ada memory pada scope ini.</div>}
+      {tab !== 'skills' && shown.map(item => <article className="memory-item" key={item.id}>
+        <div><span>{item.category}</span><b>{Math.round(item.confidence * 100)}% yakin</b></div><p>{item.content}</p>
+        <small>{item.evidence.length ? `Bukti: ${item.evidence.map(value => value.ref).join(', ')}` : 'Belum ada referensi bukti'}</small>
+        <footer><button onClick={() => { const content = window.prompt('Koreksi memory', item.content); if (content) void run(() => updateMemory(item.id, { content })) }}>Koreksi</button><button onClick={() => run(() => updateMemory(item.id, { status: item.status === 'active' ? 'archived' : 'active' }))}>{item.status === 'active' ? 'Arsipkan' : 'Aktifkan'}</button><button className="danger" onClick={() => { if (window.confirm('Hapus memory ini secara permanen?')) void run(() => deleteMemory(item.id)) }}>Hapus</button></footer>
+      </article>)}
+      {tab === 'skills' && <><button className="new-skill" onClick={draftSkill}><Wrench size={14}/>Buat skill draft</button>{skills.length === 0 && <div className="agenda-empty">Belum ada dynamic skill.</div>}{skills.map(skill => <article className="memory-item skill-draft" key={skill.id}>
+        <div><span>{skill.name}</span><b>{skill.status}</b></div><p>{skill.description}</p><small>{skill.toolAllowlist.length ? `Tools: ${skill.toolAllowlist.join(', ')}` : 'Instruction-only · tanpa tool tambahan'}</small>
+        <footer>{skill.status === 'draft' && <button onClick={() => run(() => dynamicSkillAction(skill.id, 'validate'))}>Validasi</button>}{skill.status === 'pending_approval' && <button onClick={() => { if (window.confirm('Aktifkan skill yang sudah lolos validasi?')) void run(() => dynamicSkillAction(skill.id, 'approve')) }}>Setujui & aktifkan</button>}{skill.status === 'active' && <button className="danger" onClick={() => run(() => dynamicSkillAction(skill.id, 'disable'))}>Nonaktifkan</button>}</footer>
+      </article>)}</>}
+    </div>
+  </section></div>
+}
+
 function Onboarding({ onReady }: { onReady: (session: Session, history?: Message[], bondValue?: number, milestones?: Milestone[]) => void }) {
   const [mode, setMode] = useState<'register' | 'restore'>('register')
   const [value, setValue] = useState('')
@@ -969,6 +1010,7 @@ export default function App() {
   const [skills, setSkills] = useState<SkillInfo[]>([])
   const [skillsModalOpen, setSkillsModalOpen] = useState(false)
   const [agendaOpen, setAgendaOpen] = useState(false)
+  const [memoryOpen, setMemoryOpen] = useState(false)
   const [selectedArtifact, setSelectedArtifact] = useState<ArtifactItem | null>(null)
   const [feedback, setFeedback] = useState<Record<number, 1 | -1>>({})
   const [liveAgentSteps, setLiveAgentSteps] = useState<AgentStep[]>([])
@@ -1348,6 +1390,7 @@ export default function App() {
         {settingsOpen && <div className="settings-card">
           {!EMBED_COMPANION_ONLY && <button onClick={() => { setSkillsModalOpen(true); setSettingsOpen(false) }}><Wrench size={15} /><span><b>Katalog Skills Yuki Agent</b><small>{skills.length || 14} skills aktif</small></span></button>}
           {!EMBED_COMPANION_ONLY && <button onClick={() => { setAgendaOpen(true); setSettingsOpen(false) }}><Bell size={15} /><span><b>Agenda & Pengingat</b><small>Jadwal, status, dan notifikasi HP</small></span></button>}
+          {!EMBED_COMPANION_ONLY && <button onClick={() => { setMemoryOpen(true); setSettingsOpen(false) }}><Brain size={15} /><span><b>Memory & Dynamic Skills</b><small>Lihat, koreksi, hapus, dan validasi skill</small></span></button>}
           <button onClick={() => { setBookmarksOpen(true); setSettingsOpen(false) }}><Bookmark size={15} /><span><b>Komik tersimpan</b><small>{bookmarks.length} judul tersimpan</small></span></button>
           <button onClick={() => { setTimelineOpen(true); setSettingsOpen(false) }}><Heart size={15} /><span><b>Perjalanan hubungan</b><small>{milestones.length} momen tersimpan</small></span></button>
           {installPrompt && <button onClick={installApp}><Download size={15} /><span><b>Pasang aplikasi Yuki</b><small>Tambahkan ke layar utama</small></span></button>}
@@ -1399,6 +1442,7 @@ export default function App() {
         <SkillsCatalogModal skills={skills} onClose={() => setSkillsModalOpen(false)} />
       )}
       {!EMBED_COMPANION_ONLY && agendaOpen && <AgendaModal onClose={() => setAgendaOpen(false)} />}
+      {!EMBED_COMPANION_ONLY && memoryOpen && <MemoryCenterModal onClose={() => setMemoryOpen(false)} />}
 
       {!EMBED_COMPANION_ONLY && selectedArtifact && (
         <CodexArtifactModal artifact={selectedArtifact} onClose={() => setSelectedArtifact(null)} />

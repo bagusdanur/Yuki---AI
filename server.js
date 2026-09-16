@@ -23,6 +23,8 @@ import { runAgent, extractHtmlArtifactsFromText } from './lib/agent/runner.js'
 import { cancelWorkflow, claimWorkflow, createApprovalCheckpoint, deleteUserWorkflows, getWorkflow, listPendingWorkflows, setWorkflowState } from './lib/agent/workflow-store.js'
 import { claimAgentRun, createOrGetAgentRun, deleteUserAgentRuns, getActiveAgentRun, getAgentRun, isAgentRunCancellationRequested, recoverInterruptedAgentRuns, requestAgentRunCancellation, setAgentRunState, upsertAgentRunStep } from './lib/agent/run-store.js'
 import { traceEvent } from './lib/agent/observability.js'
+import { captureMemoryCandidates, deleteAgentMemory, deleteAgentMemoryData, getMemorySettings, listAgentMemories, setMemorySettings, updateAgentMemory } from './lib/agent/memory-store.js'
+import { approveDynamicSkill, createDynamicSkill, deleteDynamicSkillData, disableDynamicSkill, listDynamicSkills, validateDynamicSkill } from './lib/agent/dynamic-skills.js'
 import { deleteScheduledTasks, getAgenda, restoreScheduledJobs, setScheduledTaskStatus, setTaskTriggerCallback, shutdownScheduler, snoozeScheduledTask, updateScheduledTask } from './lib/scheduler.js'
 import { deletePushSubscriptions, getPushConfig, removePushSubscription, savePushSubscription, sendPushToUser } from './lib/push.js'
 import { closeBrowser } from './lib/browser.js'
@@ -250,6 +252,36 @@ app.get('/api/agent/skills', rateLimit({ max: 60 }), async (_req, res) => {
   } catch (err) {
     res.status(500).json({ error: String(err.message || err) })
   }
+})
+
+app.get('/api/memories', requireSession, rateLimit({ max: 60 }), (req, res) => {
+  res.json({ memories: listAgentMemories(req.authUserId, { scopeType: String(req.query.scopeType || ''), scopeId: String(req.query.scopeId || ''), status: String(req.query.status || '') }), settings: getMemorySettings(req.authUserId) })
+})
+app.put('/api/memories/settings', requireSession, rateLimit({ windowMs: 60_000, max: 20 }), (req, res) => {
+  res.json({ settings: setMemorySettings(req.authUserId, { autoCapture: req.body?.autoCapture === true }) })
+})
+app.patch('/api/memories/:memoryId', requireSession, rateLimit({ windowMs: 60_000, max: 30 }), (req, res) => {
+  const memory = updateAgentMemory(req.params.memoryId, req.authUserId, req.body || {})
+  if (!memory) return res.status(404).json({ error: 'Memori tidak ditemukan atau bukan milikmu.' })
+  res.json({ success: true, memory })
+})
+app.delete('/api/memories/:memoryId', requireSession, rateLimit({ windowMs: 60_000, max: 20 }), (req, res) => {
+  if (!deleteAgentMemory(req.params.memoryId, req.authUserId)) return res.status(404).json({ error: 'Memori tidak ditemukan atau bukan milikmu.' })
+  res.json({ success: true })
+})
+
+app.get('/api/agent/dynamic-skills', requireSession, rateLimit({ max: 60 }), (req, res) => res.json({ skills: listDynamicSkills(req.authUserId) }))
+app.post('/api/agent/dynamic-skills', requireSession, rateLimit({ windowMs: 60_000, max: 10 }), (req, res) => {
+  const result = createDynamicSkill(req.authUserId, req.body || {}); if (!result.success) return res.status(400).json({ error: result.error }); res.status(201).json(result)
+})
+app.post('/api/agent/dynamic-skills/:skillId/validate', requireSession, rateLimit({ windowMs: 60_000, max: 20 }), (req, res) => {
+  const result = validateDynamicSkill(req.params.skillId, req.authUserId); if (!result.success) return res.status(400).json({ error: result.error || 'Skill ditolak oleh permission ceiling.', validation: result.validation }); res.json(result)
+})
+app.post('/api/agent/dynamic-skills/:skillId/approve', requireSession, rateLimit({ windowMs: 60_000, max: 10 }), (req, res) => {
+  const result = approveDynamicSkill(req.params.skillId, req.authUserId); if (!result.success) return res.status(400).json({ error: result.error }); res.json(result)
+})
+app.post('/api/agent/dynamic-skills/:skillId/disable', requireSession, rateLimit({ windowMs: 60_000, max: 20 }), (req, res) => {
+  const result = disableDynamicSkill(req.params.skillId, req.authUserId); if (!result.success) return res.status(404).json({ error: result.error }); res.json(result)
 })
 
 app.get('/api/agent/progress/:requestId', requireSession, rateLimit({ max: 240 }), (req, res) => {
@@ -538,7 +570,8 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
 
       let messageId = null
       try {
-        saveChatMessage(userId, 'user', userText)
+        const userMessageId = saveChatMessage(userId, 'user', userText)
+        captureMemoryCandidates(userId, userText, userMessageId)
         messageId = saveChatMessage(userId, 'assistant', agentResult.reply)
       } catch (err) {
         console.error('[server] Gagal simpan chat history agent:', err)
@@ -706,6 +739,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
 
     // 5) simpan (per user)
     let messageId = null
+    let userMessageId = null
     try {
       emotion.updateFromLLMMood(mood)
       saveEmotion(userId, emotion.serialize())
@@ -716,7 +750,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
       if (isIdle) {
         saveChatMessage(userId, 'user', '[terdiam]')
       } else if (userText) {
-        saveChatMessage(userId, 'user', userText)
+        userMessageId = saveChatMessage(userId, 'user', userText)
       }
       messageId = saveChatMessage(userId, 'assistant', reply)
     } catch (err) {
@@ -739,6 +773,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
     if (!isIdle) {
       try {
         captureStructuredMemory(userId, userText)
+        captureMemoryCandidates(userId, userText, userMessageId)
         recordConversationEvent(userId, userText, emotion.bond)
       } catch (err) { console.error('[memory] structured:', err.message) }
     }
@@ -857,7 +892,7 @@ app.post('/api/feedback', requireSession, rateLimit({ max: 40 }), (req, res) => 
 })
 
 app.delete('/api/account', requireSession, rateLimit({ max: 3, windowMs: 3600_000 }), (req, res) => {
-  deleteScheduledTasks(req.authUserId); deletePushSubscriptions(req.authUserId); deleteUserWorkflows(req.authUserId); deleteUserAgentRuns(req.authUserId); deleteUserData(req.authUserId); deleteWorkspaceData(req.authUserId); sessions.delete(req.authUserId); turnCounters.delete(req.authUserId)
+  deleteScheduledTasks(req.authUserId); deletePushSubscriptions(req.authUserId); deleteAgentMemoryData(req.authUserId); deleteDynamicSkillData(req.authUserId); deleteUserWorkflows(req.authUserId); deleteUserAgentRuns(req.authUserId); deleteUserData(req.authUserId); deleteWorkspaceData(req.authUserId); sessions.delete(req.authUserId); turnCounters.delete(req.authUserId)
   res.json({ ok: true })
 })
 
