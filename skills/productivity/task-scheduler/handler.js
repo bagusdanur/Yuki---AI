@@ -1,5 +1,5 @@
 // skills/productivity/task-scheduler/handler.js
-import { createScheduledTask, listScheduledTasks, cancelScheduledTask, parseToCronExpr } from '../../../lib/scheduler.js'
+import { createScheduledTask, listScheduledTasks, cancelScheduledTask, parseToCronExpr, rescheduleScheduledTask } from '../../../lib/scheduler.js'
 
 export async function executeScheduleTask({ title, description, schedule, timezone = 'Asia/Jakarta', idempotency_key = '' }, context = {}) {
   const userId = context.userId
@@ -65,8 +65,18 @@ export async function executeCancelScheduledTask({ task_id }, context = {}) {
   return cancelScheduledTask(Number(task_id), userId)
 }
 
+export async function executeRescheduleTask({ task_id = null, schedule, timezone = 'Asia/Jakarta' }, context = {}) {
+  const userId = context.userId
+  if (!userId) return { error: 'User ID tidak tersedia.' }
+  if (!schedule) return { error: 'schedule wajib diisi.' }
+  const result = rescheduleScheduledTask({ taskId: task_id, userId, schedule, timezone })
+  if (!result.success) return { error: result.error }
+  return { success: true, message: `Pengingat "${result.task.title}" berhasil diubah: ${result.task.humanSchedule}.`, task: result.task, verified: result.verified }
+}
+
 export default {
   schedule_task: executeScheduleTask,
+  reschedule_task: executeRescheduleTask,
   list_scheduled_tasks: executeListScheduledTasks,
   cancel_scheduled_task: executeCancelScheduledTask
 }

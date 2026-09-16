@@ -59,6 +59,10 @@ try {
   assert.equal(result.contract.status, 'succeeded')
   assert.ok(result.data.task.nextRunAtUtc)
   const scheduledTaskId = result.data.task.id
+  result = await executeTool('reschedule_task', { task_id: scheduledTaskId, schedule: '45 menit lagi', timezone: 'Asia/Jakarta' }, { userId: 'alice' })
+  assert.equal(result.contract.status, 'succeeded')
+  assert.equal(result.data.task.id, scheduledTaskId)
+  assert.ok(result.evidence.some(item => item.kind === 'record'))
   result = await executeTool('cancel_scheduled_task', { task_id: scheduledTaskId }, { userId: 'alice' })
   assert.equal(result.contract.status, 'succeeded')
   assert.equal(result.data.id, scheduledTaskId)

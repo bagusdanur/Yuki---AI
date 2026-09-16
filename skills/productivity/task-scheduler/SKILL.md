@@ -29,6 +29,19 @@ tools:
     parameters:
       type: object
       properties: {}
+  - name: reschedule_task
+    description: Mengubah waktu pengingat aktif; tanpa ID akan memilih pengingat aktif terbaru.
+    parameters:
+      type: object
+      properties:
+        task_id:
+          type: integer
+          description: ID pengingat opsional
+        schedule:
+          type: string
+          description: Jadwal baru
+      required:
+        - schedule
   - name: cancel_scheduled_task
     description: Membatalkan pengingat atau tugas terjadwal berdasarkan ID.
     parameters:
@@ -48,6 +61,7 @@ Gunakan skill ini ketika pengguna:
 - Minta tugas berulang ("setiap Senin, ...")
 - Mau lihat jadwal aktif ("jadwal aku apa aja?")
 - Mau batalkan pengingat
+- Mau mengubah waktu pengingat sebelumnya
 
 ## Format Jadwal yang Didukung
 - `setiap hari jam 8` / `setiap hari jam 20:30`
@@ -55,3 +69,4 @@ Gunakan skill ini ketika pengguna:
 - `setiap 30 menit` / `setiap 2 jam`
 - `30 menit lagi` / `2 jam lagi`
 - `besok jam 9`
+- `hari ini jam 09:00` / `jam 9 nanti`

@@ -9,7 +9,7 @@ const schemas = await getAvailableTools()
 const toolNames = schemas.map(item => item.function.name)
 
 assert.equal(skills.length, 16)
-assert.equal(toolNames.length, 39)
+assert.equal(toolNames.length, 40)
 assert.equal(new Set(toolNames).size, toolNames.length, 'schema tool terduplikasi pada runtime')
 
 let result = await executeTool('calculate_date_difference', { target_date: '2026-12-31' }, { userId: 'tool_test' })
