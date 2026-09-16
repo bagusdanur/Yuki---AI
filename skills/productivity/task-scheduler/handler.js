@@ -1,10 +1,12 @@
 // skills/productivity/task-scheduler/handler.js
 import { createScheduledTask, listScheduledTasks, cancelScheduledTask, parseToCronExpr, rescheduleScheduledTask } from '../../../lib/scheduler.js'
 
-export async function executeScheduleTask({ title, description, schedule, timezone = 'Asia/Jakarta', idempotency_key = '' }, context = {}) {
+export async function executeScheduleTask({ title = 'Pengingat', description = '', schedule, timezone = 'Asia/Jakarta', idempotency_key = '' } = {}, context = {}) {
   const userId = context.userId
   if (!userId) return { error: 'User ID tidak tersedia.' }
-  if (!title || !description || !schedule) return { error: 'title, description, dan schedule wajib diisi.' }
+  if (!schedule) return { error: 'schedule wajib diisi.' }
+  const safeTitle = String(title || 'Pengingat').trim().slice(0, 120) || 'Pengingat'
+  const safeDescription = String(description || `Pengingat: ${safeTitle}`).trim().slice(0, 1000)
 
   const parsed = parseToCronExpr(schedule, timezone)
   if (!parsed) {
@@ -16,8 +18,8 @@ export async function executeScheduleTask({ title, description, schedule, timezo
   try {
     const task = createScheduledTask({
       userId,
-      title,
-      description,
+      title: safeTitle,
+      description: safeDescription,
       cronExpr: parsed.cron,
       humanSchedule: parsed.human,
       runOnce: parsed.runOnce || false,
@@ -27,7 +29,7 @@ export async function executeScheduleTask({ title, description, schedule, timezo
     })
     return {
       success: true,
-      message: `Pengingat "${title}" berhasil dijadwalkan: ${parsed.human}.`,
+      message: `Pengingat "${safeTitle}" berhasil dijadwalkan: ${parsed.human}.`,
       task,
       verified: Boolean(task?.verified)
     }
