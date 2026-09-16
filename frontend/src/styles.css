@@ -811,6 +811,9 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 }
 
 .settings-card { position: absolute; z-index: 60; top: 66px; right: 20px; width: 280px; max-height: min(620px, calc(100dvh - 92px)); padding: 8px; overflow-y: auto; overscroll-behavior: contain; border: 1px solid #333741; border-radius: 8px; background: #14171d; box-shadow: 0 22px 60px rgba(0,0,0,.55); scrollbar-width: thin; }
+.settings-card-head { position: sticky; z-index: 2; top: -8px; margin: -8px -8px 4px; padding: 8px 8px 7px 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #2b2e37; background: #14171d; }
+.settings-card-head strong { color: #9b9eaa; font: 700 9px/1 ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; }
+.settings-card .settings-card-head button { width: 32px; height: 32px; padding: 0; display: grid; place-items: center; border: 1px solid #343842; }
 
 .settings-card button { width: 100%; display: flex; gap: 11px; align-items: center; padding: 11px; border: 0; border-radius: 6px; color: #dbdae0; background: transparent; text-align: left; }
 .settings-card button:hover { background: #1c1f27; }
@@ -1321,14 +1324,15 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 .new-skill { width: 100%; display: flex; align-items: center; justify-content: center; gap: 7px; color: #e3e1ff; border-color: #555184; background: #242238; }
 
 @media (max-width: 520px) {
-  .settings-card { position: fixed; top: 76px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); width: min(340px, calc(100vw - 24px)); max-height: none; }
+  .settings-card { position: fixed; top: 168px; right: 12px; bottom: auto; width: min(310px, calc(100vw - 36px)); max-height: min(430px, calc(100dvh - 210px - env(safe-area-inset-bottom))); padding: 7px; border-radius: 10px; }
+  .settings-card button { padding: 9px; }
   .agenda-modal { width: 100%; height: auto; max-height: 88dvh; align-self: flex-end; border-radius: 14px 14px 0 0; }
-  .timeline-overlay:has(.agenda-modal) { align-items: flex-end; padding: 0; }
+  .agenda-overlay { align-items: flex-end; padding: 0; }
   .agenda-item-head { display: grid; }
   .agenda-item-head > span { justify-self: start; }
   .agenda-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .memory-modal { width: 100%; max-height: 90dvh; align-self: flex-end; border-radius: 14px 14px 0 0; }
-  .timeline-overlay:has(.memory-modal) { align-items: flex-end; padding: 0; }
+  .memory-overlay { align-items: flex-end; padding: 0; }
   .memory-control { align-items: flex-start; }
   .memory-control small { max-width: 48%; }
   .memory-item footer button { flex: 1; }

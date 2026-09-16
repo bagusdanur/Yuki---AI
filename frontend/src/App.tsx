@@ -875,8 +875,8 @@ function AgendaModal({ onClose }: { onClose: () => void }) {
     } catch (error) { setNotice(error instanceof Error ? error.message : 'Notifikasi belum berhasil diaktifkan.') }
   }
   const localTime = (value?: string) => value ? new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) + ' WIB' : 'Belum dijadwalkan'
-  return <div className="timeline-overlay" onClick={onClose}><section className="timeline-card agenda-modal" onClick={event => event.stopPropagation()}>
-    <header><div><small>Asia/Jakarta · durable scheduler</small><h2>Agenda Yuki</h2></div><button onClick={onClose}><X size={17}/></button></header>
+  return <div className="timeline-overlay agenda-overlay" onPointerDown={event => { if (event.target === event.currentTarget) onClose() }}><section className="timeline-card agenda-modal" onPointerDown={event => event.stopPropagation()}>
+    <header><div><small>Asia/Jakarta · durable scheduler</small><h2>Agenda Yuki</h2></div><button type="button" onClick={event => { event.stopPropagation(); onClose() }} aria-label="Tutup agenda"><X size={17}/></button></header>
     <div className="agenda-toolbar"><button onClick={enablePush}><Bell size={15}/>Aktifkan notifikasi HP</button><span>{notice}</span></div>
     <div className="agenda-list">
       {!agenda && !notice && <div className="agenda-empty"><LoaderCircle className="spin" size={18}/> Memuat agenda…</div>}
@@ -917,8 +917,8 @@ function MemoryCenterModal({ onClose }: { onClose: () => void }) {
     void run(() => createDynamicSkill({ name, description, instructions, toolAllowlist: [] }))
   }
   const shown = memories.filter(item => item.scopeType === tab)
-  return <div className="timeline-overlay" onClick={onClose}><section className="timeline-card memory-modal" onClick={event => event.stopPropagation()}>
-    <header><div><small>Scoped · private · evidence-backed</small><h2>Memory & Skills Yuki</h2></div><button onClick={onClose}><X size={17}/></button></header>
+  return <div className="timeline-overlay memory-overlay" onPointerDown={event => { if (event.target === event.currentTarget) onClose() }}><section className="timeline-card memory-modal" onPointerDown={event => event.stopPropagation()}>
+    <header><div><small>Scoped · private · evidence-backed</small><h2>Memory & Skills Yuki</h2></div><button type="button" onClick={event => { event.stopPropagation(); onClose() }} aria-label="Tutup memory"><X size={17}/></button></header>
     <div className="memory-tabs">{(['user','project','task','lesson','skills'] as const).map(item => <button className={tab === item ? 'active' : ''} onClick={() => setTab(item)} key={item}>{item}</button>)}</div>
     <div className="memory-control"><label><input type="checkbox" checked={autoCapture} onChange={event => { const value = event.target.checked; setAutoCapture(value); void run(() => setMemoryAutoCapture(value)) }}/><span>Memory otomatis</span></label><small>Hanya dari pesanmu, dapat dikoreksi atau dihapus.</small></div>
     {notice && <div className="memory-notice">{notice}</div>}
@@ -1019,6 +1019,10 @@ export default function App() {
   const currentAudio = useRef<HTMLAudioElement | null>(null)
   const requestTimers = useRef<number[]>([])
   const reminderCursor = useRef(0)
+  const closeOverlays = () => {
+    setSettingsOpen(false); setAgendaOpen(false); setMemoryOpen(false); setSkillsModalOpen(false)
+    setTimelineOpen(false); setBookmarksOpen(false); setSelectedArtifact(null)
+  }
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [messages, busy])
   useEffect(() => { if (session) localStorage.setItem(historyKey(session.userId), JSON.stringify(messages.slice(-40))) }, [messages, session])
@@ -1388,6 +1392,7 @@ export default function App() {
           <button onClick={() => setSettingsOpen(!settingsOpen)} aria-label="Pengaturan"><Settings size={17} /></button>
         </div>
         {settingsOpen && <div className="settings-card">
+          <div className="settings-card-head"><strong>Menu Yuki</strong><button type="button" onClick={() => setSettingsOpen(false)} aria-label="Tutup menu"><X size={15}/></button></div>
           {!EMBED_COMPANION_ONLY && <button onClick={() => { setSkillsModalOpen(true); setSettingsOpen(false) }}><Wrench size={15} /><span><b>Katalog Skills Yuki Agent</b><small>{skills.length || 14} skills aktif</small></span></button>}
           {!EMBED_COMPANION_ONLY && <button onClick={() => { setAgendaOpen(true); setSettingsOpen(false) }}><Bell size={15} /><span><b>Agenda & Pengingat</b><small>Jadwal, status, dan notifikasi HP</small></span></button>}
           {!EMBED_COMPANION_ONLY && <button onClick={() => { setMemoryOpen(true); setSettingsOpen(false) }}><Brain size={15} /><span><b>Memory & Dynamic Skills</b><small>Lihat, koreksi, hapus, dan validasi skill</small></span></button>}
@@ -1441,8 +1446,8 @@ export default function App() {
       {!EMBED_COMPANION_ONLY && skillsModalOpen && (
         <SkillsCatalogModal skills={skills} onClose={() => setSkillsModalOpen(false)} />
       )}
-      {!EMBED_COMPANION_ONLY && agendaOpen && <AgendaModal onClose={() => setAgendaOpen(false)} />}
-      {!EMBED_COMPANION_ONLY && memoryOpen && <MemoryCenterModal onClose={() => setMemoryOpen(false)} />}
+      {!EMBED_COMPANION_ONLY && agendaOpen && <AgendaModal onClose={closeOverlays} />}
+      {!EMBED_COMPANION_ONLY && memoryOpen && <MemoryCenterModal onClose={closeOverlays} />}
 
       {!EMBED_COMPANION_ONLY && selectedArtifact && (
         <CodexArtifactModal artifact={selectedArtifact} onClose={() => setSelectedArtifact(null)} />
