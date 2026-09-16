@@ -1,4 +1,4 @@
-const CACHE = 'yuki-shell-v3.7'
+const CACHE = 'yuki-shell-v3.8'
 const CORE = [
   '/', '/manifest.webmanifest', '/yuki-icon.svg',
   '/expressions/tenang.png', '/expressions/senang.png', '/expressions/malu.png',
@@ -38,11 +38,11 @@ self.addEventListener('fetch', event => {
   }
 
   if (url.pathname.startsWith('/assets/')) {
-    event.respondWith(caches.match(request).then(cached => cached || fetch(request).then(response => {
+    event.respondWith(fetch(request).then(response => {
       const copy = response.clone()
       caches.open(CACHE).then(cache => cache.put(request, copy))
       return response
-    })))
+    }).catch(() => caches.match(request)))
   }
 })
 
