@@ -21,8 +21,6 @@ tools:
           type: string
           description: Jadwal dalam bahasa natural (misal "setiap Senin jam 8", "setiap hari jam 20:00", "30 menit lagi", "besok jam 9")
       required:
-        - title
-        - description
         - schedule
   - name: list_scheduled_tasks
     description: Menampilkan semua pengingat dan tugas terjadwal yang sedang aktif milik pengguna.
