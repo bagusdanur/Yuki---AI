@@ -5,7 +5,7 @@ const selectTools = text => {
   const selected = new Set()
   if (/health/i.test(text)) selected.add('run_skill_health_check')
   if (/file|bug|perbaiki/i.test(text)) ['read_workspace_file', 'replace_workspace_text', 'get_workspace_diff', 'validate_workspace_project'].forEach(name => selected.add(name))
-  if (/jadwal|reminder/i.test(text)) selected.add('schedule_task')
+  if (/jadwal|reminder|ingatkan|menit lagi/i.test(text)) { selected.add('schedule_task'); selected.add('reschedule_task'); selected.add('get_current_time'); selected.add('add_user_note') }
   return selected
 }
 
@@ -18,6 +18,10 @@ assert.deepEqual(latestWins.toolAllowlist, ['schedule_task'])
 assert.equal(latestWins.contextSource, 'latest_request')
 assert.equal(latestWins.requiresEvidence, true)
 assert.equal(validateExecutionPlan(latestWins).valid, true)
+const reschedule = buildExecutionPlan([{ role: 'user', content: 'Ubah reminder jadi 10 menit lagi' }], { selectTools })
+assert.deepEqual(reschedule.toolAllowlist, ['reschedule_task'])
+const minimalReminder = buildExecutionPlan([{ role: 'user', content: 'Ingatkan aku 2 menit lagi dong' }], { selectTools })
+assert.deepEqual(minimalReminder.toolAllowlist, ['schedule_task'])
 
 const continued = buildExecutionPlan([
   { role: 'user', content: 'Perbaiki bug file game' },
