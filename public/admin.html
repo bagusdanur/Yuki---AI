@@ -1,30 +1,40 @@
-<!doctype html>
-<html lang="id">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Yuki / Operations</title><link rel="stylesheet" href="/admin.css"></head>
-<body>
-  <main>
-    <header><div><small>YUKI / OPERATIONS</small><h1>Production overview</h1></div><div class="status"><i></i><span id="health">checking</span></div></header>
-    <section id="login" class="login"><label>Password admin</label><div><input id="key" type="password" autocomplete="current-password" placeholder="Masukkan password"><button id="connect">Masuk</button></div><p>Sesi login berlaku 12 jam pada tab ini.</p></section>
-    <section id="dashboard" hidden>
-      <div class="toolbar"><span id="updated">Belum diperbarui</span><button id="change-password">Ganti password</button><button id="refresh">Refresh</button><button id="logout">Lock</button></div>
-      <div class="cards">
-        <article><span>Total users</span><b id="users">0</b></article><article><span>Active 24h</span><b id="active">0</b></article><article><span>Messages</span><b id="messages">0</b></article><article><span>Average bond</span><b id="bond">0</b></article><article><span>Positive feedback</span><b id="positive">0</b></article><article><span>Negative feedback</span><b id="negative">0</b></article>
-      </div>
-      <section class="runtime"><h2>Runtime</h2><dl><div><dt>Uptime</dt><dd id="uptime">-</dd></div><div><dt>Requests</dt><dd id="requests">-</dd></div><div><dt>Chat failures</dt><dd id="failures">-</dd></div><div><dt>Average latency</dt><dd id="latency">-</dd></div></dl></section>
-      <section class="provider-panel">
-        <div class="section-title"><div><small>PHASE 8 / PROVIDER ROUTER</small><h2>LLM operations</h2></div><span id="router-status"><i></i> healthy</span></div>
-        <div class="provider-summary">
-          <article><span>LLM calls</span><b id="llm-calls">0</b></article>
-          <article><span>Total tokens</span><b id="llm-tokens">0</b></article>
-          <article><span>Est. cost</span><b id="llm-cost">$0</b></article>
-          <article><span>Open circuits</span><b id="open-circuits">0</b></article>
-        </div>
-        <div id="providers" class="provider-grid"></div>
-        <div class="alerts"><h3>Operational alerts</h3><div id="alerts"><p class="empty">Belum ada alert.</p></div></div>
-      </section>
-      <section class="user-panel"><div class="section-title"><div><small>USER ACTIVITY</small><h2>Recent users</h2></div><span><i></i> 20 akun terbaru</span></div><div class="table-wrap"><table><thead><tr><th>#</th><th>User</th><th>Messages</th><th>Last active</th><th>Status</th></tr></thead><tbody id="recent"></tbody></table></div></section>
-      <section id="password-panel" class="login password-panel" hidden><label>Password baru</label><div><input id="new-password" type="password" autocomplete="new-password" placeholder="Minimal 10 karakter"><button id="save-password">Simpan</button></div><p id="password-status">Gunakan password unik yang tidak dipakai di layanan lain.</p></section>
+<!doctype html><html lang="id"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Yuki Control</title><link rel="stylesheet" href="/admin.css"></head>
+<body><main>
+  <header><div><small>YUKI CONTROL</small><h1>Operations</h1><p>Runtime dan konfigurasi model.</p></div><span class="health"><i></i><b id="health">checking</b></span></header>
+  <section id="login" class="login"><label>Password admin</label><div><input id="key" type="password" autocomplete="current-password"><button id="connect">Masuk</button></div></section>
+  <section id="dashboard" hidden>
+    <nav><span id="updated">—</span><button id="refresh">Refresh</button><button id="change-password">Password</button><button id="logout">Keluar</button></nav>
+    <section class="overview">
+      <article><span>Uptime</span><b id="uptime">—</b></article><article><span>Requests</span><b id="requests">—</b></article>
+      <article><span>LLM calls</span><b id="llm-calls">—</b></article><article><span>Open circuits</span><b id="open-circuits">—</b></article>
     </section>
-    <p id="error" class="error"></p>
-  </main><script src="/admin.js" defer></script>
-</body></html>
+    <section class="panel">
+      <div class="title"><div><small>ROUTING</small><h2>LLM providers</h2></div><span id="router-state" class="tag">healthy</span></div>
+      <p class="hint">Primary dipakai pertama. Backup dicoba satu kali saat primary gagal atau circuit terbuka.</p>
+      <form id="provider-form">
+        <div class="provider-editor">
+          <div class="provider-head"><b>01 · Primary</b><span id="primary-live" class="tag">idle</span></div>
+          <label>Nama<input name="primary.name" maxlength="80"></label>
+          <label>Base URL<input name="primary.baseURL" inputmode="url"></label>
+          <label>Model<input name="primary.model"></label>
+          <label>API key<input name="primary.apiKey" type="password" autocomplete="new-password" placeholder="Kosongkan untuk mempertahankan key"></label>
+          <div class="price"><label>Input / 1M<input name="primary.inputCostPerMillion" type="number" min="0" step="0.001"></label><label>Output / 1M<input name="primary.outputCostPerMillion" type="number" min="0" step="0.001"></label></div>
+          <button type="button" data-test="primary" class="secondary">Test primary</button>
+        </div>
+        <div class="provider-editor">
+          <div class="provider-head"><b>02 · Backup</b><span id="backup-live" class="tag">idle</span></div>
+          <label>Nama<input name="backup.name" maxlength="80"></label>
+          <label>Base URL<input name="backup.baseURL" inputmode="url"></label>
+          <label>Model<input name="backup.model"></label>
+          <label>API key<input name="backup.apiKey" type="password" autocomplete="new-password" placeholder="Kosongkan untuk mempertahankan key"></label>
+          <div class="price"><label>Input / 1M<input name="backup.inputCostPerMillion" type="number" min="0" step="0.001"></label><label>Output / 1M<input name="backup.outputCostPerMillion" type="number" min="0" step="0.001"></label></div>
+          <button type="button" data-test="backup" class="secondary">Test backup</button>
+        </div>
+        <footer><span id="provider-status">Belum ada perubahan.</span><button type="submit">Simpan konfigurasi</button></footer>
+      </form>
+    </section>
+    <section class="panel"><div class="title"><div><small>LIVE METRICS</small><h2>Provider health</h2></div></div><div id="providers" class="provider-grid"></div></section>
+    <section class="panel"><div class="title"><div><small>EVENTS</small><h2>Alerts</h2></div></div><div id="alerts" class="alerts"><p class="empty">Tidak ada alert.</p></div></section>
+    <section id="password-panel" class="panel password-panel" hidden><h2>Ganti password</h2><div><input id="new-password" type="password" autocomplete="new-password" placeholder="Minimal 10 karakter"><button id="save-password">Simpan</button></div><p id="password-status"></p></section>
+  </section><p id="error" class="error"></p>
+</main><script src="/admin.js" defer></script></body></html>

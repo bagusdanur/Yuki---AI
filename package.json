@@ -14,10 +14,11 @@
     "test:memory-skills-v32": "node scripts/test-memory-skills-v32.mjs",
     "test:subagents-v32": "node scripts/test-subagents-v32.mjs",
     "test:provider-router-v32": "node scripts/test-provider-router-v32.mjs",
+    "test:provider-settings-v32": "node scripts/test-provider-settings-v32.mjs",
     "test:agent-tools": "node scripts/test-agent-tools.mjs",
     "test:v31": "node scripts/test-agent-v31.mjs",
     "test:skills": "node scripts/test-skill-contracts.mjs",
-    "test": "npm run test:workspace && npm run test:agent-runs && npm run test:agent-planner && npm run test:scheduler-v32 && npm run test:memory-skills-v32 && npm run test:subagents-v32 && npm run test:provider-router-v32 && npm run test:agent-tools && npm run test:v31 && npm run test:skills && npm run build",
+    "test": "npm run test:workspace && npm run test:agent-runs && npm run test:agent-planner && npm run test:scheduler-v32 && npm run test:memory-skills-v32 && npm run test:subagents-v32 && npm run test:provider-router-v32 && npm run test:provider-settings-v32 && npm run test:agent-tools && npm run test:v31 && npm run test:skills && npm run build",
     "backup": "node scripts/backup-db.mjs",
     "load:test": "node scripts/load-test.mjs",
     "start": "node server.js"

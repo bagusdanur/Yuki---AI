@@ -33,3 +33,9 @@ Production berjalan melalui PM2 dan reverse proxy. Dashboard operasional tersedi
 - Budget token/biaya menghentikan run dengan error eksplisit.
 
 Konfigurasi dan prosedur Phase 8 ada di [docs/PHASE-8-OPERATIONS.md](docs/PHASE-8-OPERATIONS.md).
+
+## Mengganti LLM
+
+Login ke `/admin`, lalu buka **LLM providers**. Primary dan backup menerima endpoint OpenAI-compatible, model, API key, serta harga token opsional. Gunakan tombol test sebelum menyimpan. Perubahan aktif untuk request berikutnya tanpa restart PM2.
+
+API key disimpan pada `.runtime-secrets/llm-providers.json` dengan permission `600` dan tidak pernah dikirim kembali ke dashboard.

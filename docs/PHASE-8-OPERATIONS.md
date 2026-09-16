@@ -36,6 +36,10 @@ Isi harga sesuai tarif provider agar estimasi biaya bermakna. Nilai nol tidak me
 
 Panel **LLM operations** menampilkan jumlah call/token sejak PM2 terakhir dimulai, estimasi biaya, circuit, success rate, latency, error terakhir, dan alert. Metrik reset saat PM2 restart. Dashboard tidak menampilkan prompt, pesan pengguna, API key, atau isi tool.
 
+### Provider Manager
+
+Primary dan Backup dapat diganti dengan provider OpenAI-compatible. Dashboard menerima nama, base URL, model, API key, dan estimasi harga token. HTTP hanya diizinkan untuk localhost; provider remote wajib HTTPS. Tombol Test menjalankan completion kecil dengan timeout 15 detik. Field API key kosong mempertahankan key lama. Konfigurasi baru berlaku pada request berikutnya tanpa restart.
+
 ## Deployment
 
 ```bash
