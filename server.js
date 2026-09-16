@@ -12,7 +12,8 @@ import {
   countChatMessages, summarizeAndTrimHistory, captureStructuredMemory,
   recordConversationEvent, syncBondMilestones, saveResponseFeedback,
   consumeRateLimit, pruneRateLimits, deleteUserData, getAdminStats, userExists,
-  saveComicBookmark, getComicBookmarks, deleteComicBookmark, getScheduledReminderMessages
+  saveComicBookmark, getComicBookmarks, deleteComicBookmark
+  , getScheduledReminderMessages
 } from './lib/memory.js'
 import { responseTarget, shouldInitiate, validateCharacterReply } from './lib/character-quality.js'
 import { warmupEmbedder } from './lib/semantic.js'
@@ -20,6 +21,7 @@ import { searchComics, latestComics, wantsComic, wantsLatestComics, detectReques
 import { executeTool, initSkills, listSkills } from './lib/agent/skills-engine.js'
 import { runAgent, extractHtmlArtifactsFromText } from './lib/agent/runner.js'
 import { cancelWorkflow, claimWorkflow, createApprovalCheckpoint, deleteUserWorkflows, getWorkflow, listPendingWorkflows, setWorkflowState } from './lib/agent/workflow-store.js'
+import { claimAgentRun, createOrGetAgentRun, deleteUserAgentRuns, getActiveAgentRun, getAgentRun, isAgentRunCancellationRequested, recoverInterruptedAgentRuns, requestAgentRunCancellation, setAgentRunState, upsertAgentRunStep } from './lib/agent/run-store.js'
 import { traceEvent } from './lib/agent/observability.js'
 import { deleteScheduledTasks, restoreScheduledJobs, setTaskTriggerCallback, shutdownScheduler } from './lib/scheduler.js'
 import { closeBrowser } from './lib/browser.js'
@@ -113,35 +115,13 @@ function requireAdmin(req, res, next) {
 }
 
 const metrics = { startedAt: Date.now(), requests: 0, errors: 0, chats: 0, chatFailures: 0, latencyTotal: 0 }
-const agentProgress = new Map()
+const AGENT_WORKER_ID = `${process.pid}:${crypto.randomUUID()}`
+recoverInterruptedAgentRuns()
 
 function updateAgentProgress(requestId, userId, step) {
   if (!requestId) return
-  const current = agentProgress.get(requestId) || { userId: String(userId), steps: [], done: false, updatedAt: Date.now() }
-  if (current.userId !== String(userId)) return
-  const safeStep = {
-    id: String(step.id || ''), tool: String(step.tool || 'agent_core'),
-    title: String(step.title || 'Memproses tugas').slice(0, 300),
-    status: ['queued', 'planning', 'running', 'awaiting_approval', 'resuming', 'verifying', 'done', 'error', 'cancelled'].includes(step.status) ? step.status : 'running',
-    durationMs: Number.isFinite(step.durationMs) ? step.durationMs : undefined,
-    skillName: step.skillName ? String(step.skillName).slice(0, 100) : undefined,
-    skillTitle: step.skillTitle ? String(step.skillTitle).slice(0, 100) : undefined
-  }
-  if (step.approval?.id) safeStep.approval = { id: String(step.approval.id), reason: String(step.approval.reason || '').slice(0, 300), status: step.approval.status || 'pending' }
-  if (Array.isArray(step.evidence)) safeStep.evidence = step.evidence.slice(0, 8)
-  const index = current.steps.findIndex((item) => item.id === safeStep.id)
-  if (index >= 0) current.steps[index] = { ...current.steps[index], ...safeStep }
-  else current.steps.push(safeStep)
-  if (safeStep.status === 'awaiting_approval') current.state = 'awaiting_approval'
-  else if (['running', 'planning', 'resuming', 'verifying'].includes(safeStep.status)) current.state = safeStep.status === 'running' ? 'running' : safeStep.status
-  current.updatedAt = Date.now()
-  agentProgress.set(requestId, current)
+  upsertAgentRunStep(requestId, userId, step)
 }
-
-setInterval(() => {
-  const cutoff = Date.now() - 10 * 60_000
-  for (const [id, progress] of agentProgress) if (progress.updatedAt < cutoff) agentProgress.delete(id)
-}, 60_000).unref()
 app.use((req, res, next) => {
   const started = Date.now(); metrics.requests += 1
   res.on('finish', () => { metrics.latencyTotal += Date.now() - started; if (res.statusCode >= 500) metrics.errors += 1 })
@@ -265,9 +245,22 @@ app.get('/api/agent/skills', rateLimit({ max: 60 }), async (_req, res) => {
 app.get('/api/agent/progress/:requestId', requireSession, rateLimit({ max: 240 }), (req, res) => {
   const requestId = String(req.params.requestId || '')
   if (!/^[a-zA-Z0-9_-]{8,80}$/.test(requestId)) return res.status(400).json({ error: 'Request ID tidak valid.' })
-  const progress = agentProgress.get(requestId)
-  if (!progress || progress.userId !== String(req.authUserId)) return res.json({ steps: [], done: false, state: 'queued' })
-  res.json({ steps: progress.steps, done: progress.done, state: progress.state || (progress.done ? 'succeeded' : 'running') })
+  const progress = getAgentRun(requestId, req.authUserId)
+  if (!progress) return res.json({ steps: [], done: false, state: 'queued' })
+  res.json(progress)
+})
+
+app.get('/api/agent/runs/active', requireSession, rateLimit({ max: 120 }), (req, res) => {
+  res.json({ run: getActiveAgentRun(req.authUserId) })
+})
+
+app.post('/api/agent/runs/:requestId/cancel', requireSession, rateLimit({ windowMs: 60_000, max: 20 }), (req, res) => {
+  const requestId = String(req.params.requestId || '')
+  if (!/^[a-zA-Z0-9_-]{8,80}$/.test(requestId)) return res.status(400).json({ error: 'Request ID tidak valid.' })
+  const run = requestAgentRunCancellation(requestId, req.authUserId)
+  if (!run) return res.status(404).json({ error: 'Run tidak ditemukan.' })
+  traceEvent('agent_run_cancel_requested', { requestId, userId: String(req.authUserId) })
+  res.json({ success: true, run })
 })
 
 app.post('/api/agent/workspace/import', requireSession, rateLimit({ windowMs: 60_000, max: 10 }), async (req, res) => {
@@ -291,8 +284,7 @@ app.post('/api/agent/approvals/:approvalId', requireSession, rateLimit({ windowM
   if (!existing) return res.status(404).json({ error: 'Approval tidak ditemukan atau sudah kedaluwarsa.' })
   if (req.body?.decision !== 'approve') {
     cancelWorkflow(id, req.authUserId)
-    const progress = agentProgress.get(existing.requestId)
-    if (progress) { progress.state = 'cancelled'; progress.done = true; progress.updatedAt = Date.now() }
+    if (existing.requestId) setAgentRunState(existing.requestId, req.authUserId, 'cancelled')
     traceEvent('approval_rejected', { workflowId: id, requestId: existing.requestId })
     return res.json({ success: true, status: 'rejected', state: 'cancelled', workflowId: id })
   }
@@ -317,7 +309,7 @@ app.post('/api/agent/approvals/:approvalId', requireSession, rateLimit({ windowM
   }
 
   traceEvent('workflow_resumed', { workflowId: id, requestId: workflow.requestId, toolName: checkpoint.toolName })
-  if (workflow.requestId) agentProgress.set(workflow.requestId, { userId: String(req.authUserId), steps: [], done: false, updatedAt: Date.now(), state: 'resuming' })
+  if (workflow.requestId) setAgentRunState(workflow.requestId, req.authUserId, 'resuming')
   const resume = checkpoint.resume || {}
   const agentResult = await runAgent({
     userId: req.authUserId,
@@ -326,6 +318,7 @@ app.post('/api/agent/approvals/:approvalId', requireSession, rateLimit({ windowM
     memoryContext: resume.memoryContext || '',
     bondName: resume.bondName || 'mulai terbiasa',
     onProgress: step => updateAgentProgress(workflow.requestId, req.authUserId, step),
+    shouldCancel: () => isAgentRunCancellationRequested(workflow.requestId, req.authUserId),
     onApproval: ({ toolName, args, reason, stepId }) => createApprovalCheckpoint({
       requestId: workflow.requestId, userId: req.authUserId, toolName, args, reason,
       resume: { ...resume, stepId }
@@ -336,8 +329,7 @@ app.post('/api/agent/approvals/:approvalId', requireSession, rateLimit({ windowM
   let messageId = null
   try { messageId = saveChatMessage(req.authUserId, 'assistant', agentResult.reply) } catch {}
   setWorkflowState(id, req.authUserId, state, { result: agentResult })
-  const progress = agentProgress.get(workflow.requestId)
-  if (progress) { progress.done = state !== 'awaiting_approval'; progress.state = state; progress.updatedAt = Date.now() }
+  setAgentRunState(workflow.requestId, req.authUserId, state, { result: agentResult })
   traceEvent('agent_run_completed', { workflowId: id, requestId: workflow.requestId, state })
   res.json({ success: true, status: 'approved', workflowId: id, state, messageId, ...agentResult })
 })
@@ -420,6 +412,7 @@ app.get('/api/chat/reminders', requireSession, rateLimit({ windowMs: 60_000, max
 
 // Endpoint chat -> balasan dari Qwen/DeepSeek (dengan emosi + kedekatan + memori + agent skills)
 app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) => {
+  let trackedAgentRequestId = ''
   try {
     metrics.chats += 1
     const { messages, adult, isIdle = false, mode: requestedMode = 'companion', surface = 'app', requestId: rawRequestId } = req.body || {}
@@ -469,9 +462,13 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
 
     // === MODE AGENT AI (Yuki Agent Skills ReAct Loop) ===
     if (mode === 'agent' && !isIdle) {
-      if (requestId) agentProgress.set(requestId, { userId: String(userId), steps: [], done: false, state: 'planning', updatedAt: Date.now() })
       const messagesToSend = sanitizedMessages.slice(-18)
       const currentUsername = getUsernameByUserId(userId) || req.body.username || 'User'
+      const run = requestId ? createOrGetAgentRun({ requestId, userId, goal: userText }) : null
+      if (requestId && !run) return res.status(409).json({ error: 'Request ID sudah dipakai.' })
+      if (run?.done && run.result) return res.json(run.result)
+      if (requestId && !claimAgentRun(requestId, userId, AGENT_WORKER_ID)) return res.status(409).json({ error: 'Run ini sedang diproses atau sudah dibatalkan.' })
+      trackedAgentRequestId = requestId
       traceEvent('agent_run_started', { requestId, userId: String(userId), mode: 'agent' })
       const agentResult = await runAgent({
         userId,
@@ -480,6 +477,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
         memoryContext,
         bondName: bond.name,
         onProgress: (step) => updateAgentProgress(requestId, userId, step),
+        shouldCancel: () => isAgentRunCancellationRequested(requestId, userId),
         onApproval: ({ toolName, args, reason, stepId }) => {
           const approval = createApprovalCheckpoint({
             requestId: requestId || `agent_${crypto.randomUUID().replaceAll('-', '')}`,
@@ -517,35 +515,16 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
       }
 
       const milestones = syncBondMilestones(userId, emotion.bond)
-      if (requestId) {
-        const progress = agentProgress.get(requestId)
-        if (progress) {
-          progress.state = agentResult.workflowState || 'succeeded'
-          progress.done = progress.state !== 'awaiting_approval'
-          progress.updatedAt = Date.now()
-        }
+      const responsePayload = {
+        reply: agentResult.reply, model: agentResult.model, mood: agentMood, bond: bond.name,
+        bondValue: emotion.bond, feeling: emotion.feeling(), mode: 'agent', gesture: agentResult.gesture,
+        markdown: agentResult.markdown, workflowState: agentResult.workflowState, awaitingApproval: agentResult.awaitingApproval,
+        steps: getAgentRun(requestId, userId)?.steps || agentResult.steps || [], evidence: agentResult.evidence || [],
+        truncated: Boolean(agentResult.truncated), artifacts: agentResult.artifacts || [], comics: agentResult.comics || [], messageId, milestones
       }
+      if (requestId) setAgentRunState(requestId, userId, agentResult.workflowState || 'succeeded', { result: responsePayload })
       traceEvent('agent_run_completed', { requestId, state: agentResult.workflowState || 'succeeded' })
-      return res.json({
-        reply: agentResult.reply,
-        model: agentResult.model,
-        mood: agentMood,
-        bond: bond.name,
-        bondValue: emotion.bond,
-        feeling: emotion.feeling(),
-        mode: 'agent',
-        gesture: agentResult.gesture,
-        markdown: agentResult.markdown,
-        workflowState: agentResult.workflowState,
-        awaitingApproval: agentResult.awaitingApproval,
-        steps: agentProgress.get(requestId)?.steps || agentResult.steps || [],
-        evidence: agentResult.evidence || [],
-        truncated: Boolean(agentResult.truncated),
-        artifacts: agentResult.artifacts || [],
-        comics: agentResult.comics || [],
-        messageId,
-        milestones
-      })
+      return res.json(responsePayload)
     }
 
     shouldAskQuestion = !isIdle && shouldInitiate({
@@ -745,6 +724,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
   } catch (e) {
     metrics.chatFailures += 1
     console.error(e)
+    if (trackedAgentRequestId) setAgentRunState(trackedAgentRequestId, req.authUserId, 'failed', { errorCode: 'RUN_FAILED' })
     res.status(500).json({ error: String(e.message || e) })
   }
 })
@@ -841,7 +821,7 @@ app.post('/api/feedback', requireSession, rateLimit({ max: 40 }), (req, res) => 
 })
 
 app.delete('/api/account', requireSession, rateLimit({ max: 3, windowMs: 3600_000 }), (req, res) => {
-  deleteScheduledTasks(req.authUserId); deleteUserWorkflows(req.authUserId); deleteUserData(req.authUserId); deleteWorkspaceData(req.authUserId); sessions.delete(req.authUserId); turnCounters.delete(req.authUserId)
+  deleteScheduledTasks(req.authUserId); deleteUserWorkflows(req.authUserId); deleteUserAgentRuns(req.authUserId); deleteUserData(req.authUserId); deleteWorkspaceData(req.authUserId); sessions.delete(req.authUserId); turnCounters.delete(req.authUserId)
   res.json({ ok: true })
 })
 
