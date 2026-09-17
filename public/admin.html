@@ -1,13 +1,50 @@
 <!doctype html><html lang="id"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Yuki Control</title><link rel="stylesheet" href="/admin.css"></head>
 <body><main>
-  <header><div><small>YUKI CONTROL</small><h1>Operations</h1><p>Runtime dan konfigurasi model.</p></div><span class="health"><i></i><b id="health">checking</b></span></header>
+  <header><div><small>YUKI CONTROL</small><h1>Operations</h1><p>Runtime, token terpakai, dan konfigurasi model.</p></div><span class="health"><i></i><b id="health">checking</b></span></header>
   <section id="login" class="login"><label>Password admin</label><div><input id="key" type="password" autocomplete="current-password"><button id="connect">Masuk</button></div></section>
   <section id="dashboard" hidden>
     <nav><span id="updated">—</span><button id="refresh">Refresh</button><button id="change-password">Password</button><button id="logout">Keluar</button></nav>
+
     <section class="overview">
-      <article><span>Uptime</span><b id="uptime">—</b></article><article><span>Requests</span><b id="requests">—</b></article>
-      <article><span>LLM calls</span><b id="llm-calls">—</b></article><article><span>Open circuits</span><b id="open-circuits">—</b></article>
+      <article><span>Uptime</span><b id="uptime">—</b></article>
+      <article><span>Requests</span><b id="requests">—</b></article>
+      <article><span>LLM calls</span><b id="llm-calls">—</b></article>
+      <article><span>Success rate</span><b id="success-rate">—</b></article>
+      <article><span>Latency rata-rata</span><b id="avg-latency">—</b></article>
+      <article><span>Open circuits</span><b id="open-circuits">—</b></article>
     </section>
+
+    <!-- ===== TOKEN & BIAYA (PERSISTEN) ===== -->
+    <section class="panel">
+      <div class="title"><div><small>TOKEN &amp; BIAYA</small><h2>Akumulasi pemakaian</h2></div><span id="stats-saved" class="tag">—</span></div>
+      <p class="hint">Tersimpan ke disk secara berkala — <b>tidak hilang saat restart</b>. Tombol reset menghapus akumulasi.</p>
+      <section class="overview token-grid">
+        <article><span>Total tokens</span><b id="tok-total">—</b></article>
+        <article><span>Input tokens</span><b id="tok-in">—</b></article>
+        <article><span>Output tokens</span><b id="tok-out">—</b></article>
+        <article><span>Rata-rata / call</span><b id="tok-avg">—</b></article>
+        <article><span>Estimasi biaya</span><b id="tok-cost">—</b></article>
+        <article><span>Total gagal</span><b id="tok-fail">—</b></article>
+      </section>
+      <footer class="row-actions">
+        <button id="reset-stats" class="secondary danger">Reset statistik</button>
+        <span id="reset-status"></span>
+      </footer>
+    </section>
+
+    <!-- ===== TREN HARIAN ===== -->
+    <section class="panel">
+      <div class="title"><div><small>TREN HARIAN</small><h2>Pemakaian per hari</h2></div></div>
+      <div class="chart-wrap"><canvas id="chart" height="180"></canvas></div>
+      <div class="table-wrap">
+        <table id="daily-table"><thead><tr><th>Tanggal</th><th>Calls</th><th>Tokens</th><th>Gagal</th><th>Biaya</th></tr></thead><tbody></tbody></table>
+      </div>
+    </section>
+
+    <!-- ===== PROVIDER HEALTH ===== -->
+    <section class="panel"><div class="title"><div><small>LIVE METRICS</small><h2>Provider health</h2></div></div><div id="providers" class="provider-grid"></div></section>
+
+    <!-- ===== KONFIGURASI ===== -->
     <section class="panel">
       <div class="title"><div><small>ROUTING</small><h2>LLM providers</h2></div><span id="router-state" class="tag">healthy</span></div>
       <p class="hint">Primary dipakai pertama. Backup dicoba satu kali saat primary gagal atau circuit terbuka.</p>
@@ -33,8 +70,17 @@
         <footer><span id="provider-status">Belum ada perubahan.</span><button type="submit">Simpan konfigurasi</button></footer>
       </form>
     </section>
-    <section class="panel"><div class="title"><div><small>LIVE METRICS</small><h2>Provider health</h2></div></div><div id="providers" class="provider-grid"></div></section>
+
+    <!-- ===== DATA APLIKASI ===== -->
+    <section class="panel">
+      <div class="title"><div><small>DATA APLIKASI</small><h2>Isi database</h2></div><span class="tag">SQLite · persisten</span></div>
+      <p class="hint">Tabel di bawah tersimpan di <code>data/yuki.db</code> dan tidak terpengaruh restart.</p>
+      <section class="overview data-grid" id="app-data"></section>
+    </section>
+
+    <!-- ===== ALERTS ===== -->
     <section class="panel"><div class="title"><div><small>EVENTS</small><h2>Alerts</h2></div></div><div id="alerts" class="alerts"><p class="empty">Tidak ada alert.</p></div></section>
+
     <section id="password-panel" class="panel password-panel" hidden><h2>Ganti password</h2><div><input id="new-password" type="password" autocomplete="new-password" placeholder="Minimal 10 karakter"><button id="save-password">Simpan</button></div><p id="password-status"></p></section>
   </section><p id="error" class="error"></p>
 </main><script src="/admin.js" defer></script></body></html>

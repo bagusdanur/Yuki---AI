@@ -19,7 +19,7 @@ import { responseTarget, shouldInitiate, validateCharacterReply } from './lib/ch
 import { warmupEmbedder } from './lib/semantic.js'
 import { searchComics, latestComics, wantsComic, wantsLatestComics, detectRequestedGenre, extractQuery, buildComicContext } from './lib/ryukomik.js'
 import { executeTool, initSkills, listSkills } from './lib/agent/skills-engine.js'
-import { getProviderOperations } from './lib/provider-router.js'
+import { getProviderOperations, flushProviderOperations, resetProviderOperations } from './lib/provider-router.js'
 import { getPublicProviderSettings, saveProviderSettings, testProviderConnection } from './lib/provider-settings.js'
 import { runAgent, extractHtmlArtifactsFromText } from './lib/agent/runner.js'
 import { cancelWorkflow, claimWorkflow, createApprovalCheckpoint, deleteUserWorkflows, getWorkflow, listPendingWorkflows, setWorkflowState } from './lib/agent/workflow-store.js'
@@ -236,11 +236,13 @@ restoreScheduledJobs()
 
 // Graceful shutdown untuk browser pool
 process.on('SIGINT', async () => {
+  flushProviderOperations()
   shutdownScheduler()
   await closeBrowser()
   process.exit(0)
 })
 process.on('SIGTERM', async () => {
+  flushProviderOperations()
   shutdownScheduler()
   await closeBrowser()
   process.exit(0)
@@ -916,6 +918,10 @@ app.put('/api/admin/providers', rateLimit({ max: 10, windowMs: 60_000 }), requir
 app.post('/api/admin/providers/test', rateLimit({ max: 10, windowMs: 60_000 }), requireAdmin, async (req, res) => {
   try { res.json(await testProviderConnection(req.body || {})) }
   catch (error) { res.status(400).json({ error: String(error.message || error).slice(0, 240) }) }
+})
+app.post('/api/admin/providers/reset-stats', rateLimit({ max: 3, windowMs: 60_000 }), requireAdmin, (_req, res) => {
+  resetProviderOperations()
+  res.json({ ok: true, providers: getProviderOperations() })
 })
 app.post('/api/admin/password', rateLimit({ max: 5, windowMs: 15 * 60_000 }), requireAdmin, (req, res) => {
   const password = String(req.body?.password || '')

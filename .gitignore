@@ -21,3 +21,8 @@ tts-service/*.wav
 ecosystem.config.cjs
 data/*.db*
 data/self_improvements.json
+data/provider-stats.json
+data/*.bak-*
+.runtime-secrets/
+*.bak-*
+*.bak
