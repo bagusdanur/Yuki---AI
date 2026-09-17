@@ -13,13 +13,14 @@ import {
   recordConversationEvent, syncBondMilestones, saveResponseFeedback,
   consumeRateLimit, pruneRateLimits, deleteUserData, getAdminStats, userExists,
   saveComicBookmark, getComicBookmarks, deleteComicBookmark
-  , getScheduledReminderMessages
+  , getScheduledReminderMessages, dbHandle, APP_DATA_LABELS
 } from './lib/memory.js'
 import { responseTarget, shouldInitiate, validateCharacterReply } from './lib/character-quality.js'
 import { warmupEmbedder } from './lib/semantic.js'
 import { searchComics, latestComics, wantsComic, wantsLatestComics, detectRequestedGenre, extractQuery, buildComicContext } from './lib/ryukomik.js'
 import { executeTool, initSkills, listSkills } from './lib/agent/skills-engine.js'
 import { getProviderOperations, flushProviderOperations, resetProviderOperations } from './lib/provider-router.js'
+import { listTables, readTable, listDirectory, readTextFile, workspaceSummary } from './lib/admin-browser.js'
 import { getPublicProviderSettings, saveProviderSettings, testProviderConnection } from './lib/provider-settings.js'
 import { runAgent, extractHtmlArtifactsFromText } from './lib/agent/runner.js'
 import { cancelWorkflow, claimWorkflow, createApprovalCheckpoint, deleteUserWorkflows, getWorkflow, listPendingWorkflows, setWorkflowState } from './lib/agent/workflow-store.js'
@@ -53,6 +54,7 @@ const AUTH_SECRET = process.env.AUTH_SECRET || crypto.randomBytes(32).toString('
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || ''
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || ADMIN_TOKEN
 const ADMIN_PASSWORD_FILE = path.resolve(process.env.ADMIN_PASSWORD_FILE || './.runtime-secrets/admin-password.json')
+const WORKSPACE_ROOT = path.resolve(process.env.AGENT_WORKSPACE_DIR || './agent-workspace')
 if (IS_PRODUCTION && !process.env.AUTH_SECRET) console.warn('[security] AUTH_SECRET belum disetel; sesi akan invalid setelah restart.')
 if (IS_PRODUCTION && !ADMIN_TOKEN) console.warn('[security] ADMIN_TOKEN belum disetel; dashboard admin dinonaktifkan.')
 
@@ -922,6 +924,36 @@ app.post('/api/admin/providers/test', rateLimit({ max: 10, windowMs: 60_000 }), 
 app.post('/api/admin/providers/reset-stats', rateLimit({ max: 3, windowMs: 60_000 }), requireAdmin, (_req, res) => {
   resetProviderOperations()
   res.json({ ok: true, providers: getProviderOperations() })
+})
+
+// === Database browser (pagination + search) ===
+app.get('/api/admin/db/tables', rateLimit({ max: 60 }), requireAdmin, (_req, res) => {
+  try { res.json({ tables: listTables({ db: dbHandle, labels: APP_DATA_LABELS }) }) }
+  catch (error) { res.status(500).json({ error: error.message }) }
+})
+app.get('/api/admin/db/table/:name', rateLimit({ max: 120 }), requireAdmin, (req, res) => {
+  try {
+    res.json(readTable({
+      db: dbHandle, table: String(req.params.name || ''), labels: APP_DATA_LABELS,
+      page: Number(req.query.page) || 1, pageSize: Number(req.query.pageSize) || 25,
+      search: String(req.query.search || ''), orderBy: req.query.orderBy ? String(req.query.orderBy) : null,
+      order: String(req.query.order || 'desc')
+    }))
+  } catch (error) { res.status(400).json({ error: error.message }) }
+})
+
+// === Workspace file browser (per-user, sandboxed read-only) ===
+app.get('/api/admin/workspace', rateLimit({ max: 30 }), requireAdmin, (_req, res) => {
+  try { res.json(workspaceSummary({ root: WORKSPACE_ROOT })) }
+  catch (error) { res.status(500).json({ error: error.message }) }
+})
+app.get('/api/admin/workspace/list', rateLimit({ max: 120 }), requireAdmin, (req, res) => {
+  try { res.json(listDirectory({ root: WORKSPACE_ROOT, relative: String(req.query.path || '') })) }
+  catch (error) { res.status(400).json({ error: error.message }) }
+})
+app.get('/api/admin/workspace/file', rateLimit({ max: 60 }), requireAdmin, (req, res) => {
+  try { res.json(readTextFile({ root: WORKSPACE_ROOT, relative: String(req.query.path || '') })) }
+  catch (error) { res.status(400).json({ error: error.message }) }
 })
 app.post('/api/admin/password', rateLimit({ max: 5, windowMs: 15 * 60_000 }), requireAdmin, (req, res) => {
   const password = String(req.body?.password || '')

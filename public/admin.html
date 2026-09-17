@@ -78,6 +78,46 @@
       <section class="overview data-grid" id="app-data"></section>
     </section>
 
+    <!-- ===== DATABASE BROWSER ===== -->
+    <section class="panel">
+      <div class="title"><div><small>DATABASE BROWSER</small><h2>Jelajahi tabel</h2></div><span id="db-total" class="tag">—</span></div>
+      <p class="hint">Baca-saja. Kolom sensitif (token, kode akses, password) otomatis disamarkan.</p>
+      <div class="browser-bar">
+        <select id="db-table"><option value="">— pilih tabel —</option></select>
+        <input id="db-search" type="search" placeholder="Cari isi tabel…">
+        <select id="db-size"><option value="25">25 / halaman</option><option value="50">50 / halaman</option><option value="100">100 / halaman</option></select>
+        <button id="db-reload" class="secondary">Muat</button>
+      </div>
+      <div id="db-meta" class="browser-meta"></div>
+      <div class="table-wrap" id="db-wrap"><p class="empty">Pilih tabel untuk menampilkan data.</p></div>
+      <div class="pager" id="db-pager" hidden>
+        <button id="db-first" class="secondary">« Awal</button>
+        <button id="db-prev" class="secondary">‹ Sebelumnya</button>
+        <span id="db-pageinfo">—</span>
+        <button id="db-next" class="secondary">Berikutnya ›</button>
+        <button id="db-last" class="secondary">Akhir »</button>
+      </div>
+    </section>
+
+    <!-- ===== WORKSPACE PER USER ===== -->
+    <section class="panel">
+      <div class="title"><div><small>WORKSPACE</small><h2>Folder per user</h2></div><span id="ws-root" class="tag">—</span></div>
+      <p class="hint">File yang dibuat agent untuk tiap user. Baca-saja, dibatasi ke folder workspace.</p>
+      <section class="overview data-grid" id="ws-users"></section>
+      <div class="browser-bar">
+        <span id="ws-path" class="path-label">/</span>
+        <button id="ws-up" class="secondary">↑ Naik</button>
+        <button id="ws-reload" class="secondary">Muat ulang</button>
+      </div>
+      <div class="table-wrap"><table id="ws-table"><thead><tr><th>Nama</th><th>Tipe</th><th>Ukuran</th><th>Diubah</th></tr></thead><tbody></tbody></table></div>
+    </section>
+
+    <!-- ===== PRATINJAU FILE ===== -->
+    <section class="panel" id="file-panel" hidden>
+      <div class="title"><div><small>PRATINJAU</small><h2 id="file-name">—</h2></div><button id="file-close" class="secondary">Tutup</button></div>
+      <pre id="file-content" class="file-preview"></pre>
+    </section>
+
     <!-- ===== ALERTS ===== -->
     <section class="panel"><div class="title"><div><small>EVENTS</small><h2>Alerts</h2></div></div><div id="alerts" class="alerts"><p class="empty">Tidak ada alert.</p></div></section>
 

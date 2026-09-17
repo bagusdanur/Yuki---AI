@@ -119,6 +119,8 @@ async function load() {
     renderDaily(window.__yukiDaily)
     renderHealth(providers)
     renderAppData(stats.appData)
+    if (!dbTables.length) loadDbTables()
+    loadWsUsers()
     fill('primary', config.providers.primary); fill('backup', config.providers.backup)
     $('updated').textContent = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
     clearTimeout(timer); timer = setTimeout(load, 30000)
@@ -148,4 +150,115 @@ $('refresh').onclick = load; $('logout').onclick = () => { sessionStorage.remove
 $('change-password').onclick = () => { $('password-panel').hidden = !$('password-panel').hidden }
 $('save-password').onclick = async () => { try { const data = await request('/api/admin/password', { method: 'POST', headers: headers(true), body: JSON.stringify({ password: $('new-password').value }) }); sessionStorage.setItem('yuki_admin_session', data.sessionToken); $('password-status').textContent = 'Password diganti.' } catch (e) { $('password-status').textContent = e.message } }
 window.addEventListener('resize', () => drawChart(window.__yukiDaily || []))
+
+/* ===== DATABASE BROWSER (pagination + search) ===== */
+const dbState = { table: '', page: 1, pageSize: 25, search: '', pageCount: 1 }
+let dbTables = []
+
+async function loadDbTables() {
+  try {
+    const data = await request('/api/admin/db/tables', { headers: headers() })
+    dbTables = data.tables || []
+    const select = $('db-table')
+    select.innerHTML = '<option value="">— pilih tabel —</option>' +
+      dbTables.map(t => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.label)} · ${fmt(t.count)}</option>`).join('')
+    $('db-total').textContent = `${dbTables.length} tabel`
+  } catch (e) { $('db-total').textContent = 'gagal memuat' }
+}
+
+function bytesLabel(size) {
+  if (size < 1024) return `${size} B`
+  if (size < 1048576) return `${(size / 1024).toFixed(1)} KB`
+  return `${(size / 1048576).toFixed(1)} MB`
+}
+
+async function loadDbTable() {
+  if (!dbState.table) { $('db-wrap').innerHTML = '<p class="empty">Pilih tabel untuk menampilkan data.</p>'; $('db-pager').hidden = true; return }
+  const params = new URLSearchParams({ page: dbState.page, pageSize: dbState.pageSize })
+  if (dbState.search) params.set('search', dbState.search)
+  try {
+    const data = await request(`/api/admin/db/table/${encodeURIComponent(dbState.table)}?${params}`, { headers: headers() })
+    dbState.page = data.page; dbState.pageCount = data.pageCount
+    $('db-meta').innerHTML = `<b>${escapeHtml(data.label)}</b> · ${fmt(data.total)} baris` +
+      (data.redactedColumns.length ? ` · <span class="warn">${data.redactedColumns.length} kolom disamarkan</span>` : '') +
+      (dbState.search ? ` · filter: “${escapeHtml(dbState.search)}”` : '')
+
+    if (!data.rows.length) { $('db-wrap').innerHTML = '<p class="empty">Tidak ada baris yang cocok.</p>' }
+    else {
+      const heads = data.columns.map(c => `<th>${escapeHtml(c)}</th>`).join('')
+      const body = data.rows.map(row => `<tr>${data.columns.map(c => {
+        const v = row[c]
+        const text = v === null || v === undefined ? '<i class="null">null</i>' : escapeHtml(String(v))
+        return `<td title="${escapeHtml(String(v ?? '').slice(0, 200))}">${text}</td>`
+      }).join('')}</tr>`).join('')
+      $('db-wrap').innerHTML = `<table><thead><tr>${heads}</tr></thead><tbody>${body}</tbody></table>`
+    }
+    $('db-pager').hidden = false
+    $('db-pageinfo').textContent = `Halaman ${dbState.page} / ${dbState.pageCount}`
+    $('db-prev').disabled = dbState.page <= 1
+    $('db-first').disabled = dbState.page <= 1
+    $('db-next').disabled = dbState.page >= dbState.pageCount
+    $('db-last').disabled = dbState.page >= dbState.pageCount
+  } catch (e) { $('db-wrap').innerHTML = `<p class="empty">${escapeHtml(e.message)}</p>` }
+}
+
+$('db-table').onchange = event => { dbState.table = event.target.value; dbState.page = 1; loadDbTable() }
+$('db-size').onchange = event => { dbState.pageSize = Number(event.target.value); dbState.page = 1; loadDbTable() }
+$('db-reload').onclick = () => { dbState.page = 1; loadDbTable() }
+let dbSearchTimer
+$('db-search').oninput = event => {
+  clearTimeout(dbSearchTimer)
+  dbSearchTimer = setTimeout(() => { dbState.search = event.target.value.trim(); dbState.page = 1; loadDbTable() }, 400)
+}
+$('db-first').onclick = () => { dbState.page = 1; loadDbTable() }
+$('db-prev').onclick = () => { if (dbState.page > 1) { dbState.page -= 1; loadDbTable() } }
+$('db-next').onclick = () => { if (dbState.page < dbState.pageCount) { dbState.page += 1; loadDbTable() } }
+$('db-last').onclick = () => { dbState.page = dbState.pageCount; loadDbTable() }
+
+/* ===== WORKSPACE FILE BROWSER ===== */
+const wsState = { path: '' }
+
+function renderWsUsers(data) {
+  if (!data?.users?.length) { $('ws-users').innerHTML = '<p class="empty">Belum ada folder user.</p>'; return }
+  $('ws-users').innerHTML = data.users.map(u =>
+    `<article class="ws-user" data-user="${escapeHtml(u.name)}"><span>${escapeHtml(u.name)}</span><b>${u.files} file</b><small>${bytesLabel(u.bytes)}</small></article>`
+  ).join('')
+  $('ws-users').querySelectorAll('.ws-user').forEach(card => card.onclick = () => { wsState.path = card.dataset.user; loadWsDir() })
+  $('ws-root').textContent = `${data.users.length} user`
+}
+
+async function loadWsUsers() {
+  try { renderWsUsers(await request('/api/admin/workspace', { headers: headers() })) }
+  catch { $('ws-users').innerHTML = '<p class="empty">Tidak dapat memuat workspace.</p>' }
+}
+
+async function loadWsDir() {
+  try {
+    const data = await request(`/api/admin/workspace/list?path=${encodeURIComponent(wsState.path)}`, { headers: headers() })
+    $('ws-path').textContent = '/' + (data.path || '')
+    const rows = data.entries.map(e => {
+      const clickable = e.type === 'dir' ? `data-dir="${escapeHtml(e.name)}"` : (/\.(txt|md|json|js|mjs|cjs|ts|tsx|py|css|html|yml|yaml|sh|csv|log|env)$/i.test(e.name) ? `data-file="${escapeHtml(e.name)}"` : '')
+      return `<tr class="ws-row ${e.type}" ${clickable}><td>${e.type === 'dir' ? '📁' : '📄'} ${escapeHtml(e.name)}</td><td>${e.type}</td><td>${e.type === 'dir' ? '—' : bytesLabel(e.size)}</td><td>${e.mtime ? new Date(e.mtime).toLocaleString('id-ID') : '—'}</td></tr>`
+    }).join('')
+    $('ws-table').querySelector('tbody').innerHTML = rows || '<tr><td colspan="4" class="empty">Folder kosong.</td></tr>'
+    $('ws-table').querySelectorAll('[data-dir]').forEach(row => row.onclick = () => { wsState.path = `${wsState.path ? wsState.path + '/' : ''}${row.dataset.dir}`; loadWsDir() })
+    $('ws-table').querySelectorAll('[data-file]').forEach(row => row.onclick = () => openWsFile(`${wsState.path ? wsState.path + '/' : ''}${row.dataset.file}`))
+    $('ws-up').disabled = !data.path
+  } catch (e) { $('ws-table').querySelector('tbody').innerHTML = `<tr><td colspan="4" class="empty">${escapeHtml(e.message)}</td></tr>` }
+}
+
+async function openWsFile(filePath) {
+  try {
+    const data = await request(`/api/admin/workspace/file?path=${encodeURIComponent(filePath)}`, { headers: headers() })
+    $('file-name').textContent = filePath
+    $('file-content').textContent = data.content + (data.truncated ? '\n\n… (dipotong, file lebih besar)' : '')
+    $('file-panel').hidden = false
+    $('file-panel').scrollIntoView({ behavior: 'smooth', block: 'start' })
+  } catch (e) { $('file-name').textContent = 'Gagal membuka file'; $('file-content').textContent = e.message; $('file-panel').hidden = false }
+}
+
+$('ws-up').onclick = () => { wsState.path = wsState.path.split('/').slice(0, -1).join('/'); loadWsDir() }
+$('ws-reload').onclick = () => { loadWsUsers(); if (wsState.path) loadWsDir() }
+$('file-close').onclick = () => { $('file-panel').hidden = true }
+
 fetch('/api/health').then(r => r.json()).then(data => $('health').textContent = data.status).catch(() => $('health').textContent = 'offline'); load()
