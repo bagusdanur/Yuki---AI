@@ -168,12 +168,12 @@ async function loadUsers() {
     $('user-grid').innerHTML = usersCache.map(u => `
       <article class="user-card" data-user="${escapeHtml(u.userId)}" data-name="${escapeHtml(u.username)}">
         <div class="uc-head"><b>${escapeHtml(u.username || 'tanpa nama')}</b><span class="tag">${fmt(u.messages)} chat</span></div>
-        <dl>
-          <div><dt>Memori</dt><dd>${fmt(u.memories)}</dd></div>
-          <div><dt>Fakta</dt><dd>${fmt(u.facts)}</dd></div>
-          <div><dt>Jadwal</dt><dd>${fmt(u.schedules)}</dd></div>
-          <div><dt>File</dt><dd>${u.wsFiles}</dd></div>
-        </dl>
+        <div class="uc-stats">
+          <span>memori <b>${fmt(u.memories)}</b></span>
+          <span>fakta <b>${fmt(u.facts)}</b></span>
+          <span>jadwal <b>${fmt(u.schedules)}</b></span>
+          <span>file <b>${u.wsFiles}</b></span>
+        </div>
         <small class="uc-id">${escapeHtml(u.userId)}</small>
       </article>`).join('') || '<p class="empty">Tidak ada user yang cocok.</p>'
     $('user-grid').querySelectorAll('.user-card').forEach(card => card.onclick = () => openUser(card.dataset.user, card.dataset.name))
@@ -195,10 +195,10 @@ async function openUser(userId, username) {
   $('user-summary').innerHTML = `
     <div><span>Riwayat chat</span><b>${fmt(u.messages)}</b></div>
     <div><span>Memori</span><b>${fmt(u.memories)}</b></div>
-    <div><span>Fakta ingatan</span><b>${fmt(u.facts)}</b></div>
+    <div><span>Fakta</span><b>${fmt(u.facts)}</b></div>
     <div><span>Jadwal</span><b>${fmt(u.schedules)}</b></div>
     <div><span>Bookmark</span><b>${fmt(u.bookmarks)}</b></div>
-    <div><span>Folder</span><b>${u.wsFiles} file</b></div>`
+    <div><span>File</span><b>${u.wsFiles}</b></div>`
 
   try {
     const data = await request(`/api/admin/users/${encodeURIComponent(userId)}/tables`, { headers: headers() })

@@ -47,17 +47,16 @@ td.empty{text-align:center;color:#686c75}
 .file-preview{margin:14px 0 0;padding:14px;max-height:460px;overflow:auto;border:1px solid #2c2f36;border-radius:6px;background:#0a0c10;color:#c8ccd4;font:11.5px/1.55 ui-monospace,monospace;white-space:pre-wrap;word-break:break-word}
 
 /* ===== Penjelajah user: kartu user, chip kategori, breadcrumb ===== */
-.user-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:9px;margin-top:14px}
-.user-card{padding:13px;border:1px solid #2c2f36;border-radius:8px;background:#0d0f13;cursor:pointer;transition:border-color .15s,background .15s,transform .1s}
+.user-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;margin-top:12px}
+.user-card{padding:11px 12px;border:1px solid #2c2f36;border-radius:8px;background:#0d0f13;cursor:pointer;transition:border-color .15s,background .15s}
 .user-card:hover{border-color:#5a57a0;background:#15171d}
-.user-card:active{transform:scale(.985)}
-.uc-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.uc-head b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
-.uc-head .tag{flex:0 0 auto;font-size:8px;padding:5px 7px}
-.user-card dl{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin:12px 0 0}
-.user-card dt{color:#676b74;font-size:8px;text-transform:uppercase}
-.user-card dd{margin:3px 0 0;font:700 11px ui-monospace,monospace;color:#c9cbd1}
-.uc-id{display:block;margin-top:9px;color:#5c606a;font:9px ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.uc-head{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.uc-head b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px;min-width:0}
+.uc-head .tag{flex:0 0 auto;font-size:8px;padding:4px 6px}
+.uc-stats{display:flex;flex-wrap:wrap;gap:9px;margin-top:9px}
+.uc-stats span{display:inline-flex;align-items:baseline;gap:4px;color:#6f737c;font:700 8px ui-monospace,monospace;text-transform:uppercase}
+.uc-stats b{color:#c9cbd1;font:700 11px ui-monospace,monospace}
+.uc-id{display:block;margin-top:7px;color:#5c606a;font:8.5px ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:12px}
 .crumb{padding:5px 9px!important;font-size:10px;border-radius:99px;background:#17191e;border:1px solid #33363e;color:#b9bcc4;cursor:pointer}
 .crumb:hover{border-color:#5a57a0;color:#e3e2ff}
@@ -85,8 +84,10 @@ td.empty{text-align:center;color:#686c75}
   .overview article{padding:12px}
   .overview b{font-size:19px}
   .token-grid,.data-grid{grid-template-columns:1fr 1fr}
-  .user-grid{grid-template-columns:1fr;gap:8px}
-  .user-card dl{grid-template-columns:repeat(4,1fr)}
+  .user-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .user-card{padding:10px}
+  .uc-head b{font-size:11.5px}
+  .uc-stats{gap:7px;margin-top:7px}
   .user-summary{grid-template-columns:repeat(3,1fr);padding:11px}
   .user-summary b{font-size:15px}
   .provider-editor{grid-template-columns:1fr}
@@ -120,8 +121,41 @@ td.empty{text-align:center;color:#686c75}
   header p{display:none}
   .overview,.token-grid,.data-grid{grid-template-columns:1fr}
   .user-summary{grid-template-columns:1fr 1fr}
-  .user-card dl{grid-template-columns:1fr 1fr}
+
   .login div,.password-panel>div{flex-direction:column}
   .price{grid-template-columns:1fr}
   .pager button{flex:1 1 45%}
+}
+
+/* ===== Kerapatan layout: ringkas, tidak memanjang ke bawah ===== */
+main{width:min(1180px,calc(100% - 32px));padding:28px 0 56px}
+header{padding-bottom:18px}
+h1{font-size:32px}
+.panel{margin-top:12px;padding:16px}
+.login,.panel{margin-top:12px}
+nav{margin:12px 0}
+.overview{gap:7px}
+.overview article{padding:13px}
+.overview b{margin-top:7px;font-size:20px}
+.user-summary{padding:11px;gap:7px}
+.user-summary b{font-size:15px;margin-top:5px}
+.table-chips{margin-top:11px;gap:6px}
+.chip{padding:7px 11px!important;font-size:10.5px}
+.user-grid{margin-top:11px}
+.browser-bar{margin-top:11px}
+.provider-grid{margin-top:12px}
+.alerts{margin-top:10px}
+.chart-wrap{margin-top:12px}
+.table-wrap{margin-top:10px}
+.file-preview{margin-top:12px;max-height:380px}
+/* tabel lebih padat */
+th,td{padding:7px 9px}
+/* ringkas di layar kecil */
+@media(max-width:700px){
+  main{padding:16px 0 44px}
+  .panel{margin-top:10px;padding:12px}
+  .overview article{padding:10px}
+  .overview b{font-size:17px}
+  h1{font-size:25px}
+  .login{margin:40px auto;padding:18px}
 }
