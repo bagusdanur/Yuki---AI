@@ -157,6 +157,7 @@ async function load() {
     loadWsUsers()
     fill('primary', config.providers.primary); fill('backup', config.providers.backup)
     $('updated').textContent = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+    if (!window.__viewReady) { window.__viewReady = true; viewFromHash() }
     clearTimeout(timer); timer = setTimeout(load, 30000)
   } catch (cause) { $('error').textContent = cause.message; if (/sesi|auth/i.test(cause.message)) { sessionStorage.removeItem('yuki_admin_session'); location.reload() } }
 }
@@ -185,6 +186,30 @@ $('change-password').onclick = () => { $('password-panel').hidden = !$('password
 $('save-password').onclick = async () => { try { const data = await request('/api/admin/password', { method: 'POST', headers: headers(true), body: JSON.stringify({ password: $('new-password').value }) }); sessionStorage.setItem('yuki_admin_session', data.sessionToken); $('password-status').textContent = 'Password diganti.' } catch (e) { $('password-status').textContent = e.message } }
 window.addEventListener('resize', () => drawChart(window.__yukiDaily || []))
 
+
+
+/* ===== NAVIGASI SIDEBAR ===== */
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === id))
+  document.querySelectorAll('.side-link').forEach(b => b.classList.toggle('active', b.dataset.view === id))
+  closeSidebar()
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+  location.hash = id.replace('view-', '')
+}
+function openSidebar() { $('sidebar').classList.add('open'); $('side-backdrop').classList.add('show') }
+function closeSidebar() { $('sidebar').classList.remove('open'); $('side-backdrop').classList.remove('show') }
+document.querySelectorAll('.side-link').forEach(btn => btn.onclick = () => showView(btn.dataset.view))
+$('menu-toggle').onclick = openSidebar
+$('side-backdrop').onclick = closeSidebar
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSidebar() })
+
+// Buka view dari hash URL (mis. #browser)
+function viewFromHash() {
+  const id = (location.hash || '').replace('#', '')
+  const target = id ? `view-${id}` : 'view-overview'
+  if ($(target)) showView(target)
+}
+window.addEventListener('hashchange', viewFromHash)
 
 /* ===== PENJELAJAH USER: 2 tingkat (user -> tabel -> isi) ===== */
 const userState = { page: 1, pageSize: 24, search: '', pageCount: 1 }

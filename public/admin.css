@@ -206,3 +206,58 @@ th,td{padding:7px 9px}
   .user-summary{grid-template-columns:repeat(2,minmax(0,1fr))!important}
   .user-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 }
+
+/* ===== SIDEBAR LAYOUT (gaya side menu) ===== */
+main{width:min(1440px,calc(100% - 28px));padding:22px 0 48px}
+.shell{display:grid;grid-template-columns:212px minmax(0,1fr);gap:18px;align-items:start;margin-top:14px}
+.sidebar{position:sticky;top:18px;padding:14px;border:1px solid #2d3037;border-radius:10px;background:#101217}
+.side-brand{display:flex;align-items:baseline;gap:6px;padding:4px 6px 12px;border-bottom:1px solid #262930}
+.side-brand small{color:#9a96dc;font:700 9px ui-monospace,monospace;letter-spacing:.14em}
+.side-brand b{font:600 15px Georgia,serif;color:#e8e8ea}
+.side-nav{display:flex;flex-direction:column;gap:2px;margin-top:10px}
+.side-group{display:block;margin:12px 6px 5px;color:#5f636c;font:700 8px ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase}
+.side-group:first-child{margin-top:2px}
+.side-link{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border:0;border-radius:6px;background:transparent;color:#a9adb6;font-size:12px;text-align:left;cursor:pointer;transition:background .13s,color .13s}
+.side-link:hover{background:#181b21;color:#e4e5ea}
+.side-link.active{background:#24233a;color:#e9e8ff;font-weight:700;box-shadow:inset 2px 0 0 #726fc0}
+.side-foot{display:flex;flex-direction:column;gap:5px;margin-top:14px;padding-top:12px;border-top:1px solid #262930}
+.side-foot span{color:#71757e;font:700 9px ui-monospace,monospace;padding:0 6px 4px}
+.side-foot button{width:100%;padding:7px;font-size:11px}
+.content{min-width:0}
+.view{display:none}
+.view.active{display:block;animation:fadeView .16s ease-out}
+@keyframes fadeView{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.menu-toggle{display:none;width:100%;padding:10px;margin-bottom:10px;font-size:12px}
+.side-backdrop{display:none}
+
+/* ===== RAPIKAN PENJELAJAH DATA ===== */
+#browser-panel .title{margin-bottom:4px}
+.crumbs{margin-top:10px;padding:8px 10px;border:1px solid #2a2d34;border-radius:8px;background:#0e1015}
+.user-summary{padding:10px 12px}
+.user-summary div{padding:4px 0}
+.table-chips{margin-top:10px}
+.chip{padding:6px 10px!important;font-size:10px}
+.user-grid{margin-top:10px}
+
+/* ===== RAPIKAN FORM PROVIDER ===== */
+#view-providers .provider-editor{padding:14px;gap:10px}
+#view-providers .provider-editor label{font-size:10px;gap:5px}
+#view-providers .provider-editor input{padding:9px 10px;font-size:12px}
+#view-providers .provider-head{padding-bottom:10px}
+#view-providers .price{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+#view-providers form footer{margin-top:11px;padding-top:11px;border-top:1px solid #262930}
+#view-providers .provider-editor>button{justify-self:stretch;max-width:150px}
+
+/* ===== MOBILE: sidebar jadi drawer ===== */
+@media(max-width:860px){
+  .shell{grid-template-columns:1fr;gap:0}
+  .sidebar{position:fixed;top:0;left:0;bottom:0;z-index:60;width:250px;max-width:82vw;overflow-y:auto;border-radius:0;border-right:1px solid #2d3037;transform:translateX(-102%);transition:transform .2s ease;padding:16px}
+  .sidebar.open{transform:none}
+  .side-backdrop{display:block;position:fixed;inset:0;z-index:55;background:rgba(6,7,10,.72);opacity:0;pointer-events:none;transition:opacity .2s}
+  .side-backdrop.show{opacity:1;pointer-events:auto}
+  .menu-toggle{display:block;position:sticky;top:6px;z-index:40}
+}
+@media(max-width:420px){
+  .sidebar{width:230px}
+  .crumbs{padding:7px 8px}
+}

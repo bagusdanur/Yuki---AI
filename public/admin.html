@@ -3,8 +3,38 @@
   <header><div><small>YUKI CONTROL</small><h1>Operations</h1><p>Runtime, token terpakai, dan konfigurasi model.</p></div><span class="health"><i></i><b id="health">checking</b></span></header>
   <section id="login" class="login"><label>Password admin</label><div><input id="key" type="password" autocomplete="current-password"><button id="connect">Masuk</button></div></section>
   <section id="dashboard" hidden>
-    <nav><span id="updated">—</span><button id="refresh">Refresh</button><button id="change-password">Password</button><button id="logout">Keluar</button></nav>
+    <button id="menu-toggle" class="menu-toggle" aria-label="Buka menu">☰ Menu</button>
+    <div class="shell">
+      <aside class="sidebar" id="sidebar">
+        <div class="side-brand"><small>YUKI</small><b>Control</b></div>
+        <nav class="side-nav">
+          <span class="side-group">RINGKASAN</span>
+          <button class="side-link" data-view="view-overview">📊 Overview</button>
+          <button class="side-link" data-view="view-stats">📈 Laporan</button>
+          <button class="side-link" data-view="view-tokens">🪙 Token &amp; Biaya</button>
+          <button class="side-link" data-view="view-daily">📅 Tren Harian</button>
 
+          <span class="side-group">DATA</span>
+          <button class="side-link active" data-view="view-browser">🧭 Penjelajah Data</button>
+          <button class="side-link" data-view="view-tables">🗄️ Semua Tabel</button>
+          <button class="side-link" data-view="view-workspace">📁 Workspace</button>
+
+          <span class="side-group">SISTEM</span>
+          <button class="side-link" data-view="view-providers">🔌 Provider</button>
+          <button class="side-link" data-view="view-health">❤️ Health</button>
+          <button class="side-link" data-view="view-alerts">🔔 Alerts</button>
+        </nav>
+        <div class="side-foot">
+          <span id="updated">—</span>
+          <button id="refresh" class="secondary">Refresh</button>
+          <button id="change-password" class="secondary">Password</button>
+          <button id="logout" class="secondary">Keluar</button>
+        </div>
+      </aside>
+      <div class="side-backdrop" id="side-backdrop"></div>
+      <main class="content">
+
+<div class="view" id="view-overview">
     <section class="overview">
       <article><span>Uptime</span><b id="uptime">—</b></article>
       <article><span>Requests</span><b id="requests">—</b></article>
@@ -13,13 +43,17 @@
       <article><span>Latency rata-rata</span><b id="avg-latency">—</b></article>
       <article><span>Open circuits</span><b id="open-circuits">—</b></article>
     </section>
+    </div>
 
+<div class="view" id="view-stats">
     <!-- ===== LAPORAN STATISTIK ===== -->
     <section class="panel">
       <div class="title"><div><small>LAPORAN</small><h2>Statistik aplikasi</h2></div><span class="tag">ringkas</span></div>
       <section class="overview" id="stats-report"></section>
     </section>
+    </div>
 
+<div class="view" id="view-tokens">
     <!-- ===== TOKEN & BIAYA (PERSISTEN) ===== -->
     <section class="panel">
       <div class="title"><div><small>TOKEN &amp; BIAYA</small><h2>Akumulasi pemakaian</h2></div><span id="stats-saved" class="tag">—</span></div>
@@ -37,7 +71,9 @@
         <span id="reset-status"></span>
       </footer>
     </section>
+    </div>
 
+<div class="view" id="view-daily">
     <!-- ===== TREN HARIAN ===== -->
     <section class="panel">
       <div class="title"><div><small>TREN HARIAN</small><h2>Pemakaian per hari</h2></div></div>
@@ -46,10 +82,14 @@
         <table id="daily-table"><thead><tr><th>Tanggal</th><th>Calls</th><th>Tokens</th><th>Gagal</th><th>Biaya</th></tr></thead><tbody></tbody></table>
       </div>
     </section>
+    </div>
 
     <!-- ===== PROVIDER HEALTH ===== -->
+    <div class="view" id="view-health">
     <section class="panel"><div class="title"><div><small>LIVE METRICS</small><h2>Provider health</h2></div></div><div id="providers" class="provider-grid"></div></section>
+    </div>
 
+<div class="view" id="view-providers">
     <!-- ===== KONFIGURASI ===== -->
     <section class="panel">
       <div class="title"><div><small>ROUTING</small><h2>LLM providers</h2></div><span id="router-state" class="tag">healthy</span></div>
@@ -73,7 +113,8 @@
           <div class="price"><label>Input / 1M<input name="backup.inputCostPerMillion" type="number" min="0" step="0.001"></label><label>Output / 1M<input name="backup.outputCostPerMillion" type="number" min="0" step="0.001"></label></div>
           <button type="button" data-test="backup" class="secondary">Test backup</button>
         </div>
-        <footer><span id="provider-status">Belum ada perubahan.</span><button type="submit">Simpan konfigurasi</button></footer>
+        <footer><span id="provider-status">Belum ada perubahan.</span><button type="submit">Simpan konfigurasi</button
+    </footer>
       </form>
     </section>
 
@@ -83,7 +124,9 @@
       <p class="hint">Tabel di bawah tersimpan di <code>data/yuki.db</code> dan tidak terpengaruh restart.</p>
       <section class="overview data-grid" id="app-data"></section>
     </section>
+    </div>
 
+<div class="view" id="view-browser">
     <!-- ===== PENJELAJAH USER (2 tingkat: user -> tabel -> isi) ===== -->
     <section class="panel" id="browser-panel">
       <div class="title">
@@ -129,7 +172,9 @@
         </div>
       </div>
     </section>
+    </div>
 
+<div class="view" id="view-tables">
     <!-- ===== DATABASE BROWSER (semua tabel) ===== -->
     <section class="panel" id="db-panel">
       <div class="title"><div><small>SEMUA TABEL</small><h2>Database mentah</h2></div><span id="db-total" class="tag">—</span></div>
@@ -150,7 +195,9 @@
         <button id="db-last" class="secondary">Akhir »</button>
       </div>
     </section>
+    </div>
 
+<div class="view" id="view-workspace">
     <!-- ===== WORKSPACE PER USER ===== -->
     <section class="panel" id="ws-panel">
       <div class="title"><div><small>WORKSPACE</small><h2>File per user</h2></div><span id="ws-root" class="tag">—</span></div>
@@ -162,6 +209,7 @@
       </div>
       <div class="table-wrap"><table id="ws-table"><thead><tr><th>Nama</th><th>Tipe</th><th>Ukuran</th><th>Diubah</th></tr></thead><tbody></tbody></table></div>
     </section>
+    </div>
 
     <!-- ===== PRATINJAU FILE ===== -->
     <section class="panel" id="file-panel" hidden>
@@ -170,8 +218,12 @@
     </section>
 
     <!-- ===== ALERTS ===== -->
+    <div class="view" id="view-alerts">
     <section class="panel"><div class="title"><div><small>EVENTS</small><h2>Alerts</h2></div></div><div id="alerts" class="alerts"><p class="empty">Tidak ada alert.</p></div></section>
+    </div>
 
     <section id="password-panel" class="panel password-panel" hidden><h2>Ganti password</h2><div><input id="new-password" type="password" autocomplete="new-password" placeholder="Minimal 10 karakter"><button id="save-password">Simpan</button></div><p id="password-status"></p></section>
+      </main>
+    </div>
   </section><p id="error" class="error"></p>
 </main><script src="/admin.js" defer></script></body></html>
