@@ -3,26 +3,26 @@
   <header><div><small>YUKI CONTROL</small><h1>Operations</h1><p>Runtime, token terpakai, dan konfigurasi model.</p></div><span class="health"><i></i><b id="health">checking</b></span></header>
   <section id="login" class="login"><label>Password admin</label><div><input id="key" type="password" autocomplete="current-password"><button id="connect">Masuk</button></div></section>
   <section id="dashboard" hidden>
-    <button id="menu-toggle" class="menu-toggle" aria-label="Buka menu">☰ Menu</button>
+    <button id="menu-toggle" class="menu-toggle" aria-label="Buka menu"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;vertical-align:-2px;margin-right:6px"><path d="M3 6h18M3 12h18M3 18h18"/></svg>Menu</button>
     <div class="shell">
       <aside class="sidebar" id="sidebar">
         <div class="side-brand"><small>YUKI</small><b>Control</b></div>
         <nav class="side-nav">
           <span class="side-group">RINGKASAN</span>
-          <button class="side-link" data-view="view-overview">📊 Overview</button>
-          <button class="side-link" data-view="view-stats">📈 Laporan</button>
-          <button class="side-link" data-view="view-tokens">🪙 Token &amp; Biaya</button>
-          <button class="side-link" data-view="view-daily">📅 Tren Harian</button>
+          <button class="side-link" data-view="view-overview"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg>Overview</button>
+          <button class="side-link" data-view="view-stats"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg>Laporan</button>
+          <button class="side-link" data-view="view-tokens"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h5M9.5 14.5h5"/></svg>Token &amp; Biaya</button>
+          <button class="side-link" data-view="view-daily"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>Tren Harian</button>
 
           <span class="side-group">DATA</span>
-          <button class="side-link active" data-view="view-browser">🧭 Penjelajah Data</button>
-          <button class="side-link" data-view="view-tables">🗄️ Semua Tabel</button>
-          <button class="side-link" data-view="view-workspace">📁 Workspace</button>
+          <button class="side-link active" data-view="view-browser"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>Penjelajah Data</button>
+          <button class="side-link" data-view="view-tables"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>Semua Tabel</button>
+          <button class="side-link" data-view="view-workspace"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Workspace</button>
 
           <span class="side-group">SISTEM</span>
-          <button class="side-link" data-view="view-providers">🔌 Provider</button>
-          <button class="side-link" data-view="view-health">❤️ Health</button>
-          <button class="side-link" data-view="view-alerts">🔔 Alerts</button>
+          <button class="side-link" data-view="view-providers"><svg viewBox="0 0 24 24"><path d="M9 2v6M15 2v6"/><path d="M6 8h12v3a6 6 0 0 1-12 0z"/><path d="M12 17v5"/></svg>Provider</button>
+          <button class="side-link" data-view="view-health"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.5-7-9.5A4 4 0 0 1 12 7a4 4 0 0 1 7 3.5C19 15.5 12 20 12 20z"/></svg>Health</button>
+          <button class="side-link" data-view="view-alerts"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>Alerts</button>
         </nav>
         <div class="side-foot">
           <span id="updated">—</span>

@@ -406,6 +406,8 @@ $('db-last').onclick = () => { dbState.page = dbState.pageCount; loadDbTable() }
 
 /* ===== WORKSPACE FILE BROWSER ===== */
 const wsState = { path: '' }
+const DIR_ICON = '<svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:#8f92fb;fill:none;stroke-width:1.8;vertical-align:-2px;margin-right:5px"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>'
+const FILE_ICON = '<svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:#9aa0aa;fill:none;stroke-width:1.8;vertical-align:-2px;margin-right:5px"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>'
 
 function renderWsUsers(data) {
   if (!data?.users?.length) { $('ws-users').innerHTML = '<p class="empty">Belum ada folder user.</p>'; return }
@@ -427,7 +429,7 @@ async function loadWsDir() {
     $('ws-path').textContent = '/' + (data.path || '')
     const rows = data.entries.map(e => {
       const clickable = e.type === 'dir' ? `data-dir="${escapeHtml(e.name)}"` : (/\.(txt|md|json|js|mjs|cjs|ts|tsx|py|css|html|yml|yaml|sh|csv|log|env)$/i.test(e.name) ? `data-file="${escapeHtml(e.name)}"` : '')
-      return `<tr class="ws-row ${e.type}" ${clickable}><td>${e.type === 'dir' ? '📁' : '📄'} ${escapeHtml(e.name)}</td><td>${e.type}</td><td>${e.type === 'dir' ? '—' : bytesLabel(e.size)}</td><td>${e.mtime ? new Date(e.mtime).toLocaleString('id-ID') : '—'}</td></tr>`
+      return `<tr class="ws-row ${e.type}" ${clickable}><td>${e.type === 'dir' ? DIR_ICON : FILE_ICON} ${escapeHtml(e.name)}</td><td>${e.type}</td><td>${e.type === 'dir' ? '—' : bytesLabel(e.size)}</td><td>${e.mtime ? new Date(e.mtime).toLocaleString('id-ID') : '—'}</td></tr>`
     }).join('')
     $('ws-table').querySelector('tbody').innerHTML = rows || '<tr><td colspan="4" class="empty">Folder kosong.</td></tr>'
     $('ws-table').querySelectorAll('[data-dir]').forEach(row => row.onclick = () => { wsState.path = `${wsState.path ? wsState.path + '/' : ''}${row.dataset.dir}`; loadWsDir() })

@@ -261,3 +261,32 @@ main{width:min(1440px,calc(100% - 28px));padding:22px 0 48px}
   .sidebar{width:230px}
   .crumbs{padding:7px 8px}
 }
+
+/* ===== FIX: form provider full width, tidak terpotong ===== */
+#view-providers .provider-editor{grid-template-columns:1fr 1fr!important;width:100%}
+#view-providers .provider-editor label{width:100%;min-width:0}
+#view-providers .provider-editor input{width:100%;min-width:0;box-sizing:border-box}
+#view-providers .provider-editor label:nth-of-type(2),
+#view-providers .provider-editor label:nth-of-type(3),
+#view-providers .provider-editor label:nth-of-type(4){grid-column:1/-1}
+#view-providers .price{grid-column:1/-1;grid-template-columns:1fr 1fr!important;width:100%}
+#view-providers .price label{width:100%}
+#view-providers form{width:100%}
+#view-providers .panel{padding:16px}
+/* Hapus batasan max-width pada tombol test */
+#view-providers .provider-editor>button{justify-self:stretch;max-width:none;width:100%}
+
+/* ===== IKON SVG (mengganti emoji) ===== */
+.side-link svg{width:14px;height:14px;flex:0 0 auto;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+.side-link.active svg{opacity:1}
+.side-group{display:flex;align-items:center;gap:6px}
+
+/* Mobile: form jadi 1 kolom penuh */
+@media(max-width:700px){
+  #view-providers .provider-editor{grid-template-columns:1fr!important}
+  #view-providers .provider-editor label:nth-of-type(n){grid-column:1!important}
+  #view-providers .price{grid-template-columns:1fr 1fr!important}
+}
+@media(max-width:420px){
+  #view-providers .price{grid-template-columns:1fr!important}
+}
