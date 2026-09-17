@@ -159,3 +159,50 @@ th,td{padding:7px 9px}
   h1{font-size:25px}
   .login{margin:40px auto;padding:18px}
 }
+
+/* ===== PAKSA: semua panel tetap kotak-kotak horizontal, bukan memanjang ===== */
+
+/* Overview & grid angka: selalu multi-kolom otomatis */
+.overview{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(155px,1fr))!important;gap:8px!important}
+.token-grid{grid-template-columns:repeat(auto-fit,minmax(155px,1fr))!important}
+.data-grid{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))!important}
+
+/* Ringkasan user: chip horizontal, bukan tumpukan */
+.user-summary{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(110px,1fr))!important;gap:8px!important}
+
+/* Kartu user: rapi multi-kolom */
+.user-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(195px,1fr))!important;gap:8px!important}
+
+/* Provider health: 2-3 kolom horizontal */
+.provider-grid{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))!important;gap:9px!important}
+
+/* Editor provider: 2 kolom */
+.provider-editor{grid-template-columns:1fr 1fr!important}
+
+/* Chip kategori: sebaris wrap, tidak vertikal */
+.table-chips{display:flex!important;flex-wrap:wrap!important;gap:6px!important}
+
+/* Breadcrumb horizontal */
+.crumbs{display:flex!important;flex-wrap:wrap!important;gap:6px!important}
+
+/* Semua kartu angka konsisten tinggi */
+.overview article,.data-grid article,.user-summary div{display:flex!important;flex-direction:column!important;justify-content:center!important}
+
+/* ===== Mobile: TETAP horizontal (2 kolom), bukan 1 kolom memanjang ===== */
+@media(max-width:700px){
+  .overview{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .token-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .data-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .user-summary{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  .user-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .provider-grid{grid-template-columns:1fr!important}
+  .overview article,.data-grid article{padding:10px!important}
+  .overview span,.data-grid span{font-size:7.5px!important}
+  .overview b,.data-grid b{font-size:16px!important;margin-top:5px!important}
+  .user-summary b{font-size:14px!important}
+}
+@media(max-width:420px){
+  .overview,.token-grid,.data-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .user-summary{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .user-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}

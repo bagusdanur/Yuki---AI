@@ -92,6 +92,38 @@ function renderDaily(daily = []) {
   $('daily-table').querySelector('tbody').innerHTML = rows.map(d => `<tr><td>${escapeHtml(d.date)}</td><td>${fmt(d.calls)}</td><td>${fmt(d.tokens)}</td><td>${fmt(d.failures)}</td><td>$${(d.cost || 0).toFixed(4)}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">Belum ada data.</td></tr>'
 }
 
+
+function renderStatsReport(stats) {
+  const host = $('stats-report'); if (!host) return
+  const totalUsers = Number(stats.users || 0)
+  const active = Number(stats.activeToday || 0)
+  const messages = Number(stats.messages || 0)
+  const avgMsg = totalUsers ? Math.round(messages / totalUsers) : 0
+  const pos = Number(stats.feedbackPositive || 0)
+  const neg = Number(stats.feedbackNegative || 0)
+  const totalFb = pos + neg
+  const likeRate = totalFb ? Math.round((pos / totalFb) * 1000) / 10 : 0
+  const bond = Math.round(Number(stats.averageBond || 0) * 10) / 10
+  const appTables = stats.appData?.tables?.length || 0
+  const totalRows = stats.appData?.tables?.reduce((sum, t) => sum + t.count, 0) || 0
+  const dbSize = stats.appData?.sizeBytes ? bytesLabel(stats.appData.sizeBytes) : '—'
+
+  const cards = [
+    ['Total pengguna', fmt(totalUsers)],
+    ['Aktif hari ini', fmt(active)],
+    ['Total pesan', fmt(messages)],
+    ['Rata-rata pesan/user', fmt(avgMsg)],
+    ['Bond rata-rata', fmt(bond)],
+    ['Feedback positif', fmt(pos)],
+    ['Feedback negatif', fmt(neg)],
+    ['Rasio suka', likeRate + '%'],
+    ['Tabel database', fmt(appTables)],
+    ['Total baris', fmt(totalRows)],
+    ['Ukuran database', dbSize]
+  ]
+  host.innerHTML = cards.map(([label, value]) => `<article><span>${escapeHtml(label)}</span><b>${escapeHtml(String(value))}</b></article>`).join('')
+}
+
 function renderAppData(appData) {
   const hosting = $('app-data')
   if (!appData || !Array.isArray(appData.tables)) { hosting.innerHTML = '<p class="empty">Data aplikasi tidak tersedia.</p>'; return }
@@ -118,6 +150,7 @@ async function load() {
     window.__yukiDaily = providers.daily || []
     renderDaily(window.__yukiDaily)
     renderHealth(providers)
+    renderStatsReport(stats)
     renderAppData(stats.appData)
     if (!dbTables.length) loadDbTables()
     if (!$('user-grid').children.length) loadUsers()
