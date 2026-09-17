@@ -20,7 +20,7 @@ import { warmupEmbedder } from './lib/semantic.js'
 import { searchComics, latestComics, wantsComic, wantsLatestComics, detectRequestedGenre, extractQuery, buildComicContext } from './lib/ryukomik.js'
 import { executeTool, initSkills, listSkills } from './lib/agent/skills-engine.js'
 import { getProviderOperations, flushProviderOperations, resetProviderOperations } from './lib/provider-router.js'
-import { listTables, readTable, listDirectory, readTextFile, workspaceSummary } from './lib/admin-browser.js'
+import { listTables, readTable, listDirectory, readTextFile, workspaceSummary, listUsers, listUserTables, readUserTable } from './lib/admin-browser.js'
 import { getPublicProviderSettings, saveProviderSettings, testProviderConnection } from './lib/provider-settings.js'
 import { runAgent, extractHtmlArtifactsFromText } from './lib/agent/runner.js'
 import { cancelWorkflow, claimWorkflow, createApprovalCheckpoint, deleteUserWorkflows, getWorkflow, listPendingWorkflows, setWorkflowState } from './lib/agent/workflow-store.js'
@@ -938,6 +938,29 @@ app.get('/api/admin/db/table/:name', rateLimit({ max: 120 }), requireAdmin, (req
       page: Number(req.query.page) || 1, pageSize: Number(req.query.pageSize) || 25,
       search: String(req.query.search || ''), orderBy: req.query.orderBy ? String(req.query.orderBy) : null,
       order: String(req.query.order || 'desc')
+    }))
+  } catch (error) { res.status(400).json({ error: error.message }) }
+})
+
+// === Penjelajahan per-user (pilih user dulu -> baru lihat isinya) ===
+app.get('/api/admin/users', rateLimit({ max: 120 }), requireAdmin, (req, res) => {
+  try {
+    res.json(listUsers({
+      db: dbHandle, search: String(req.query.search || ''),
+      page: Number(req.query.page) || 1, pageSize: Number(req.query.pageSize) || 24
+    }))
+  } catch (error) { res.status(500).json({ error: error.message }) }
+})
+app.get('/api/admin/users/:userId/tables', rateLimit({ max: 120 }), requireAdmin, (req, res) => {
+  try { res.json(listUserTables({ db: dbHandle, userId: String(req.params.userId || ''), labels: APP_DATA_LABELS })) }
+  catch (error) { res.status(400).json({ error: error.message }) }
+})
+app.get('/api/admin/users/:userId/table/:name', rateLimit({ max: 180 }), requireAdmin, (req, res) => {
+  try {
+    res.json(readUserTable({
+      db: dbHandle, userId: String(req.params.userId || ''), table: String(req.params.name || ''),
+      labels: APP_DATA_LABELS, page: Number(req.query.page) || 1, pageSize: Number(req.query.pageSize) || 25,
+      search: String(req.query.search || '')
     }))
   } catch (error) { res.status(400).json({ error: error.message }) }
 })

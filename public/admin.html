@@ -78,10 +78,56 @@
       <section class="overview data-grid" id="app-data"></section>
     </section>
 
-    <!-- ===== DATABASE BROWSER ===== -->
-    <section class="panel">
-      <div class="title"><div><small>DATABASE BROWSER</small><h2>Jelajahi tabel</h2></div><span id="db-total" class="tag">—</span></div>
-      <p class="hint">Baca-saja. Kolom sensitif (token, kode akses, password) otomatis disamarkan.</p>
+    <!-- ===== PENJELAJAH USER (2 tingkat: user -> tabel -> isi) ===== -->
+    <section class="panel" id="browser-panel">
+      <div class="title">
+        <div><small>PENJELAJAH DATA</small><h2 id="browser-title">Pilih user</h2></div>
+        <span id="browser-badge" class="tag">—</span>
+      </div>
+
+      <!-- breadcrumb -->
+      <nav class="crumbs" id="crumbs" hidden></nav>
+
+      <!-- TINGKAT 1: daftar user -->
+      <div id="stage-users">
+        <p class="hint">Pilih user untuk melihat riwayat chat, memori, jadwal, dan folder workspace-nya.</p>
+        <div class="browser-bar">
+          <input id="user-search" type="search" placeholder="Cari nama user…">
+          <select id="user-size"><option value="12">12 / halaman</option><option value="24" selected>24 / halaman</option><option value="48">48 / halaman</option></select>
+        </div>
+        <div id="user-grid" class="user-grid"></div>
+        <div class="pager" id="user-pager" hidden>
+          <button id="user-first" class="secondary">«</button>
+          <button id="user-prev" class="secondary">‹</button>
+          <span id="user-pageinfo">—</span>
+          <button id="user-next" class="secondary">›</button>
+          <button id="user-last" class="secondary">»</button>
+        </div>
+      </div>
+
+      <!-- TINGKAT 2: sub-tabel milik user terpilih -->
+      <div id="stage-tables" hidden>
+        <div id="user-summary" class="user-summary"></div>
+        <div class="table-chips" id="user-tables"></div>
+        <div class="browser-bar" id="ut-bar" hidden>
+          <input id="user-table-search" type="search" placeholder="Cari isi kategori ini…">
+          <select id="ut-size"><option value="25">25 / halaman</option><option value="50">50 / halaman</option><option value="100">100 / halaman</option></select>
+        </div>
+        <div class="table-wrap" id="user-table-wrap"><p class="empty">Pilih salah satu kategori di atas.</p></div>
+        <div class="pager" id="user-table-pager" hidden>
+          <button id="ut-first" class="secondary">« Awal</button>
+          <button id="ut-prev" class="secondary">‹ Sebelumnya</button>
+          <span id="ut-pageinfo">—</span>
+          <button id="ut-next" class="secondary">Berikutnya ›</button>
+          <button id="ut-last" class="secondary">Akhir »</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== DATABASE BROWSER (semua tabel) ===== -->
+    <section class="panel" id="db-panel">
+      <div class="title"><div><small>SEMUA TABEL</small><h2>Database mentah</h2></div><span id="db-total" class="tag">—</span></div>
+      <p class="hint">Baca-saja, semua tabel tanpa filter user. Kolom sensitif disamarkan.</p>
       <div class="browser-bar">
         <select id="db-table"><option value="">— pilih tabel —</option></select>
         <input id="db-search" type="search" placeholder="Cari isi tabel…">
@@ -100,10 +146,9 @@
     </section>
 
     <!-- ===== WORKSPACE PER USER ===== -->
-    <section class="panel">
-      <div class="title"><div><small>WORKSPACE</small><h2>Folder per user</h2></div><span id="ws-root" class="tag">—</span></div>
-      <p class="hint">File yang dibuat agent untuk tiap user. Baca-saja, dibatasi ke folder workspace.</p>
-      <section class="overview data-grid" id="ws-users"></section>
+    <section class="panel" id="ws-panel">
+      <div class="title"><div><small>WORKSPACE</small><h2>File per user</h2></div><span id="ws-root" class="tag">—</span></div>
+      <p class="hint">File yang dibuat agent untuk tiap user. Baca-saja.</p>
       <div class="browser-bar">
         <span id="ws-path" class="path-label">/</span>
         <button id="ws-up" class="secondary">↑ Naik</button>

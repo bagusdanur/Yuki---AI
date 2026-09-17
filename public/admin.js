@@ -120,6 +120,7 @@ async function load() {
     renderHealth(providers)
     renderAppData(stats.appData)
     if (!dbTables.length) loadDbTables()
+    if (!$('user-grid').children.length) loadUsers()
     loadWsUsers()
     fill('primary', config.providers.primary); fill('backup', config.providers.backup)
     $('updated').textContent = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
@@ -150,6 +151,136 @@ $('refresh').onclick = load; $('logout').onclick = () => { sessionStorage.remove
 $('change-password').onclick = () => { $('password-panel').hidden = !$('password-panel').hidden }
 $('save-password').onclick = async () => { try { const data = await request('/api/admin/password', { method: 'POST', headers: headers(true), body: JSON.stringify({ password: $('new-password').value }) }); sessionStorage.setItem('yuki_admin_session', data.sessionToken); $('password-status').textContent = 'Password diganti.' } catch (e) { $('password-status').textContent = e.message } }
 window.addEventListener('resize', () => drawChart(window.__yukiDaily || []))
+
+
+/* ===== PENJELAJAH USER: 2 tingkat (user -> tabel -> isi) ===== */
+const userState = { page: 1, pageSize: 24, search: '', pageCount: 1 }
+const utState = { userId: '', username: '', table: '', page: 1, pageSize: 25, search: '', pageCount: 1 }
+let usersCache = []
+
+async function loadUsers() {
+  try {
+    const params = new URLSearchParams({ page: userState.page, pageSize: userState.pageSize })
+    if (userState.search) params.set('search', userState.search)
+    const data = await request(`/api/admin/users?${params}`, { headers: headers() })
+    usersCache = data.users || []
+    userState.page = data.page; userState.pageCount = data.pageCount
+    $('user-grid').innerHTML = usersCache.map(u => `
+      <article class="user-card" data-user="${escapeHtml(u.userId)}" data-name="${escapeHtml(u.username)}">
+        <div class="uc-head"><b>${escapeHtml(u.username || 'tanpa nama')}</b><span class="tag">${fmt(u.messages)} chat</span></div>
+        <dl>
+          <div><dt>Memori</dt><dd>${fmt(u.memories)}</dd></div>
+          <div><dt>Fakta</dt><dd>${fmt(u.facts)}</dd></div>
+          <div><dt>Jadwal</dt><dd>${fmt(u.schedules)}</dd></div>
+          <div><dt>File</dt><dd>${u.wsFiles}</dd></div>
+        </dl>
+        <small class="uc-id">${escapeHtml(u.userId)}</small>
+      </article>`).join('') || '<p class="empty">Tidak ada user yang cocok.</p>'
+    $('user-grid').querySelectorAll('.user-card').forEach(card => card.onclick = () => openUser(card.dataset.user, card.dataset.name))
+    $('user-pager').hidden = false
+    $('user-pageinfo').textContent = `User ${userState.page} / ${userState.pageCount} · ${fmt(data.total)} total`
+    $('user-first').disabled = $('user-prev').disabled = userState.page <= 1
+    $('user-last').disabled = $('user-next').disabled = userState.page >= userState.pageCount
+    $('browser-badge').textContent = `${fmt(data.total)} user`
+  } catch (e) { $('user-grid').innerHTML = `<p class="empty">${escapeHtml(e.message)}</p>` }
+}
+
+async function openUser(userId, username) {
+  utState.userId = userId; utState.username = username; utState.table = ''; utState.page = 1; utState.search = ''
+  $('stage-users').hidden = true; $('stage-tables').hidden = false
+  $('browser-title').textContent = username || userId
+  renderCrumbs()
+
+  const u = usersCache.find(x => x.userId === userId) || {}
+  $('user-summary').innerHTML = `
+    <div><span>Riwayat chat</span><b>${fmt(u.messages)}</b></div>
+    <div><span>Memori</span><b>${fmt(u.memories)}</b></div>
+    <div><span>Fakta ingatan</span><b>${fmt(u.facts)}</b></div>
+    <div><span>Jadwal</span><b>${fmt(u.schedules)}</b></div>
+    <div><span>Bookmark</span><b>${fmt(u.bookmarks)}</b></div>
+    <div><span>Folder</span><b>${u.wsFiles} file</b></div>`
+
+  try {
+    const data = await request(`/api/admin/users/${encodeURIComponent(userId)}/tables`, { headers: headers() })
+    $('user-tables').innerHTML = (data.tables || []).map(t =>
+      `<button class="chip" data-table="${escapeHtml(t.name)}">${escapeHtml(t.label)} <b>${fmt(t.count)}</b></button>`).join('') || '<p class="empty">User ini belum punya data.</p>'
+    $('user-tables').querySelectorAll('.chip').forEach(btn => btn.onclick = () => {
+      $('user-tables').querySelectorAll('.chip').forEach(b => b.classList.remove('active'))
+      btn.classList.add('active')
+      utState.table = btn.dataset.table; utState.page = 1; utState.search = ''
+      $('user-table-search').value = ''
+      $('ut-bar').hidden = false
+      renderCrumbs(); loadUserTable()
+    })
+    $('user-table-wrap').innerHTML = '<p class="empty">Pilih salah satu kategori di atas.</p>'
+    $('user-table-pager').hidden = true
+    $('ut-bar').hidden = true
+  } catch (e) { $('user-tables').innerHTML = `<p class="empty">${escapeHtml(e.message)}</p>` }
+}
+
+function renderCrumbs() {
+  const crumbs = $('crumbs')
+  crumbs.hidden = false
+  let html = `<button class="crumb" data-go="users">Semua user</button>`
+  html += `<span class="sep">›</span><button class="crumb" data-go="user">${escapeHtml(utState.username || utState.userId)}</button>`
+  if (utState.table) html += `<span class="sep">›</span><b class="crumb cur">${escapeHtml(utState.table)}</b>`
+  crumbs.innerHTML = html
+  crumbs.querySelector('[data-go="users"]').onclick = backToUsers
+  const toUser = crumbs.querySelector('[data-go="user"]')
+  if (toUser) toUser.onclick = () => { utState.table = ''; renderCrumbs(); $('user-table-wrap').innerHTML = '<p class="empty">Pilih salah satu kategori di atas.</p>'; $('user-table-pager').hidden = true; $('ut-bar').hidden = true; $('user-tables').querySelectorAll('.chip').forEach(b => b.classList.remove('active')) }
+}
+
+function backToUsers() {
+  $('stage-users').hidden = false; $('stage-tables').hidden = true
+  $('browser-title').textContent = 'Pilih user'
+  $('crumbs').hidden = true
+  utState.userId = ''; utState.table = ''
+}
+
+async function loadUserTable() {
+  if (!utState.table) return
+  const params = new URLSearchParams({ page: utState.page, pageSize: utState.pageSize })
+  if (utState.search) params.set('search', utState.search)
+  try {
+    const data = await request(`/api/admin/users/${encodeURIComponent(utState.userId)}/table/${encodeURIComponent(utState.table)}?${params}`, { headers: headers() })
+    utState.page = data.page; utState.pageCount = data.pageCount
+    if (!data.rows.length) $('user-table-wrap').innerHTML = '<p class="empty">Tidak ada baris yang cocok.</p>'
+    else {
+      const heads = data.columns.map(c => `<th>${escapeHtml(c)}</th>`).join('')
+      const body = data.rows.map(row => `<tr>${data.columns.map(c => {
+        const v = row[c]
+        const text = v === null || v === undefined ? '<i class="null">null</i>' : escapeHtml(String(v))
+        return `<td title="${escapeHtml(String(v ?? '').slice(0, 200))}">${text}</td>`
+      }).join('')}</tr>`).join('')
+      $('user-table-wrap').innerHTML = `<div class="table-note">${escapeHtml(data.label)} · ${fmt(data.total)} baris</div><table><thead><tr>${heads}</tr></thead><tbody>${body}</tbody></table>`
+    }
+    $('user-table-pager').hidden = false
+    $('ut-pageinfo').textContent = `Halaman ${utState.page} / ${utState.pageCount}`
+    $('ut-first').disabled = $('ut-prev').disabled = utState.page <= 1
+    $('ut-last').disabled = $('ut-next').disabled = utState.page >= utState.pageCount
+  } catch (e) { $('user-table-wrap').innerHTML = `<p class="empty">${escapeHtml(e.message)}</p>` }
+}
+
+$('user-first').onclick = () => { userState.page = 1; loadUsers() }
+$('user-prev').onclick = () => { if (userState.page > 1) { userState.page -= 1; loadUsers() } }
+$('user-next').onclick = () => { if (userState.page < userState.pageCount) { userState.page += 1; loadUsers() } }
+$('user-last').onclick = () => { userState.page = userState.pageCount; loadUsers() }
+$('user-size').onchange = e => { userState.pageSize = Number(e.target.value); userState.page = 1; loadUsers() }
+let userSearchTimer
+$('user-search').oninput = e => {
+  clearTimeout(userSearchTimer)
+  userSearchTimer = setTimeout(() => { userState.search = e.target.value.trim(); userState.page = 1; loadUsers() }, 400)
+}
+$('ut-size').onchange = e => { utState.pageSize = Number(e.target.value); utState.page = 1; loadUserTable() }
+let utSearchTimer
+$('user-table-search').oninput = e => {
+  clearTimeout(utSearchTimer)
+  utSearchTimer = setTimeout(() => { utState.search = e.target.value.trim(); utState.page = 1; loadUserTable() }, 400)
+}
+$('ut-first').onclick = () => { utState.page = 1; loadUserTable() }
+$('ut-prev').onclick = () => { if (utState.page > 1) { utState.page -= 1; loadUserTable() } }
+$('ut-next').onclick = () => { if (utState.page < utState.pageCount) { utState.page += 1; loadUserTable() } }
+$('ut-last').onclick = () => { utState.page = utState.pageCount; loadUserTable() }
 
 /* ===== DATABASE BROWSER (pagination + search) ===== */
 const dbState = { table: '', page: 1, pageSize: 25, search: '', pageCount: 1 }
