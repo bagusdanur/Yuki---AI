@@ -9,6 +9,7 @@ import { Emotion } from './lib/emotion.js'
 import {
   loadMemory, addFacts, addEvent, buildMemoryContext, recallMemory, saveEmotion,
   registerUser, getUserByAccessCode, getUsernameByUserId, saveChatMessage, getChatHistory,
+  getChatHistoryPage,
   countChatMessages, summarizeAndTrimHistory, captureStructuredMemory,
   recordConversationEvent, syncBondMilestones, saveResponseFeedback,
   consumeRateLimit, pruneRateLimits, deleteUserData, getAdminStats, userExists,
@@ -474,6 +475,15 @@ app.post('/api/login-code', rateLimit({ max: 15 }), async (req, res) => {
 app.get('/api/chat/reminders', requireSession, rateLimit({ windowMs: 60_000, max: 30 }), (req, res) => {
   const afterId = Math.max(0, Number(req.query.after || 0) || 0)
   res.json({ reminders: getScheduledReminderMessages(req.authUserId, afterId) })
+})
+
+// Riwayat obrolan lengkap (dengan paging) — dipakai menu "Riwayat obrolan" di
+// aplikasi penuh maupun versi embed. Berbeda dari /api/login-code yang hanya
+// mengirim 40 pesan terakhir, endpoint ini bisa menelusuri seluruh riwayat.
+app.get('/api/chat/history', requireSession, rateLimit({ max: 60 }), (req, res) => {
+  const beforeId = Math.max(0, Number(req.query.before || 0) || 0)
+  const limit = Math.max(1, Math.min(200, Number(req.query.limit || 60) || 60))
+  res.json(getChatHistoryPage(req.authUserId, { beforeId, limit }))
 })
 
 app.get('/api/agenda', requireSession, rateLimit({ max: 60 }), (req, res) => {

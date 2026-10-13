@@ -55,6 +55,7 @@ export interface Message {
   artifacts?: ArtifactItem[]
   comics?: ComicRecommendation[]
   messageId?: number
+  createdAt?: string
 }
 
 export interface Milestone {

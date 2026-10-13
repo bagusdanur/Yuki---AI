@@ -4,12 +4,12 @@ import remarkGfm from 'remark-gfm'
 import rehypeSanitize from 'rehype-sanitize'
 import {
   Bell, Bookmark, BookOpen, Bot, Brain, Check, ChevronDown, ChevronUp, Clock3, Code2, Copy, Download,
-  Gamepad2, Globe, Heart, KeyRound, ListTodo, LoaderCircle, Maximize2, MessageSquare,
+  Gamepad2, Globe, Heart, History as HistoryIcon, KeyRound, ListTodo, LoaderCircle, Maximize2, MessageSquare,
   Minimize2, Pause, Play, Radio, RefreshCw, RotateCcw, Save, Send, Settings, Sparkles, Star,
   Terminal, ThumbsDown, ThumbsUp, Volume2, WifiOff, Wrench, X, Zap
 } from 'lucide-react'
 import {
-  addBookmark, cancelAgentRun, createDynamicSkill, decideAgentApproval, deleteAccount, deleteMemory, dynamicSkillAction, getActiveAgentRun, getAgenda, getBookmarks, getDynamicSkills, getMemories, getPushConfig, getRelationship,
+  addBookmark, cancelAgentRun, createDynamicSkill, decideAgentApproval, deleteAccount, deleteMemory, dynamicSkillAction, getActiveAgentRun, getAgenda, getBookmarks, getChatHistoryPage, getDynamicSkills, getMemories, getPushConfig, getRelationship,
   getAgentProgress, getPendingAgentWorkflows, getScheduledReminders, getSkills, register, removeBookmark, restore, savePushSubscription, sendChat, sendChatStream, sendFeedback, setMemoryAutoCapture, speak, updateAgendaTask, updateMemory
 } from './api'
 import type {
@@ -988,7 +988,7 @@ function AgendaModal({ onClose }: { onClose: () => void }) {
   </div>
 }
 
-function MemoryCenterModal({ onClose }: { onClose: () => void }) {
+function MemoryCenterModal({ onClose, companionOnly = false }: { onClose: () => void; companionOnly?: boolean }) {
   const [tab, setTab] = useState<'user' | 'project' | 'task' | 'lesson' | 'skills'>('user')
   const [memories, setMemories] = useState<AgentMemory[]>([])
   const [skills, setSkills] = useState<DynamicSkill[]>([])
@@ -996,7 +996,7 @@ function MemoryCenterModal({ onClose }: { onClose: () => void }) {
   const [notice, setNotice] = useState('')
   const load = async () => {
     try {
-      const [memoryData, skillData] = await Promise.all([getMemories(), getDynamicSkills()])
+      const [memoryData, skillData] = await Promise.all([getMemories(), companionOnly ? Promise.resolve({ skills: [] as DynamicSkill[] }) : getDynamicSkills()])
       setMemories(memoryData.memories); setAutoCapture(memoryData.settings.autoCapture); setSkills(skillData.skills)
     } catch (error) { setNotice(error instanceof Error ? error.message : 'Data belum berhasil dimuat.') }
   }
@@ -1010,12 +1010,12 @@ function MemoryCenterModal({ onClose }: { onClose: () => void }) {
   }
   const shown = memories.filter(item => item.scopeType === tab)
   return <div className="timeline-overlay memory-overlay" onPointerDown={event => { if (event.target === event.currentTarget) onClose() }}><section className="timeline-card memory-modal" onPointerDown={event => event.stopPropagation()}>
-    <header><div><small>Scoped · private · evidence-backed</small><h2>Memory & Skills Yuki</h2></div><button type="button" onClick={event => { event.stopPropagation(); onClose() }} aria-label="Tutup memory"><X size={17}/></button></header>
-    <div className="memory-tabs">{(['user','project','task','lesson','skills'] as const).map(item => <button className={tab === item ? 'active' : ''} onClick={() => setTab(item)} key={item}>{item}</button>)}</div>
-    <div className="memory-control"><label><input type="checkbox" checked={autoCapture} onChange={event => { const value = event.target.checked; setAutoCapture(value); void run(() => setMemoryAutoCapture(value)) }}/><span>Memory otomatis</span></label><small>Hanya dari pesanmu, dapat dikoreksi atau dihapus.</small></div>
+    <header><div><small>{companionOnly ? 'Pribadi · hanya untukmu' : 'Scoped · private · evidence-backed'}</small><h2>{companionOnly ? 'Ingatan Yuki tentangmu' : 'Memory & Skills Yuki'}</h2></div><button type="button" onClick={event => { event.stopPropagation(); onClose() }} aria-label="Tutup memory"><X size={17}/></button></header>
+    {!companionOnly && <div className="memory-tabs">{(['user','project','task','lesson','skills'] as const).map(item => <button className={tab === item ? 'active' : ''} onClick={() => setTab(item)} key={item}>{item}</button>)}</div>}
+    <div className="memory-control"><label><input type="checkbox" checked={autoCapture} onChange={event => { const value = event.target.checked; setAutoCapture(value); void run(() => setMemoryAutoCapture(value)) }}/><span>Memory otomatis</span></label><small>{companionOnly ? 'Yuki mengingat hal penting darimu. Bisa dikoreksi atau dihapus kapan saja.' : 'Hanya dari pesanmu, dapat dikoreksi atau dihapus.'}</small></div>
     {notice && <div className="memory-notice">{notice}</div>}
     <div className="memory-list">
-      {tab !== 'skills' && shown.length === 0 && <div className="agenda-empty">Belum ada memory pada scope ini.</div>}
+      {tab !== 'skills' && shown.length === 0 && <div className="agenda-empty">{companionOnly ? 'Yuki belum mencatat hal penting tentangmu. Ceritakan sesuatu, nanti ia ingat.' : 'Belum ada memory pada scope ini.'}</div>}
       {tab !== 'skills' && shown.map(item => <article className="memory-item" key={item.id}>
         <div><span>{item.category}</span><b>{Math.round(item.confidence * 100)}% yakin</b></div><p>{item.content}</p>
         <small>{item.evidence.length ? `Bukti: ${item.evidence.map(value => value.ref).join(', ')}` : 'Belum ada referensi bukti'}</small>
@@ -1027,6 +1027,74 @@ function MemoryCenterModal({ onClose }: { onClose: () => void }) {
       </article>)}</>}
     </div>
   </section></div>
+}
+
+function ChatHistoryModal({ onClose }: { onClose: () => void }) {
+  const [items, setItems] = useState<Message[]>([])
+  const [total, setTotal] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [notice, setNotice] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    getChatHistoryPage(0, 60)
+      .then(data => { if (cancelled) return; setItems(data.messages); setTotal(data.total); setHasMore(data.hasMore) })
+      .catch(error => { if (!cancelled) setNotice(error instanceof Error ? error.message : 'Riwayat belum berhasil dimuat.') })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const loadOlder = async () => {
+    if (!items.length || loadingMore) return
+    setLoadingMore(true); setNotice('')
+    try {
+      const data = await getChatHistoryPage(items[0].messageId || 0, 60)
+      setItems(current => [...data.messages, ...current])
+      setHasMore(data.hasMore)
+    } catch (error) { setNotice(error instanceof Error ? error.message : 'Bagian riwayat lama belum berhasil dimuat.') }
+    finally { setLoadingMore(false) }
+  }
+
+  const formatStamp = (value?: string) => {
+    if (!value) return ''
+    try {
+      return new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value.replace(' ', 'T') + 'Z')) + ' WIB'
+    } catch { return value }
+  }
+
+  return <div className="timeline-overlay" onClick={onClose} style={{ zIndex: 1000 }}>
+    <section className="timeline-card history-modal" role="dialog" aria-modal="true" aria-label="Riwayat obrolan" onClick={event => event.stopPropagation()}>
+      <header>
+        <div><small>Tersimpan di server · {total} pesan</small><h2>Riwayat Obrolan</h2></div>
+        <button type="button" onClick={event => { event.stopPropagation(); onClose() }} aria-label="Tutup riwayat"><X size={17} /></button>
+      </header>
+      {notice && <div className="memory-notice">{notice}</div>}
+      <div className="history-list">
+        {loading && <div className="agenda-empty"><LoaderCircle className="spin" size={18} /> Memuat riwayat…</div>}
+        {!loading && items.length === 0 && <div className="agenda-empty">Belum ada obrolan tersimpan. Mulai ngobrol dulu dengan Yuki.</div>}
+        {items.map((message, index) => (
+          <article className={`history-item ${message.role === 'user' ? 'from-user' : 'from-yuki'}`} key={`${message.messageId ?? index}-${index}`}>
+            <div className="history-item-head">
+              <strong>{message.role === 'user' ? 'Kamu' : 'Yuki'}</strong>
+              {message.createdAt && <small>{formatStamp(message.createdAt)}</small>}
+            </div>
+            <p>{cleanMessageContent(legacyComics(message.content).clean).slice(0, 600) || '(pesan kosong)'}</p>
+          </article>
+        ))}
+      </div>
+      {hasMore && <footer className="history-actions">
+        <button type="button" disabled={loadingMore} onClick={loadOlder}>{loadingMore ? <LoaderCircle className="spin" size={13} /> : <ChevronUp size={13} />} Muat riwayat lebih lama</button>
+      </footer>}
+    </section>
+  </div>
 }
 
 function Onboarding({ onReady }: { onReady: (session: Session, history?: Message[], bondValue?: number, milestones?: Milestone[]) => void }) {
@@ -1104,6 +1172,7 @@ export default function App() {
   const [skillsModalOpen, setSkillsModalOpen] = useState(false)
   const [agendaOpen, setAgendaOpen] = useState(false)
   const [memoryOpen, setMemoryOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const [selectedArtifact, setSelectedArtifact] = useState<ArtifactItem | null>(null)
   const [feedback, setFeedback] = useState<Record<number, 1 | -1>>({})
   const [liveAgentSteps, setLiveAgentSteps] = useState<AgentStep[]>([])
@@ -1114,7 +1183,7 @@ export default function App() {
   const reminderCursor = useRef(0)
   const closeOverlays = () => {
     setSettingsOpen(false); setAgendaOpen(false); setMemoryOpen(false); setSkillsModalOpen(false)
-    setTimelineOpen(false); setBookmarksOpen(false); setSelectedArtifact(null)
+    setTimelineOpen(false); setBookmarksOpen(false); setSelectedArtifact(null); setHistoryOpen(false)
   }
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [messages, busy, streamingText])
@@ -1491,9 +1560,10 @@ export default function App() {
         </div>
         {settingsOpen && <div className="settings-card">
           <div className="settings-card-head"><strong>Menu Yuki</strong><button type="button" onClick={() => setSettingsOpen(false)} aria-label="Tutup menu"><X size={15}/></button></div>
+          <button onClick={() => { setHistoryOpen(true); setSettingsOpen(false) }}><HistoryIcon size={15} /><span><b>Riwayat obrolan</b><small>Semua percakapanmu dengan Yuki</small></span></button>
+          <button onClick={() => { setMemoryOpen(true); setSettingsOpen(false) }}><Brain size={15} /><span><b>Ingatan Yuki tentangmu</b><small>Lihat, koreksi, atau hapus yang Yuki ingat</small></span></button>
           {!EMBED_COMPANION_ONLY && <button onClick={() => { setSkillsModalOpen(true); setSettingsOpen(false) }}><Wrench size={15} /><span><b>Katalog Skills Yuki Agent</b><small>{skills.length || 14} skills aktif</small></span></button>}
           {!EMBED_COMPANION_ONLY && <button onClick={() => { setAgendaOpen(true); setSettingsOpen(false) }}><Bell size={15} /><span><b>Agenda & Pengingat</b><small>Jadwal, status, dan notifikasi HP</small></span></button>}
-          {!EMBED_COMPANION_ONLY && <button onClick={() => { setMemoryOpen(true); setSettingsOpen(false) }}><Brain size={15} /><span><b>Memory & Dynamic Skills</b><small>Lihat, koreksi, hapus, dan validasi skill</small></span></button>}
           <button onClick={() => { setBookmarksOpen(true); setSettingsOpen(false) }}><Bookmark size={15} /><span><b>Komik tersimpan</b><small>{bookmarks.length} judul tersimpan</small></span></button>
           <button onClick={() => { setTimelineOpen(true); setSettingsOpen(false) }}><Heart size={15} /><span><b>Perjalanan hubungan</b><small>{milestones.length} momen tersimpan</small></span></button>
           {installPrompt && <button onClick={installApp}><Download size={15} /><span><b>Pasang aplikasi Yuki</b><small>Tambahkan ke layar utama</small></span></button>}
@@ -1545,7 +1615,10 @@ export default function App() {
         <SkillsCatalogModal skills={skills} onClose={() => setSkillsModalOpen(false)} />
       )}
       {!EMBED_COMPANION_ONLY && agendaOpen && <AgendaModal onClose={() => setAgendaOpen(false)} />}
-      {!EMBED_COMPANION_ONLY && memoryOpen && <MemoryCenterModal onClose={closeOverlays} />}
+      {/* Riwayat obrolan & ingatan tersedia di aplikasi penuh MAUPUN versi embed,
+          karena keduanya milik mode Teman Ngobrol (bukan tool Agent). */}
+      {historyOpen && <ChatHistoryModal onClose={() => setHistoryOpen(false)} />}
+      {memoryOpen && <MemoryCenterModal onClose={closeOverlays} companionOnly={EMBED_COMPANION_ONLY} />}
 
       {!EMBED_COMPANION_ONLY && selectedArtifact && (
         <CodexArtifactModal artifact={selectedArtifact} onClose={() => setSelectedArtifact(null)} />

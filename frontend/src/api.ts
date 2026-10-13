@@ -178,6 +178,13 @@ export async function getScheduledReminders(afterId = 0) {
   return request<{ reminders: Message[] }>(`/api/chat/reminders?after=${Math.max(0, afterId)}`, { method: 'GET' }, 10_000, 0)
 }
 
+/** Riwayat obrolan lengkap (berpaging). `before` = id pesan tertua yang sudah dimuat. */
+export async function getChatHistoryPage(before = 0, limit = 60) {
+  return request<{ messages: Message[]; total: number; hasMore: boolean }>(
+    `/api/chat/history?before=${Math.max(0, before)}&limit=${Math.max(1, limit)}`, { method: 'GET' }, 15_000, 0
+  )
+}
+
 export async function getAgenda() {
   return request<AgendaResponse>('/api/agenda', { method: 'GET' }, 10_000, 0)
 }
