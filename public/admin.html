@@ -1,229 +1,596 @@
-<!doctype html><html lang="id"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Yuki Control</title><link rel="stylesheet" href="/admin.css"></head>
-<body><main>
-  <header><div><small>YUKI CONTROL</small><h1>Operations</h1><p>Runtime, token terpakai, dan konfigurasi model.</p></div><span class="health"><i></i><b id="health">checking</b></span></header>
-  <section id="login" class="login"><label>Password admin</label><div><input id="key" type="password" autocomplete="current-password"><button id="connect">Masuk</button></div></section>
-  <section id="dashboard" hidden>
-    <button id="menu-toggle" class="menu-toggle" aria-label="Buka menu"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;vertical-align:-2px;margin-right:6px"><path d="M3 6h18M3 12h18M3 18h18"/></svg>Menu</button>
-    <div class="shell">
-      <aside class="sidebar" id="sidebar">
-        <div class="side-brand"><small>YUKI</small><b>Control</b></div>
-        <nav class="side-nav">
-          <span class="side-group">RINGKASAN</span>
-          <button class="side-link" data-view="view-overview"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg>Overview</button>
-          <button class="side-link" data-view="view-stats"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg>Laporan</button>
-          <button class="side-link" data-view="view-tokens"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h5M9.5 14.5h5"/></svg>Token &amp; Biaya</button>
-          <button class="side-link" data-view="view-daily"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>Tren Harian</button>
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Yuki Control</title>
+<link rel="icon" type="image/svg+xml" href="/yuki-icon.svg">
+<link rel="alternate icon" href="/favicon.ico">
+<link rel="stylesheet" href="/admin.css">
+</head>
+<body>
 
-          <span class="side-group">DATA</span>
-          <button class="side-link active" data-view="view-browser"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>Penjelajah Data</button>
-          <button class="side-link" data-view="view-tables"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>Semua Tabel</button>
-          <button class="side-link" data-view="view-workspace"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Workspace</button>
+<!-- ══════════ LOGIN ══════════ -->
+<section id="login-gate" class="login-gate">
+  <h2><i class="ico" data-icon="layout-dashboard"></i> Yuki Control</h2>
+  <p>Masukkan password admin untuk mengakses dashboard.</p>
+  <div class="field">
+    <label for="admin-key">Password admin</label>
+    <input id="admin-key" type="password" autocomplete="current-password" placeholder="••••••••">
+  </div>
+  <button id="btn-login" class="btn block">Masuk</button>
+  <p id="login-error" class="status-line err" style="margin-top:12px"></p>
+</section>
 
-          <span class="side-group">SISTEM</span>
-          <button class="side-link" data-view="view-providers"><svg viewBox="0 0 24 24"><path d="M9 2v6M15 2v6"/><path d="M6 8h12v3a6 6 0 0 1-12 0z"/><path d="M12 17v5"/></svg>Provider</button>
-          <button class="side-link" data-view="view-health"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.5-7-9.5A4 4 0 0 1 12 7a4 4 0 0 1 7 3.5C19 15.5 12 20 12 20z"/></svg>Health</button>
-          <button class="side-link" data-view="view-alerts"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>Alerts</button>
-        </nav>
-        <div class="side-foot">
-          <span id="updated">—</span>
-          <button id="refresh" class="secondary">Refresh</button>
-          <button id="change-password" class="secondary">Password</button>
-          <button id="logout" class="secondary">Keluar</button>
-        </div>
-      </aside>
-      <div class="side-backdrop" id="side-backdrop"></div>
-      <main class="content">
+<!-- ══════════ DASHBOARD ══════════ -->
+<section id="app" class="hidden">
+<div class="wrap">
 
-<div class="view" id="view-overview">
-    <section class="overview">
-      <article><span>Uptime</span><b id="uptime">—</b></article>
-      <article><span>Requests</span><b id="requests">—</b></article>
-      <article><span>LLM calls</span><b id="llm-calls">—</b></article>
-      <article><span>Success rate</span><b id="success-rate">—</b></article>
-      <article><span>Latency rata-rata</span><b id="avg-latency">—</b></article>
-      <article><span>Open circuits</span><b id="open-circuits">—</b></article>
-    </section>
-    </div>
-
-<div class="view" id="view-stats">
-    <!-- ===== LAPORAN STATISTIK ===== -->
-    <section class="panel">
-      <div class="title"><div><small>LAPORAN</small><h2>Statistik aplikasi</h2></div><span class="tag">ringkas</span></div>
-      <section class="overview" id="stats-report"></section>
-    </section>
-    </div>
-
-<div class="view" id="view-tokens">
-    <!-- ===== TOKEN & BIAYA (PERSISTEN) ===== -->
-    <section class="panel">
-      <div class="title"><div><small>TOKEN &amp; BIAYA</small><h2>Akumulasi pemakaian</h2></div><span id="stats-saved" class="tag">—</span></div>
-      <p class="hint">Tersimpan ke disk secara berkala — <b>tidak hilang saat restart</b>. Tombol reset menghapus akumulasi.</p>
-      <section class="overview token-grid">
-        <article><span>Total tokens</span><b id="tok-total">—</b></article>
-        <article><span>Input tokens</span><b id="tok-in">—</b></article>
-        <article><span>Output tokens</span><b id="tok-out">—</b></article>
-        <article><span>Rata-rata / call</span><b id="tok-avg">—</b></article>
-        <article><span>Estimasi biaya</span><b id="tok-cost">—</b></article>
-        <article><span>Total gagal</span><b id="tok-fail">—</b></article>
-      </section>
-      <footer class="row-actions">
-        <button id="reset-stats" class="secondary danger">Reset statistik</button>
-        <span id="reset-status"></span>
-      </footer>
-    </section>
-    </div>
-
-<div class="view" id="view-daily">
-    <!-- ===== TREN HARIAN ===== -->
-    <section class="panel">
-      <div class="title"><div><small>TREN HARIAN</small><h2>Pemakaian per hari</h2></div></div>
-      <div class="chart-wrap"><canvas id="chart" height="180"></canvas></div>
-      <div class="table-wrap">
-        <table id="daily-table"><thead><tr><th>Tanggal</th><th>Calls</th><th>Tokens</th><th>Gagal</th><th>Biaya</th></tr></thead><tbody></tbody></table>
+<!-- Topbar -->
+  <header class="topbar">
+    <button class="menu-toggle" id="menu-toggle"><i class="ico" data-icon="menu"></i></button>
+    <div class="brand">
+      <div class="brand-mark">Y</div>
+      <div>
+        <h1>Yuki Control</h1>
+        <p id="brand-sub">Operations console</p>
       </div>
-    </section>
     </div>
-
-    <!-- ===== PROVIDER HEALTH ===== -->
-    <div class="view" id="view-health">
-    <section class="panel"><div class="title"><div><small>LIVE METRICS</small><h2>Provider health</h2></div></div><div id="providers" class="provider-grid"></div></section>
+    <div class="topbar-stats">
+      <span class="stat-chip"><i class="ico" data-icon="signal"></i><i class="dot" id="dot-health"></i><b id="chip-health">checking</b></span>
+      <span class="stat-chip">UPTIME <b id="chip-uptime">—</b></span>
+      <span class="stat-chip">USERS <b id="chip-users">—</b></span>
+      <span class="stat-chip">CHAT <b id="chip-messages">—</b></span>
+      <span class="stat-chip">TOKEN <b id="chip-tokens">—</b></span>
     </div>
+</header>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
-<div class="view" id="view-providers">
-    <!-- ===== KONFIGURASI ===== -->
-    <section class="panel">
-      <div class="title"><div><small>ROUTING</small><h2>LLM providers</h2></div><span id="router-state" class="tag">healthy</span></div>
-      <p class="hint">Primary dipakai pertama. Backup dicoba satu kali saat primary gagal atau circuit terbuka.</p>
-      <form id="provider-form">
-        <div class="provider-editor">
-          <div class="provider-head"><b>01 · Primary</b><span id="primary-live" class="tag">idle</span></div>
-          <label>Nama<input name="primary.name" maxlength="80"></label>
-          <label>Base URL<input name="primary.baseURL" inputmode="url"></label>
-          <label>Model<input name="primary.model"></label>
-          <label>API key<input name="primary.apiKey" type="password" autocomplete="new-password" placeholder="Kosongkan untuk mempertahankan key"></label>
-          <div class="price"><label>Input / 1M<input name="primary.inputCostPerMillion" type="number" min="0" step="0.001"></label><label>Output / 1M<input name="primary.outputCostPerMillion" type="number" min="0" step="0.001"></label></div>
-          <button type="button" data-test="primary" class="secondary">Test primary</button>
-        </div>
-        <div class="provider-editor">
-          <div class="provider-head"><b>02 · Backup</b><span id="backup-live" class="tag">idle</span></div>
-          <label>Nama<input name="backup.name" maxlength="80"></label>
-          <label>Base URL<input name="backup.baseURL" inputmode="url"></label>
-          <label>Model<input name="backup.model"></label>
-          <label>API key<input name="backup.apiKey" type="password" autocomplete="new-password" placeholder="Kosongkan untuk mempertahankan key"></label>
-          <div class="price"><label>Input / 1M<input name="backup.inputCostPerMillion" type="number" min="0" step="0.001"></label><label>Output / 1M<input name="backup.outputCostPerMillion" type="number" min="0" step="0.001"></label></div>
-          <button type="button" data-test="backup" class="secondary">Test backup</button>
-        </div>
-        <footer><span id="provider-status">Belum ada perubahan.</span><button type="submit">Simpan konfigurasi</button
-    </footer>
-      </form>
-    </section>
-
-    <!-- ===== DATA APLIKASI ===== -->
-    <section class="panel">
-      <div class="title"><div><small>DATA APLIKASI</small><h2>Isi database</h2></div><span class="tag">SQLite · persisten</span></div>
-      <p class="hint">Tabel di bawah tersimpan di <code>data/yuki.db</code> dan tidak terpengaruh restart.</p>
-      <section class="overview data-grid" id="app-data"></section>
-    </section>
-    </div>
-
-<div class="view" id="view-browser">
-    <!-- ===== PENJELAJAH USER (2 tingkat: user -> tabel -> isi) ===== -->
-    <section class="panel" id="browser-panel">
-      <div class="title">
-        <div><small>PENJELAJAH DATA</small><h2 id="browser-title">Pilih user</h2></div>
-        <span id="browser-badge" class="tag">—</span>
+  <div class="shell">
+    <!-- Sidebar -->
+<aside class="sidebar">
+      <div class="nav-group">
+        <span>Utama</span>
+        <button class="nav-link active" data-view="view-overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Overview</button>
+        <button class="nav-link" data-view="view-usage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg>Penggunaan</button>
       </div>
 
-      <!-- breadcrumb -->
-      <nav class="crumbs" id="crumbs" hidden></nav>
+      <div class="nav-group">
+        <span>Data</span>
+        <button class="nav-link" data-view="view-users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M16 11a3 3 0 100-6"/><path d="M18 20c0-2.4-.8-4.3-2.2-5.3"/></svg>Pengguna</button>
+        <button class="nav-link" data-view="view-database"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>Database</button>
+      </div>
 
-      <!-- TINGKAT 1: daftar user -->
-      <div id="stage-users">
-        <p class="hint">Pilih user untuk melihat riwayat chat, memori, jadwal, dan folder workspace-nya.</p>
-        <div class="browser-bar">
-          <input id="user-search" type="search" placeholder="Cari nama user…">
-          <select id="user-size"><option value="12">12 / halaman</option><option value="24" selected>24 / halaman</option><option value="48">48 / halaman</option></select>
+      <div class="nav-group">
+        <span>Sistem</span>
+        <button class="nav-link" data-view="view-providers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 2v6M15 2v6"/><path d="M6 8h12v3a6 6 0 01-12 0z"/><path d="M12 17v5"/></svg>Provider LLM</button>
+        <button class="nav-link" data-view="view-tts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3v12"/><circle cx="12" cy="18" r="3"/><path d="M5 6v6a7 7 0 0014 0V6"/></svg>Suara (TTS)</button>
+        <button class="nav-link" data-view="view-alerts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 8a6 6 0 10-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>Alert<span class="nav-badge" id="nav-alert-count">0</span></button>
+      </div>
+
+      <div class="side-foot">
+        <span class="status-line" id="last-updated">—</span>
+        <button class="btn ghost sm block" id="btn-refresh"><i class="ico" data-icon="key"></i> Refresh</button>
+        <button class="btn ghost sm block" id="btn-password"><i class="ico" data-icon="key"></i> Ganti Password</button>
+        <button class="btn bad sm block" id="btn-logout">Keluar</button>
+      </div>
+    </aside>
+
+    <!-- Konten -->
+    <main class="content">
+
+      <!-- ══════ OVERVIEW ══════ -->
+      <div class="view active" id="view-overview">
+        <div class="block">
+          <div class="block-head">
+            <div><small>Ringkasan</small><h2><i class="ico" data-icon="layout-dashboard"></i> Statistik Utama</h2></div>
+            <span class="pill" id="ov-pill">memuat…</span>
+          </div>
+          <div class="block-body">
+            <div class="kpi-grid">
+              <div class="kpi hero">
+                <span class="kpi-label">Total Pesan</span>
+                <span class="kpi-value" id="ov-messages">—</span>
+                <span class="kpi-sub" id="ov-messages-sub">—</span>
+              </div>
+              <div class="kpi violet">
+                <span class="kpi-label">Total Pengguna</span>
+                <span class="kpi-value" id="ov-users">—</span>
+                <span class="kpi-sub" id="ov-users-sub">—</span>
+              </div>
+              <div class="kpi pink">
+                <span class="kpi-label">Total Token LLM</span>
+                <span class="kpi-value sm" id="ov-tokens">—</span>
+                <span class="kpi-sub" id="ov-tokens-sub">—</span>
+              </div>
+              <div class="kpi">
+                <span class="kpi-label">Estimasi Biaya</span>
+                <span class="kpi-value sm" id="ov-cost">—</span>
+                <span class="kpi-sub" id="ov-cost-sub">—</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="block-body">
+            <div class="kpi-grid">
+              <div class="kpi">
+                <span class="kpi-label">Aktif Hari Ini</span>
+                <span class="kpi-value sm" id="ov-active-today">—</span>
+                <span class="kpi-sub" id="ov-active-sub">—</span>
+              </div>
+              <div class="kpi">
+                <span class="kpi-label">Pesan Hari Ini</span>
+                <span class="kpi-value sm" id="ov-msg-today">—</span>
+                <span class="kpi-sub">24 jam terakhir</span>
+              </div>
+              <div class="kpi">
+                <span class="kpi-label">Request API</span>
+                <span class="kpi-value sm" id="ov-requests">—</span>
+                <span class="kpi-sub" id="ov-success">—</span>
+              </div>
+              <div class="kpi">
+                <span class="kpi-label">Latensi Rata-rata</span>
+                <span class="kpi-value sm" id="ov-latency">—</span>
+                <span class="kpi-sub" id="ov-latency-sub">—</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <div id="user-grid" class="user-grid"></div>
-        <div class="pager" id="user-pager" hidden>
-          <button id="user-first" class="secondary">«</button>
-          <button id="user-prev" class="secondary">‹</button>
-          <span id="user-pageinfo">—</span>
-          <button id="user-next" class="secondary">›</button>
-          <button id="user-last" class="secondary">»</button>
+
+        <div class="block">
+          <div class="block-head">
+            <div><small>30 Hari Terakhir</small><h2><i class="ico" data-icon="chart-line"></i> Tren Percakapan</h2></div>
+            <div class="row" style="gap:8px"><span class="tag" id="trend-peak">—</span><span class="tag" id="trend-total">—</span></div>
+          </div>
+          <div class="block-body">
+            <div class="chart">
+              <div class="chart-bars" id="trend-chart" data-showval="1" style="height:200px"></div>
+              <div class="chart-axis">
+                <span id="trend-from">—</span>
+                <span>tinggi & warna = jumlah pesan/hari</span>
+                <span id="trend-to">—</span>
+              </div>
+              <div class="legend" style="margin-top:12px">
+                <span class="legend-item"><i class="legend-swatch" style="background:var(--accent)"></i> Sepi</span>
+                <span class="legend-item"><i class="legend-swatch" style="background:var(--info)"></i> Sedang</span>
+                <span class="legend-item"><i class="legend-swatch" style="background:var(--warn)"></i> Ramai</span>
+                <span class="legend-item"><i class="legend-swatch" style="background:var(--accent-3)"></i> Puncak</span>
+              </div>
+            </div>
+          </div>
+          <div class="block-body">
+            <div class="block-head" style="padding:0 0 12px;border-bottom:2px solid var(--line);background:transparent">
+              <div><small>24 Jam</small><h2><i class="ico" data-icon="clock"></i> Aktivitas Per Jam</h2></div>
+            </div>
+            <div class="chart" style="margin-top:14px">
+              <div class="chart-bars" id="hourly-chart" data-showval="1" style="height:150px"></div>
+              <div class="chart-axis"><span>00:00</span><span>12:00</span><span>23:00</span></div>
+            </div>
+            <div class="legend" style="margin-top:12px">
+              <span class="legend-item"><i class="legend-swatch" style="background:var(--accent)"></i> Sepi</span>
+              <span class="legend-item"><i class="legend-swatch" style="background:var(--info)"></i> Sedang</span>
+              <span class="legend-item"><i class="legend-swatch" style="background:var(--warn)"></i> Ramai</span>
+              <span class="legend-item"><i class="legend-swatch" style="background:var(--accent-3)"></i> Puncak</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="block">
+            <div class="block-head"><div><small>Peringkat</small><h2><i class="ico" data-icon="trophy"></i> Pengguna Teraktif</h2></div></div>
+            <div class="block-body" style="padding:0">
+              <div class="scroll-x">
+                <table class="tbl">
+                  <thead><tr><th>#</th><th>Nama</th><th>Pesan</th><th>Terakhir</th></tr></thead>
+                  <tbody id="top-users"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="block">
+            <div class="block-head"><div><small>Komunitas</small><h2><i class="ico" data-icon="heart"></i> Distribusi Kedekatan</h2></div></div>
+            <div class="block-body">
+              <div class="hbar-list" id="emotion-chart"></div>
+              <div class="chart-axis" id="emotion-axis" style="margin-top:12px"></div>
+              <div class="note" style="margin-top:14px">
+                <b>Rata-rata bond:</b> <span id="ov-bond">—</span> — menunjukkan seberapa dekat Yuki dengan pengguna rata-rata.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="block-head"><div><small>Terbaru</small><h2><i class="ico" data-icon="hand"></i> Pengguna Baru</h2></div></div>
+          <div class="block-body" id="recent-users" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px"></div>
         </div>
       </div>
 
-      <!-- TINGKAT 2: sub-tabel milik user terpilih -->
-      <div id="stage-tables" hidden>
-        <div id="user-summary" class="user-summary"></div>
-        <div class="table-chips" id="user-tables"></div>
-        <div class="browser-bar" id="ut-bar" hidden>
-          <input id="user-table-search" type="search" placeholder="Cari isi kategori ini…">
-          <select id="ut-size"><option value="25">25 / halaman</option><option value="50">50 / halaman</option><option value="100">100 / halaman</option></select>
+        <div class="block">
+          <div class="block-head">
+            <div><small>Provider LLM</small><h2><i class="ico" data-icon="zap"></i> Token &amp; Estimasi Biaya</h2></div>
+            <span class="tag" id="ov-provider-name">—</span>
+          </div>
+
+          <!-- Ringkasan token -->
+          <div class="block-body">
+            <div class="kpi-grid">
+              <div class="kpi violet">
+                <span class="kpi-label"><i class="ico" data-icon="inbox"></i> Input Token</span>
+                <span class="kpi-value sm" id="ov-input-tokens">—</span>
+                <span class="kpi-sub">prompt terkirim</span>
+              </div>
+              <div class="kpi pink">
+                <span class="kpi-label"><i class="ico" data-icon="file-text"></i> Output Token</span>
+                <span class="kpi-value sm" id="ov-output-tokens">—</span>
+                <span class="kpi-sub">balasan Yuki</span>
+              </div>
+              <div class="kpi hero">
+                <span class="kpi-label"><i class="ico" data-icon="package"></i> Total Token</span>
+                <span class="kpi-value sm" id="ov-tokens-total">—</span>
+                <span class="kpi-sub">input + output</span>
+              </div>
+              <div class="kpi">
+                <span class="kpi-label"><i class="ico" data-icon="gauge"></i> Total Request</span>
+                <span class="kpi-value sm" id="ov-calls">—</span>
+                <span class="kpi-sub" id="ov-calls-sub">—</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Diagram batang token -->
+          <div class="block-body">
+            <div class="between" style="margin-bottom:14px">
+              <h2 style="font:900 13px/1 var(--sans);text-transform:uppercase;margin:0"><i class="ico" data-icon="chart-line"></i> Komposisi Token</h2>
+              <span class="tag">perbandingan input vs output</span>
+            </div>
+            <div class="hbar-list" id="token-bars"></div>
+            <div class="legend" style="margin-top:14px">
+              <span class="legend-item"><i class="legend-swatch" style="background:var(--accent-2)"></i> Input (prompt)</span>
+              <span class="legend-item"><i class="legend-swatch" style="background:var(--accent-3)"></i> Output (balasan)</span>
+              <span class="legend-item"><i class="legend-swatch" style="background:var(--info)"></i> Rata-rata / request</span>
+            </div>
+          </div>
+
+          <!-- Estimasi biaya -->
+          <div class="block-body">
+            <div class="between" style="margin-bottom:14px">
+              <h2 style="font:900 13px/1 var(--sans);text-transform:uppercase;margin:0"><i class="ico" data-icon="coins"></i> Estimasi Biaya</h2>
+              <span class="tag">harga retail DeepSeek v4.1</span>
+            </div>
+            <div class="kpi-grid">
+              <div class="kpi money">
+                <span class="kpi-label"><i class="ico" data-icon="circle-dollar-sign"></i> Estimasi Modal</span>
+                <span class="kpi-value sm" id="ov-est-cost">—</span>
+                <span class="kpi-sub" id="ov-est-cost-sub">kalau bayar retail</span>
+              </div>
+              <div class="kpi money-violet">
+                <span class="kpi-label"><i class="ico" data-icon="tag"></i> Biaya Aktual</span>
+                <span class="kpi-value sm" id="ov-actual-cost">$0.00</span>
+                <span class="kpi-sub">via 9Router (gratis)</span>
+              </div>
+              <div class="kpi">
+                <span class="kpi-label"><i class="ico" data-icon="trending-down"></i> Penghematan</span>
+                <span class="kpi-value sm" id="ov-savings">—</span>
+                <span class="kpi-sub">hemat vs retail</span>
+              </div>
+              <div class="kpi">
+                <span class="kpi-label"><i class="ico" data-icon="activity"></i> Latensi Rata-rata</span>
+                <span class="kpi-value sm" id="ov-provider-latency">—</span>
+                <span class="kpi-sub" id="ov-success-rate-sub">—</span>
+              </div>
+            </div>
+            <div class="note" style="margin-top:14px">
+              <b>Hitungan:</b> <span class="mono">(input × $0.14/M) + (output × $0.28/M)</span> —
+              tarif publik DeepSeek. Karena Yuki pakai endpoint gratis, biaya aktual <b>$0</b>.
+            </div>
+          </div>
+
+          <!-- Kesehatan provider -->
+          <div class="block-body">
+            <div class="between" style="margin-bottom:14px">
+              <h2 style="font:900 13px/1 var(--sans);text-transform:uppercase;margin:0"><i class="ico" data-icon="plug"></i> Status Provider</h2>
+              <span class="pill" id="ov-success-rate">—</span>
+            </div>
+            <div id="ov-provider-detail"></div>
+          </div>
         </div>
-        <div class="table-wrap" id="user-table-wrap"><p class="empty">Pilih salah satu kategori di atas.</p></div>
-        <div class="pager" id="user-table-pager" hidden>
-          <button id="ut-first" class="secondary">« Awal</button>
-          <button id="ut-prev" class="secondary">‹ Sebelumnya</button>
-          <span id="ut-pageinfo">—</span>
-          <button id="ut-next" class="secondary">Berikutnya ›</button>
-          <button id="ut-last" class="secondary">Akhir »</button>
+
+      <!-- ══════ PENGGUNAAN ══════ -->
+      <div class="view" id="view-usage">
+        <div class="block">
+          <div class="block-head">
+            <div><small>Token &amp; Biaya</small><h2><i class="ico" data-icon="credit-card"></i> Penggunaan LLM</h2></div>
+            <button class="btn ghost sm" id="btn-reset-stats">Reset Statistik</button>
+          </div>
+          <div class="block-body">
+            <div class="kpi-grid">
+              <div class="kpi hero"><span class="kpi-label">Total Token</span><span class="kpi-value sm" id="us-tokens">—</span><span class="kpi-sub">input + output</span></div>
+              <div class="kpi violet"><span class="kpi-label">Input Token</span><span class="kpi-value sm" id="us-input">—</span><span class="kpi-sub">prompt</span></div>
+              <div class="kpi pink"><span class="kpi-label">Output Token</span><span class="kpi-value sm" id="us-output">—</span><span class="kpi-sub">completion</span></div>
+              <div class="kpi"><span class="kpi-label">Total Biaya</span><span class="kpi-value sm" id="us-cost">—</span><span class="kpi-sub" id="us-cost-sub">USD</span></div>
+            </div>
+          </div>
+          <div class="block-body">
+            <div class="kpi-grid">
+              <div class="kpi"><span class="kpi-label">Total Request</span><span class="kpi-value sm" id="us-calls">—</span><span class="kpi-sub" id="us-calls-sub">—</span></div>
+              <div class="kpi"><span class="kpi-label">Rata-rata Token/Request</span><span class="kpi-value sm" id="us-avg">—</span><span class="kpi-sub">per panggilan</span></div>
+              <div class="kpi"><span class="kpi-label">Rasio Output/Input</span><span class="kpi-value sm" id="us-ratio">—</span><span class="kpi-sub">efisiensi balasan</span></div>
+              <div class="kpi"><span class="kpi-label">Biaya / 1K Request</span><span class="kpi-value sm" id="us-cost1k">—</span><span class="kpi-sub">estimasi</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="block-head"><div><small>Harian</small><h2><i class="ico" data-icon="calendar"></i> Rincian Per Hari</h2></div><span class="tag" id="usage-days">—</span></div>
+          <div class="block-body" style="padding:0">
+            <div class="scroll-x">
+              <table class="tbl">
+                <thead><tr><th>Tanggal</th><th>Request</th><th>Token</th><th>Gagal</th><th>Biaya</th></tr></thead>
+                <tbody id="usage-daily"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="block-head"><div><small>Provider</small><h2><i class="ico" data-icon="activity"></i> Kesehatan Provider</h2></div></div>
+          <div class="block-body" id="usage-providers" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px"></div>
         </div>
       </div>
-    </section>
-    </div>
 
-<div class="view" id="view-tables">
-    <!-- ===== DATABASE BROWSER (semua tabel) ===== -->
-    <section class="panel" id="db-panel">
-      <div class="title"><div><small>SEMUA TABEL</small><h2>Database mentah</h2></div><span id="db-total" class="tag">—</span></div>
-      <p class="hint">Baca-saja, semua tabel tanpa filter user. Kolom sensitif disamarkan.</p>
-      <div class="browser-bar">
-        <select id="db-table"><option value="">— pilih tabel —</option></select>
-        <input id="db-search" type="search" placeholder="Cari isi tabel…">
-        <select id="db-size"><option value="25">25 / halaman</option><option value="50">50 / halaman</option><option value="100">100 / halaman</option></select>
-        <button id="db-reload" class="secondary">Muat</button>
+      <!-- ══════ PENGGUNA ══════ -->
+      <div class="view" id="view-users">
+        <div class="block">
+          <div class="block-head">
+            <div><small>Penjelajah</small><h2><i class="ico" data-icon="users"></i> Daftar Pengguna</h2></div>
+            <div class="row">
+              <input id="user-search" type="search" placeholder="Cari nama…" style="width:190px">
+              <select id="user-size" style="width:auto">
+                <option value="12">12</option><option value="24" selected>24</option><option value="48">48</option>
+              </select>
+            </div>
+          </div>
+          <div class="block-body" id="user-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px"></div>
+          <div class="block-body between" id="user-pager" style="border-top:3px solid var(--line)">
+            <button class="btn ghost sm" id="u-first">« Awal</button>
+            <button class="btn ghost sm" id="u-prev">‹ Sebelumnya</button>
+            <span class="status-line" id="u-pageinfo">—</span>
+            <button class="btn ghost sm" id="u-next">Berikutnya ›</button>
+            <button class="btn ghost sm" id="u-last">Akhir »</button>
+          </div>
+        </div>
+
+        <div class="block hidden" id="user-detail">
+          <div class="block-head">
+            <div><small>Detail Pengguna</small><h2 id="ud-name">—</h2></div>
+            <button class="btn ghost sm" id="ud-close"><i class="ico" data-icon="x"></i> Tutup</button>
+          </div>
+          <div class="block-body" id="ud-summary"></div>
+          <div class="block-body">
+            <div class="btn-row" id="ud-tabs"></div>
+          </div>
+          <div class="block-body" style="padding:0">
+            <div class="scroll-x"><div id="ud-table"><p class="muted" style="padding:16px">Pilih kategori data di atas.</p></div></div>
+          </div>
+        </div>
       </div>
-      <div id="db-meta" class="browser-meta"></div>
-      <div class="table-wrap" id="db-wrap"><p class="empty">Pilih tabel untuk menampilkan data.</p></div>
-      <div class="pager" id="db-pager" hidden>
-        <button id="db-first" class="secondary">« Awal</button>
-        <button id="db-prev" class="secondary">‹ Sebelumnya</button>
-        <span id="db-pageinfo">—</span>
-        <button id="db-next" class="secondary">Berikutnya ›</button>
-        <button id="db-last" class="secondary">Akhir »</button>
+
+      <!-- ══════ DATABASE ══════ -->
+      <div class="view" id="view-database">
+        <div class="block">
+          <div class="block-head">
+            <div><small>Penyimpanan</small><h2><i class="ico" data-icon="database"></i> Ukuran &amp; Tabel</h2></div>
+            <span class="tag" id="db-size">—</span>
+          </div>
+          <div class="block-body">
+            <div class="kpi-grid" id="db-tables"></div>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="block-head">
+            <div><small>Penjelajah</small><h2><i class="ico" data-icon="database"></i> Isi Database</h2></div>
+            <div class="row">
+              <select id="db-table" style="width:auto"><option value="">— pilih tabel —</option></select>
+              <input id="db-search" type="search" placeholder="Cari isi…" style="width:170px">
+              <select id="db-size-sel" style="width:auto">
+                <option value="25">25</option><option value="50" selected>50</option><option value="100">100</option>
+              </select>
+              <button class="btn ghost sm" id="db-load">Muat</button>
+            </div>
+          </div>
+          <div class="block-body" style="padding:0">
+            <div class="scroll-x" id="db-wrap"><p class="muted" style="padding:16px">Pilih tabel untuk menampilkan data.</p></div>
+          </div>
+          <div class="block-body between" id="db-pager" style="border-top:3px solid var(--line)">
+            <button class="btn ghost sm" id="db-first">« Awal</button>
+            <button class="btn ghost sm" id="db-prev">‹ Sebelumnya</button>
+            <span class="status-line" id="db-pageinfo">—</span>
+            <button class="btn ghost sm" id="db-next">Berikutnya ›</button>
+            <button class="btn ghost sm" id="db-last">Akhir »</button>
+          </div>
+        </div>
       </div>
-    </section>
-    </div>
 
-<div class="view" id="view-workspace">
-    <!-- ===== WORKSPACE PER USER ===== -->
-    <section class="panel" id="ws-panel">
-      <div class="title"><div><small>WORKSPACE</small><h2>File per user</h2></div><span id="ws-root" class="tag">—</span></div>
-      <p class="hint">File yang dibuat agent untuk tiap user. Baca-saja.</p>
-      <div class="browser-bar">
-        <span id="ws-path" class="path-label">/</span>
-        <button id="ws-up" class="secondary">↑ Naik</button>
-        <button id="ws-reload" class="secondary">Muat ulang</button>
+      <!-- ══════ PROVIDER ══════ -->
+      <div class="view" id="view-providers">
+        <form id="provider-form">
+          <div class="block">
+            <div class="block-head">
+              <div><small>Routing</small><h2><i class="ico" data-icon="plug"></i> Provider LLM</h2></div>
+              <span class="pill" id="router-state">—</span>
+            </div>
+            <div class="block-body">
+              <div class="note">Primary dipakai lebih dulu. Backup dicoba sekali bila primary gagal atau circuit terbuka.</div>
+            </div>
+
+            <div class="block-body">
+              <div class="between" style="margin-bottom:12px">
+                <h2 style="font:900 13px/1 var(--sans);text-transform:uppercase;margin:0">01 · Primary</h2>
+                <span class="pill" id="primary-live">idle</span>
+              </div>
+              <div class="grid-2">
+                <div class="field"><label>Nama</label><input name="primary.name" maxlength="80"></div>
+                <div class="field"><label>Base URL</label><input name="primary.baseURL" inputmode="url"></div>
+              </div>
+              <div class="field"><label>Model</label><input name="primary.model"></div>
+              <div class="field"><label>API Key</label><input name="primary.apiKey" type="password" autocomplete="new-password" placeholder="Kosongkan untuk mempertahankan"></div>
+              <div class="grid-2">
+                <div class="field"><label>Biaya Input / 1M</label><input name="primary.inputCostPerMillion" type="number" min="0" step="0.001"></div>
+                <div class="field"><label>Biaya Output / 1M</label><input name="primary.outputCostPerMillion" type="number" min="0" step="0.001"></div>
+              </div>
+              <button type="button" class="btn ghost sm" data-test="primary">Test Primary</button>
+            </div>
+
+            <div class="block-body">
+              <div class="between" style="margin-bottom:12px">
+                <h2 style="font:900 13px/1 var(--sans);text-transform:uppercase;margin:0">02 · Backup</h2>
+                <span class="pill" id="backup-live">idle</span>
+              </div>
+              <div class="grid-2">
+                <div class="field"><label>Nama</label><input name="backup.name" maxlength="80"></div>
+                <div class="field"><label>Base URL</label><input name="backup.baseURL" inputmode="url"></div>
+              </div>
+              <div class="field"><label>Model</label><input name="backup.model"></div>
+              <div class="field"><label>API Key</label><input name="backup.apiKey" type="password" autocomplete="new-password" placeholder="Kosongkan untuk mempertahankan"></div>
+              <div class="grid-2">
+                <div class="field"><label>Biaya Input / 1M</label><input name="backup.inputCostPerMillion" type="number" min="0" step="0.001"></div>
+                <div class="field"><label>Biaya Output / 1M</label><input name="backup.outputCostPerMillion" type="number" min="0" step="0.001"></div>
+              </div>
+              <button type="button" class="btn ghost sm" data-test="backup">Test Backup</button>
+            </div>
+
+            <div class="block-body between" style="border-top:3px solid var(--line)">
+              <span class="status-line" id="provider-status">Belum ada perubahan.</span>
+              <button type="submit" class="btn">Simpan Konfigurasi</button>
+            </div>
+          </div>
+        </form>
       </div>
-      <div class="table-wrap"><table id="ws-table"><thead><tr><th>Nama</th><th>Tipe</th><th>Ukuran</th><th>Diubah</th></tr></thead><tbody></tbody></table></div>
-    </section>
-    </div>
 
-    <!-- ===== PRATINJAU FILE ===== -->
-    <section class="panel" id="file-panel" hidden>
-      <div class="title"><div><small>PRATINJAU</small><h2 id="file-name">—</h2></div><button id="file-close" class="secondary">Tutup</button></div>
-      <pre id="file-content" class="file-preview"></pre>
-    </section>
+      <!-- ══════ TTS ══════ -->
+      <div class="view" id="view-tts">
+        <div class="block">
+          <div class="block-head">
+            <div><small>Suara</small><h2><i class="ico" data-icon="volume-2"></i> Mesin TTS Yuki</h2></div>
+            <span class="pill" id="tts-engine-state">—</span>
+          </div>
+          <div class="block-body">
+            <div class="note">VOICEVOX (suara anime) paling berat. Hidupkan hanya saat dipakai, atau biarkan menyala untuk suara instan.</div>
+          </div>
 
-    <!-- ===== ALERTS ===== -->
-    <div class="view" id="view-alerts">
-    <section class="panel"><div class="title"><div><small>EVENTS</small><h2>Alerts</h2></div></div><div id="alerts" class="alerts"><p class="empty">Tidak ada alert.</p></div></section>
-    </div>
+          <form id="tts-form">
+            <div class="block-body">
+              <div class="field">
+                <label>Mesin suara</label>
+                <select name="engine" id="tts-engine">
+                  <option value="voicevox">VOICEVOX · suara anime girl (berat)</option>
+                  <option value="edge">Edge TTS · cewek Indonesia (ringan)</option>
+                  <option value="kokoro">Kokoro · VTuber blend</option>
+                  <option value="ttsquest">VOICEVOX Online</option>
+                </select>
+              </div>
+            </div>
 
-    <section id="password-panel" class="panel password-panel" hidden><h2>Ganti password</h2><div><input id="new-password" type="password" autocomplete="new-password" placeholder="Minimal 10 karakter"><button id="save-password">Simpan</button></div><p id="password-status"></p></section>
-      </main>
-    </div>
-  </section><p id="error" class="error"></p>
-</main><script src="/admin.js" defer></script></body></html>
+            <div class="block-body" id="tts-voicevox-group">
+              <div class="daemon">
+                <div class="daemon-head">
+                  <div>
+                    <h2 style="font:900 13px/1 var(--sans);text-transform:uppercase;margin:0 0 5px"><i class="ico" data-icon="power"></i> Kontrol Daemon</h2>
+                    <span class="muted" style="font-size:11px">Daemon menahan RAM hanya saat hidup.</span>
+                  </div>
+                  <span class="pill" id="tts-vv-status">memeriksa…</span>
+                </div>
+
+                <div class="daemon-metrics">
+                  <div class="kpi"><span class="kpi-label">RAM</span><span class="kpi-value sm" id="tts-vv-ram">—</span></div>
+                  <div class="kpi"><span class="kpi-label">CPU</span><span class="kpi-value sm" id="tts-vv-cpu">—</span></div>
+                  <div class="kpi"><span class="kpi-label">Restart</span><span class="kpi-value sm" id="tts-vv-restart">—</span></div>
+                </div>
+
+                <div class="btn-row">
+                  <button type="button" class="btn" id="tts-vv-start"><i class="ico" data-icon="power"></i> Nyalakan</button>
+                  <button type="button" class="btn bad" id="tts-vv-stop"><i class="ico" data-icon="square"></i> Matikan</button>
+                  <button type="button" class="btn ghost" id="tts-vv-refresh"><i class="ico" data-icon="refresh-cw"></i> Periksa</button>
+                </div>
+
+                <div class="field">
+                  <label>Speaker</label>
+                  <select name="voicevoxSpeaker" id="tts-vv-speaker">
+                    <option value="14">14 · 冥鳴ひまり (Meimei Himari)</option>
+                  </select>
+                </div>
+                <button type="button" class="btn ghost sm" id="tts-vv-load-speakers" style="justify-self:start">Muat Daftar Speaker Lengkap</button>
+
+                <label class="switch">
+                  <input type="checkbox" name="voicevoxKeepAlive" id="tts-vv-keepalive" checked>
+                  <span>
+                    <b>Biarkan menyala terus (suara instan)</b>
+                    <small>ON = tanpa jeda cold-start. OFF = RAM dibebaskan, tapi suara jadi lambat saat dipanggil.</small>
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <div class="block-body" id="tts-edge-group">
+              <h2 style="font:900 13px/1 var(--sans);text-transform:uppercase;margin:0 0 4px"><i class="ico" data-icon="file-text"></i> Edge TTS (cadangan)</h2>
+              <p class="muted" style="font-size:11px;margin:0 0 14px">Dipakai otomatis bila mesin utama gagal.</p>
+              <div class="field"><label>Voice</label><input name="edgeVoice" maxlength="120" placeholder="id-ID-GadisNeural"></div>
+              <div class="grid-2">
+                <div class="field"><label>Pitch</label><input name="edgePitch" maxlength="20" placeholder="+3Hz"></div>
+                <div class="field"><label>Rate</label><input name="edgeRate" maxlength="20" placeholder="+0%"></div>
+              </div>
+            </div>
+
+            <div class="block-body between" style="border-top:3px solid var(--line)">
+              <span class="status-line" id="tts-status">Belum ada perubahan.</span>
+              <button type="submit" class="btn">Simpan Pengaturan</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="block">
+          <div class="block-head"><div><small>Pratinjau</small><h2><i class="ico" data-icon="headphones"></i> Uji Suara</h2></div></div>
+          <div class="block-body">
+            <div class="field"><label>Teks uji</label><input id="tts-test-text" value="Halo, aku Yuki. Senang banget ketemu kamu."></div>
+            <button type="button" class="btn" id="tts-test-play"><i class="ico" data-icon="play"></i> Putar Contoh</button>
+            <audio id="tts-audio" controls hidden style="width:100%;margin-top:14px"></audio>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ ALERT ══════ -->
+      <div class="view" id="view-alerts">
+        <div class="block">
+          <div class="block-head">
+            <div><small>Peristiwa</small><h2><i class="ico" data-icon="bell"></i> Alert Sistem</h2></div>
+            <button class="btn ghost sm" id="alert-refresh"><i class="ico" data-icon="refresh-cw"></i> Refresh</button>
+          </div>
+          <div class="block-body"><div class="alert-list" id="alert-list"><p class="muted">Tidak ada alert.</p></div></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+</section>
+
+<!-- Panel ganti password -->
+<section id="password-panel" class="block hidden" style="max-width:520px;margin:20px auto">
+  <div class="block-head"><div><small>Keamanan</small><h2><i class="ico" data-icon="key"></i> Ganti Password</h2></div><button class="btn ghost sm" id="pw-close"><i class="ico" data-icon="key"></i></button></div>
+  <div class="block-body">
+    <div class="field"><label>Password baru (min. 8 karakter)</label><input id="new-password" type="password" autocomplete="new-password"></div>
+    <button class="btn" id="pw-save">Simpan Password</button>
+    <p class="status-line" id="pw-status" style="margin-top:12px"></p>
+  </div>
+</section>
+
+<p id="global-error" class="status-line err" style="text-align:center;padding:12px"></p>
+
+<script src="/lucide-icons.js"></script>
+<script src="/admin.js" defer></script>
+<script src="/admin-tts.js" defer></script>
+</body>
+</html>

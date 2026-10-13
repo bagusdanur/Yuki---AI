@@ -14,6 +14,7 @@ agent-workspace/
 *.log
 .DS_Store
 test_agent_vps.mjs
+scripts/test-*
 tts-service/venv/
 tts-service/*.onnx
 tts-service/*.json

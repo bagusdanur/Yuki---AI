@@ -22,6 +22,15 @@ import { executeTool, initSkills, listSkills } from './lib/agent/skills-engine.j
 import { getProviderOperations, flushProviderOperations, resetProviderOperations } from './lib/provider-router.js'
 import { listTables, readTable, listDirectory, readTextFile, workspaceSummary, listUsers, listUserTables, readUserTable } from './lib/admin-browser.js'
 import { getPublicProviderSettings, saveProviderSettings, testProviderConnection } from './lib/provider-settings.js'
+import {
+  getTtsSettings, saveTtsSettings, TTS_ENGINES,
+  getVoicevoxProcessStatus, startVoicevox, stopVoicevox, probeVoicevox, listVoicevoxSpeakers,
+  setVoicevoxAutorestart
+} from './lib/tts-settings.js'
+import {
+  getDatabaseStats, getChatTrend, getHourlyActivity, getTopUsers,
+  getRecentUsers, getEmotionDistribution, getStorageInfo
+} from './lib/admin-stats.js'
 import { runAgent, extractHtmlArtifactsFromText } from './lib/agent/runner.js'
 import { cancelWorkflow, claimWorkflow, createApprovalCheckpoint, deleteUserWorkflows, getWorkflow, listPendingWorkflows, setWorkflowState } from './lib/agent/workflow-store.js'
 import { claimAgentRun, createOrGetAgentRun, deleteUserAgentRuns, getActiveAgentRun, getAgentRun, isAgentRunCancellationRequested, recoverInterruptedAgentRuns, requestAgentRunCancellation, setAgentRunState, upsertAgentRunStep } from './lib/agent/run-store.js'
@@ -389,6 +398,11 @@ const sessions = new Map() // userId -> Emotion
 const turnCounters = new Map() // userId -> turnCount
 
 app.get('/admin', (_req, res) => res.sendFile(path.resolve('public/admin.html')))
+// Favicon: browser selalu minta /favicon.ico — arahkan ke ikon Yuki
+// supaya tidak muncul 404 di console.
+app.get('/favicon.ico', (_req, res) => {
+  res.type('image/svg+xml').sendFile(path.resolve('public/yuki-icon.svg'))
+})
 app.get('/privacy', (_req, res) => res.sendFile(path.resolve('public/privacy.html')))
 // Y-3: Deteksi topik serius yang butuh override empati penuh
 function isSeriousTopic(text = '') {
@@ -845,6 +859,11 @@ app.post('/api/tts', requireSession, rateLimit({ max: 15 }), async (req, res) =>
     res.set('Content-Type', mime)
     res.send(buffer)
   } catch (e) {
+    // Suara dimatikan dari dashboard -> bukan error server, cukup 204 (tanpa isi).
+    // UI akan melewatinya tanpa menampilkan error ke pengguna.
+    if (e?.code === 'VOICEVOX_DISABLED') {
+      return res.status(204).end()
+    }
     console.error(e)
     res.status(500).json({ error: String(e.message || e) })
   }
@@ -926,6 +945,116 @@ app.post('/api/admin/providers/reset-stats', rateLimit({ max: 3, windowMs: 60_00
   res.json({ ok: true, providers: getProviderOperations() })
 })
 
+// === Statistik lengkap untuk Overview & Laporan ===
+app.get('/api/admin/overview', rateLimit({ max: 60 }), requireAdmin, (_req, res) => {
+  try {
+    const providers = getProviderOperations()
+    res.json({
+      database: getDatabaseStats(),
+      chatTrend: getChatTrend(30),
+      hourly: getHourlyActivity(),
+      topUsers: getTopUsers(8),
+      recentUsers: getRecentUsers(6),
+      emotions: getEmotionDistribution(),
+      storage: getStorageInfo(),
+      runtime: {
+        ...metrics,
+        uptime: Math.round((Date.now() - metrics.startedAt) / 1000),
+        averageLatency: metrics.requests ? Math.round(metrics.latencyTotal / metrics.requests) : 0
+      },
+      providerTotals: providers.totals,
+      providerDaily: providers.daily,
+      providerHealth: providers.providers.map(p => ({
+        id: p.id, name: p.name, state: p.state, calls: p.calls,
+        successRate: p.successRate, averageLatencyMs: p.averageLatencyMs,
+        totalTokens: p.totalTokens, inputTokens: p.inputTokens,
+        outputTokens: p.outputTokens, estimatedCostUsd: p.estimatedCostUsd
+      })),
+      alerts: providers.alerts
+    })
+  } catch (error) {
+    res.status(500).json({ error: String(error.message || error).slice(0, 240) })
+  }
+})
+
+// === Pengaturan TTS (engine + kontrol hidup/mati daemon VOICEVOX) ===
+app.get('/api/admin/tts', rateLimit({ max: 60 }), requireAdmin, async (_req, res) => {
+  try {
+    const settings = getTtsSettings()
+    const [voicevox, process] = await Promise.all([probeVoicevox(settings), getVoicevoxProcessStatus()])
+    res.json({ settings, engines: TTS_ENGINES, voicevox, process })
+  } catch (error) {
+    res.status(500).json({ error: String(error.message || error).slice(0, 200) })
+  }
+})
+
+app.put('/api/admin/tts', rateLimit({ max: 20, windowMs: 60_000 }), requireAdmin, (req, res) => {
+  try {
+    res.json({ ok: true, settings: saveTtsSettings(req.body || {}) })
+  } catch (error) {
+    res.status(400).json({ error: String(error.message || error).slice(0, 200) })
+  }
+})
+
+// Nyalakan daemon VOICEVOX (RAM/CPU terpakai selama hidup).
+app.post('/api/admin/tts/voicevox/start', rateLimit({ max: 10, windowMs: 60_000 }), requireAdmin, async (_req, res) => {
+  // Nyalakan saklar master dulu, baru hidupkan daemon.
+  saveTtsSettings({ voicevoxEnabled: true })
+  await setVoicevoxAutorestart(true)
+  const result = await startVoicevox()
+  res.status(result.ok ? 200 : 503).json(result)
+})
+
+// Matikan daemon VOICEVOX supaya RAM/CPU kembali 0%.
+// Sekaligus set saklar master KE FALSE supaya TTS tidak menyalakannya lagi.
+app.post('/api/admin/tts/voicevox/stop', rateLimit({ max: 10, windowMs: 60_000 }), requireAdmin, async (_req, res) => {
+  saveTtsSettings({ voicevoxEnabled: false })
+  // Cegah PM2 menghidupkan ulang daemon setelah dimatikan.
+  await setVoicevoxAutorestart(false)
+  const result = await stopVoicevox()
+  res.status(result.ok ? 200 : 503).json(result)
+})
+
+app.get('/api/admin/tts/voicevox/status', rateLimit({ max: 120 }), requireAdmin, async (_req, res) => {
+  const settings = getTtsSettings()
+  const [voicevox, process] = await Promise.all([probeVoicevox(settings), getVoicevoxProcessStatus()])
+  res.json({
+    voicevox, process,
+    engine: settings.engine,
+    keepAlive: settings.voicevoxKeepAlive,
+    // Saklar master: false = dimatikan dari dashboard, tidak akan menyala sendiri.
+    enabled: settings.voicevoxEnabled !== false,
+  })
+})
+
+// Daftar speaker VOICEVOX untuk pemilih suara di dashboard.
+app.get('/api/admin/tts/voicevox/speakers', rateLimit({ max: 30 }), requireAdmin, async (_req, res) => {
+  const settings = getTtsSettings()
+  const probe = await probeVoicevox(settings)
+  if (!probe.reachable) {
+    // Coba hidupkan supaya daftar bisa diambil, lalu hormati keepAlive.
+    const started = await startVoicevox()
+    if (!started.ok) return res.status(503).json({ ok: false, error: started.error || 'VOICEVOX tidak aktif' })
+    const result = await listVoicevoxSpeakers()
+    if (settings.voicevoxKeepAlive === false) stopVoicevox().catch(() => {})
+    return res.json(result)
+  }
+  res.json(await listVoicevoxSpeakers())
+})
+
+// Uji engine terpilih dengan teks contoh (tanpa mengubah konfigurasi tersimpan).
+app.post('/api/admin/tts/test', rateLimit({ max: 10, windowMs: 60_000 }), requireAdmin, async (req, res) => {
+  try {
+    const settings = saveTtsSettings({ ...getTtsSettings(), ...(req.body?.settings || {}) })
+    const text = String(req.body?.text || 'Halo, ini contoh suara Yuki.').slice(0, 300)
+    const { buffer, mime } = await synthesize(text, req.body?.mood || 'tenang', settings)
+    res.set('Content-Type', mime)
+    res.send(buffer)
+  } catch (error) {
+    res.status(400).json({ error: String(error.message || error).slice(0, 240) })
+  }
+})
+
 // === Database browser (pagination + search) ===
 app.get('/api/admin/db/tables', rateLimit({ max: 60 }), requireAdmin, (_req, res) => {
   try { res.json({ tables: listTables({ db: dbHandle, labels: APP_DATA_LABELS }) }) }
@@ -980,7 +1109,7 @@ app.get('/api/admin/workspace/file', rateLimit({ max: 60 }), requireAdmin, (req,
 })
 app.post('/api/admin/password', rateLimit({ max: 5, windowMs: 15 * 60_000 }), requireAdmin, (req, res) => {
   const password = String(req.body?.password || '')
-  if (password.length < 10 || password.length > 128) return res.status(400).json({ error: 'Password harus 10-128 karakter.' })
+  if (password.length < 8 || password.length > 128) return res.status(400).json({ error: 'Password harus 8-128 karakter.' })
   storeAdminPassword(password)
   res.json({ ok: true, sessionToken: signAdminSession() })
 })

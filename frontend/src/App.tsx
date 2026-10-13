@@ -1513,6 +1513,15 @@ export default function App() {
           </div>
           {message.role === 'assistant' && (
             <div className="message-tools">
+              <button
+                className={speakingIndex === index ? 'selected' : ''}
+                onClick={() => play(message.content, index)}
+                aria-label={speakingIndex === index ? 'Hentikan suara' : 'Putar suara'}
+                title={speakingIndex === index ? 'Hentikan suara' : 'Dengarkan balasan ini'}
+                disabled={speakingIndex !== null && speakingIndex !== index}
+              >
+                <Volume2 size={12}/>
+              </button>
               {message.truncated && <button onClick={() => setInput(`Lanjutkan jawaban sebelumnya dari message ID ${message.messageId || index}, tanpa mengulang bagian yang sudah tampil.`)} aria-label="Lanjutkan jawaban yang terpotong" title="Lanjutkan jawaban"><RefreshCw size={12}/></button>}
               <button
                 className={feedback[index] === 1 ? 'selected' : ''}
