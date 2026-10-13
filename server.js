@@ -3,7 +3,7 @@ import express from 'express'
 import path from 'path'
 import crypto from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
-import { chat, extractFacts } from './lib/llm.js'
+import { chat, chatStream, extractFacts } from './lib/llm.js'
 import { synthesize } from './lib/tts.js'
 import { Emotion } from './lib/emotion.js'
 import {
@@ -505,10 +505,28 @@ app.delete('/api/push/subscriptions', requireSession, rateLimit({ windowMs: 60_0
 // Endpoint chat -> balasan dari Qwen/DeepSeek (dengan emosi + kedekatan + memori + agent skills)
 app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) => {
   let trackedAgentRequestId = ''
+  let sseOpen = false
   try {
     metrics.chats += 1
     const { messages, adult, isIdle = false, mode: requestedMode = 'companion', surface = 'app', requestId: rawRequestId } = req.body || {}
     const mode = surface === 'embed' ? 'companion' : requestedMode
+    // Streaming (SSE) hanya untuk obrolan biasa. Mode agent & sapaan idle tetap non-stream.
+    const wantsStream = req.body?.stream === true && mode === 'companion' && !isIdle
+    const sseSend = (event, data) => {
+      if (!sseOpen) return
+      try { res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`) } catch { /* koneksi tertutup */ }
+    }
+    const openSSE = () => {
+      if (sseOpen) return
+      res.status(200).set({
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        Connection: 'keep-alive',
+        'X-Accel-Buffering': 'no'
+      })
+      if (typeof res.flushHeaders === 'function') res.flushHeaders()
+      sseOpen = true
+    }
     const userId = req.authUserId
     const requestId = /^[a-zA-Z0-9_-]{8,80}$/.test(String(rawRequestId || '')) ? String(rawRequestId) : ''
     if (!Array.isArray(messages) || messages.length === 0) {
@@ -673,7 +691,10 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
     }
 
     // 3) balas + emosi yang DIPILIH SENDIRI oleh Yuki (lewat tag [emosi: X])
-    let { reply, model, emotion: llmMood } = await chat(messagesToSend, {
+    //    Saat user meminta streaming: alirkan potongan teks realtime, lalu seluruh guard
+    //    di bawah tetap berjalan dan hasil FINAL dikirim lewat event "done" (otoritatif).
+    if (wantsStream) openSSE()
+    const chatContext = {
       emotionDirective: emotion.directive(),
       memoryContext,
       comicContext,
@@ -686,7 +707,14 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
       responseStyle: target.style,
       recentAssistant,
       gestureCue
-    })
+    }
+    let reply, model, llmMood
+    if (wantsStream) {
+      const streamed = await chatStream(messagesToSend, chatContext, (delta) => sseSend('delta', { text: delta }))
+      ;({ reply, model, emotion: llmMood } = streamed)
+    } else {
+      ;({ reply, model, emotion: llmMood } = await chat(messagesToSend, chatContext))
+    }
 
     const quality = validateCharacterReply(reply, recentAssistant, target, memoryContext, { gestureRequired: gestureCue })
     if (!quality.okFatal) {
@@ -865,16 +893,22 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
     }
 
     const milestones = syncBondMilestones(userId, emotion.bond)
-    res.json({
+    const finalPayload = {
       reply, model, mood, bond: bond.name, bondValue: emotion.bond, feeling: emotion.feeling(),
       messageId, milestones, truncated,
       artifacts: extractedArtifacts,
       comics: comicResults.map(({ title, url, type, chapter, score, image, format }) => ({ title, url, type, chapter, score, image, format }))
-    })
+    }
+    if (sseOpen) {
+      sseSend('done', finalPayload)
+      return res.end()
+    }
+    res.json(finalPayload)
   } catch (e) {
     metrics.chatFailures += 1
     console.error(e)
     if (trackedAgentRequestId) setAgentRunState(trackedAgentRequestId, req.authUserId, 'failed', { errorCode: 'RUN_FAILED' })
+    if (sseOpen) { sseSend('error', { error: String(e.message || e) }); return res.end() }
     res.status(500).json({ error: String(e.message || e) })
   }
 })

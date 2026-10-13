@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import {
   addBookmark, cancelAgentRun, createDynamicSkill, decideAgentApproval, deleteAccount, deleteMemory, dynamicSkillAction, getActiveAgentRun, getAgenda, getBookmarks, getDynamicSkills, getMemories, getPushConfig, getRelationship,
-  getAgentProgress, getPendingAgentWorkflows, getScheduledReminders, getSkills, register, removeBookmark, restore, savePushSubscription, sendChat, sendFeedback, setMemoryAutoCapture, speak, updateAgendaTask, updateMemory
+  getAgentProgress, getPendingAgentWorkflows, getScheduledReminders, getSkills, register, removeBookmark, restore, savePushSubscription, sendChat, sendChatStream, sendFeedback, setMemoryAutoCapture, speak, updateAgendaTask, updateMemory
 } from './api'
 import type {
   AgendaResponse, AgentMemory, AgentStep, ArtifactItem, BookmarkedComic, ChatMode, ComicRecommendation, DynamicSkill,
@@ -83,11 +83,15 @@ function loadHistory(userId?: string): Message[] {
 }
 
 function legacyComics(text: string) {
-  const normalized = text.replace(/\*\s*\n([^\n*]+)\n\s*\*/g, '**$1**')
+  // Perbaiki HANYA bentuk "bintang tunggal di baris sendiri" (mis. baris berisi "*"
+  // membungkus judul). WAJIB di-anchor ke batas baris — kalau tidak, gestur valid
+  // seperti "*menatap layar*" akan salah dianggap pembungkus dan teks jadi rusak.
+  const normalized = text.replace(/(^|\n)[ \t]*\*[ \t]*\n([^\n*]+)\n[ \t]*\*[ \t]*(?=\n|$)/g, '$1**$2**')
   const comics: ComicRecommendation[] = []
   // Blok rekomendasi: **Judul**\n<info>…\n[Link](URL)
-  // Toleran terhadap URL terpotong (tanpa ')'), ada/tanpa ?img=, dan format info apa pun.
-  const blockRe = /\*\*([^*\n]+)\*\*[ \t]*\n+[ \t]*([^\n]*)\n+[ \t]*\[Link\]\s*\(?\s*(https?:\/\/ryukomik\.my\.id\/[^\s)]+)\)?/gi
+  // Toleran terhadap: judul KOSONG (blok lama menyisakan "**" di baris sendiri),
+  // URL terpotong (tanpa ')'), ada/tanpa ?img=, dan format info apa pun.
+  const blockRe = /\*\*(?:([^*\n]+)\*\*)?[ \t]*\n+[ \t]*([^\n]*)\n+[ \t]*\[Link\]\s*\(?\s*(https?:\/\/ryukomik\.my\.id\/[^\s)]+)\)?/gi
   const clean = normalized.replace(blockRe, (_block, rawTitle, rawMeta, rawUrl) => {
     try {
       // URL bersih = sebelum '?' ; buang sisa tanda baca ekor dari URL yang terpotong.
@@ -114,7 +118,15 @@ function legacyComics(text: string) {
         if (/^(update|updated|up)\b/i.test(part)) { continue }
         if (!type) type = part
       }
-      comics.push({ title: String(rawTitle).trim(), url: parsed.toString(), type, chapter, score, image, format })
+      // Judul: pakai teks tebal bila ada; kalau tidak, bentuk dari slug URL agar
+      // kartu lama tetap punya judul (bukan kosong).
+      let title = String(rawTitle || '').trim()
+      if (!title) {
+        const slug = parsed.pathname.split('/').filter(Boolean).pop() || ''
+        title = slug.replace(/-/g, ' ').replace(/\b\w/g, char => char.toUpperCase())
+      }
+      if (!title) return ''
+      comics.push({ title, url: parsed.toString(), type, chapter, score, image, format })
     } catch { /* abaikan blok yang tidak valid */ }
     return ''
   })
@@ -122,10 +134,19 @@ function legacyComics(text: string) {
 }
 
 function cleanComicText(text: string, comics: ComicRecommendation[]) {
-  if (!comics.length) return text
+  // Selalu bersihkan sisa markup komik — walau parser gagal mengenali blok, sisa
+  // seperti "**", "[MANGA] · …", atau "[Link](url)" TIDAK boleh tampil ke user.
+  const stripResidual = (value: string) => value
+    .replace(/^\s*\*+\s*$/gm, '')
+    .replace(/^\s*\[(?:MANGA|MANHWA|MANHUA|MANHWA|WEBTOON)\][^\n]*$/gim, '')
+    .replace(/\[?link\]?\s*\(?\s*https?:\/\/ryukomik\.my\.id[^\s)]*(?:\s*img=[^\s)]*)?\s*\)?/gi, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+  if (!comics.length) return stripResidual(text)
   const positions = comics.map(comic => text.toLowerCase().indexOf(comic.title.toLowerCase())).filter(index => index >= 0)
   if (positions.length) return text.slice(0, Math.min(...positions)).replace(/[\s*:_-]+$/g, '').trim()
-  return text.replace(/\[?link\]?\s*\(?\s*https?:\/\/ryukomik\.my\.id[^\s)]*(?:\s*img=[^\s)]*)?\s*\)?/gi, '').replace(/^\s*\*\s*$/gm, '').trim()
+  return stripResidual(text)
 }
 
 function ComicCard({ comic, isBookmarked, onToggleBookmark }: {
@@ -1074,6 +1095,7 @@ export default function App() {
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null)
   const [updateReady, setUpdateReady] = useState(false)
   const [speakingIndex, setSpeakingIndex] = useState<number | null>(null)
+  const [streamingText, setStreamingText] = useState('')
   const [milestones, setMilestones] = useState<Milestone[]>([])
   const [timelineOpen, setTimelineOpen] = useState(false)
   const [bookmarks, setBookmarks] = useState<BookmarkedComic[]>([])
@@ -1095,7 +1117,7 @@ export default function App() {
     setTimelineOpen(false); setBookmarksOpen(false); setSelectedArtifact(null)
   }
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [messages, busy])
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [messages, busy, streamingText])
   useEffect(() => { if (session) localStorage.setItem(historyKey(session.userId), JSON.stringify(messages.slice(-40))) }, [messages, session])
   useEffect(() => {
     if (!session?.sessionToken || EMBED_COMPANION_ONLY) return
@@ -1285,7 +1307,7 @@ export default function App() {
     navigator.vibrate?.(10)
     const effectiveMode: ChatMode = EMBED_COMPANION_ONLY ? 'companion' : chatMode
     const next: Message[] = [...messages, { role: 'user', content, mode: effectiveMode }]
-    setMessages(next); setInput(''); setBusy(true); setError(''); setConnection('thinking'); setLiveAgentSteps([])
+    setMessages(next); setInput(''); setBusy(true); setError(''); setConnection('thinking'); setLiveAgentSteps([]); setStreamingText('')
     requestTimers.current.forEach(window.clearTimeout)
     requestTimers.current = [
       window.setTimeout(() => setConnection('slow'), 8_000),
@@ -1305,7 +1327,12 @@ export default function App() {
           } catch {}
         }, 500)
       }
-      const result = await sendChat(session.userId, next, false, effectiveMode, requestId)
+      // Obrolan biasa memakai streaming (teks mengalir realtime). Mode agent tetap
+      // non-stream karena hasilnya berupa langkah/artifact terstruktur.
+      const useStream = effectiveMode === 'companion'
+      const result = useStream
+        ? await sendChatStream(session.userId, next, effectiveMode, (delta) => setStreamingText(prev => prev + delta))
+        : await sendChat(session.userId, next, false, effectiveMode, requestId)
       if (!result.reply?.trim()) throw new Error('Yuki mengirim balasan kosong. Coba lagi.')
       setMessages([...next, {
         role: 'assistant',
@@ -1335,7 +1362,7 @@ export default function App() {
       if (progressTimer !== undefined) window.clearInterval(progressTimer)
       if (requestId) { localStorage.removeItem(`yuki_active_agent_run_${session.userId}`); setActiveAgentRequestId('') }
       requestTimers.current.forEach(window.clearTimeout); requestTimers.current = []
-      setBusy(false); setLiveAgentSteps([]); if (!failed) setConnection(navigator.onLine ? 'idle' : 'offline')
+      setBusy(false); setLiveAgentSteps([]); setStreamingText(''); if (!failed) setConnection(navigator.onLine ? 'idle' : 'offline')
     }
   }
 
@@ -1615,10 +1642,19 @@ export default function App() {
                 {connection === 'slow' || connection === 'retrying' ? <RefreshCw className="spin" size={12} /> : <LoaderCircle className="spin" size={12} />}
                 <span>{connectionLabel[connection]}</span>
               </div>
-              <article className="message assistant">
-                <div className="message-avatar">Y</div>
-                <div className="message-content typing"><i/><i/><i/></div>
-              </article>
+              {streamingText
+                ? (
+                  <article className="message assistant streaming">
+                    <div className="message-avatar">Y</div>
+                    <div className="message-content"><MessageBody message={{ role: 'assistant', content: streamingText }} bookmarks={bookmarks} onToggleBookmark={handleToggleBookmark} onOpenArtifact={art => setSelectedArtifact(art)} /><span className="stream-caret" aria-hidden="true" /></div>
+                  </article>
+                )
+                : (
+                  <article className="message assistant">
+                    <div className="message-avatar">Y</div>
+                    <div className="message-content typing"><i/><i/><i/></div>
+                  </article>
+                )}
             </>
           )
         )}

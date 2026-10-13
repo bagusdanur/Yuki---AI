@@ -933,6 +933,9 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 .typing { min-width: 64px; display: flex; gap: 5px; align-items: center; }
 .typing i { width: 6px; height: 6px; border-radius: 50%; background: #8581ea; animation: bounce 1s infinite alternate; }
 .typing i:nth-child(2) { animation-delay: .15s; }.typing i:nth-child(3) { animation-delay: .3s; }
+.message.streaming .message-content { position: relative; }
+.stream-caret { display: inline-block; width: 2px; height: 1em; margin-left: 2px; vertical-align: -0.15em; background: #8581ea; border-radius: 1px; animation: stream-blink 1s steps(2, start) infinite; }
+@keyframes stream-blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
 @keyframes bounce { to { opacity: .25; transform: translateY(-3px); } }
 .error-banner { align-self: center; max-width: 90%; display: flex; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid #68383d; border-radius: 6px; color: #ffb7b7; background: #28171a; font-size: 12px; }
 .error-banner button { display: grid; padding: 0; border: 0; color: inherit; background: transparent; }

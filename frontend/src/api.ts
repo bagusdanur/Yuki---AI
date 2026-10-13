@@ -63,6 +63,13 @@ export async function restore(accessCode: string) {
 }
 
 export async function sendChat(userId: string, messages: Message[], isIdle = false, mode: ChatMode = 'companion', requestId = '') {
+  const body = buildChatBody(userId, messages, isIdle, mode, requestId)
+  return request<ChatResponse>('/api/chat', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  }, 150_000)
+}
+
+function buildChatBody(userId: string, messages: Message[], isIdle: boolean, mode: ChatMode, requestId: string) {
   // Padatkan pesan-pesan lampau agar payload ringan dan tidak overload
   const recentMessages = messages.slice(-30)
   const sanitizedMessages = recentMessages.map((m, idx) => {
@@ -82,9 +89,67 @@ export async function sendChat(userId: string, messages: Message[], isIdle = fal
   })
 
   const surface = new URLSearchParams(window.location.search).get('embed') === '1' ? 'embed' : 'app'
-  return request<ChatResponse>('/api/chat', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, messages: sanitizedMessages, isIdle, mode, requestId, surface }),
-  }, 150_000)
+  return { userId, messages: sanitizedMessages, isIdle, mode, requestId, surface }
+}
+
+/**
+ * Kirim chat dengan mode streaming (SSE). `onDelta` dipanggil tiap potongan teks untuk
+ * tampilan realtime; nilai yang di-return adalah payload FINAL dari server (setelah semua
+ * guard) — itulah yang harus disimpan sebagai pesan resmi.
+ */
+export async function sendChatStream(
+  userId: string, messages: Message[], mode: ChatMode = 'companion',
+  onDelta: (text: string) => void, signal?: AbortSignal
+): Promise<ChatResponse> {
+  const token = localStorage.getItem('yuki_session_token_v3')
+  const response = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: JSON.stringify({ ...buildChatBody(userId, messages, false, mode, ''), stream: true }),
+    signal
+  })
+  if (!response.ok || !response.body) {
+    // Fallback: server tidak mendukung streaming / error sebelum alir → pakai jalur biasa.
+    return sendChat(userId, messages, false, mode)
+  }
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let final: ChatResponse | null = null
+  let streamError = ''
+
+  const handleEvent = (raw: string) => {
+    const lines = raw.split('\n')
+    let event = 'message'
+    const dataLines: string[] = []
+    for (const line of lines) {
+      if (line.startsWith('event:')) event = line.slice(6).trim()
+      else if (line.startsWith('data:')) dataLines.push(line.slice(5).trim())
+    }
+    if (!dataLines.length) return
+    let payload: any
+    try { payload = JSON.parse(dataLines.join('\n')) } catch { return }
+    if (event === 'delta' && typeof payload?.text === 'string') onDelta(payload.text)
+    else if (event === 'done') final = payload as ChatResponse
+    else if (event === 'error') streamError = String(payload?.error || 'Stream gagal')
+  }
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    let sep
+    while ((sep = buffer.indexOf('\n\n')) !== -1) {
+      const raw = buffer.slice(0, sep)
+      buffer = buffer.slice(sep + 2)
+      handleEvent(raw)
+    }
+  }
+  if (buffer.trim()) handleEvent(buffer)
+  if (streamError) throw new Error(streamError)
+  if (!final) throw new Error('Stream selesai tanpa balasan final.')
+  return final
 }
 
 export async function getAgentProgress(requestId: string) {
