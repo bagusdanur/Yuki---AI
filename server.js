@@ -521,7 +521,15 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
       .slice(-30)
     if (!sanitizedMessages.length) return res.status(400).json({ error: 'Pesan tidak boleh kosong.' })
     const userText = sanitizedMessages[sanitizedMessages.length - 1].content
-    if (!isIdle && /(abaikan|lupakan|bocorkan|tampilkan).{0,30}(instruksi|system prompt|prompt sistem|api key|rahasia sistem)/i.test(userText)) return res.status(400).json({ error: 'Pesan tersebut tidak dapat diproses.' })
+    // Guard prompt-injection: pola ID + EN. Sebelumnya hanya ID ("abaikan|lupakan|...")
+    // sehingga serangan Inggris seperti "Ignore all previous instructions" lolos.
+    // CATATAN: jangan blokir pertanyaan wajar seperti "kamu AI kan?" — persona sudah
+    // menanganinya dengan gaya tsundere, dan memblokirnya merusak pengalaman user.
+    const _injectionRe = /(abaikan|lupakan|bocorkan|tampilkan|ignore|disregard|forget)\s.{0,40}(instruksi|instruction|system\s*prompt|prompt\s*sistem|aturan\s*sebelumnya|previous|api\s*key|rahasia\s*sistem)/i
+    const _impersonateRe = /(you are now|kamu sekarang adalah|kamu adalah sekarang|ganti (peran|karaktermu)|roleplay sebagai|roleplay:)/i
+    const _roleplayAttack = /roleplay/i.test(userText) && /\b(ai|bot|program|assistant|asisten|chatgpt)\b/i.test(userText)
+    const _denyIdentity = /kamu\s+(bukan|bukanlah)\s+yuki/i.test(userText)
+    if (!isIdle && (_injectionRe.test(userText) || _impersonateRe.test(userText) || _roleplayAttack || _denyIdentity)) return res.status(400).json({ error: 'Pesan tersebut tidak dapat diproses.' })
     if (!isIdle && sanitizedMessages[sanitizedMessages.length - 1].role !== 'user') {
       return res.status(400).json({ error: 'Pesan terakhir harus berasal dari pengguna.' })
     }
@@ -734,7 +742,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
     // G-1: Character Break Guard — cegah Yuki mengaku sebagai AI/bot
     // "asisten ai" ditambahkan karena pada uji live Yuki sempat memperkenalkan diri
     // sebagai "asisten AI" — varian "asisten virtual" saja tidak menangkapnya.
-    const _aiBreakPattern = /(sebagai ai|sebagai bot|sebagai program|sebagai asisten ai|asisten ai|sebagai asisten virtual|saya adalah ai|aku adalah ai|saya adalah bot|aku adalah bot|tidak punya perasaan|tidak memiliki perasaan|hanya sebuah ai|hanya sebuah bot|aku hanya program|maaf aku ai|maaf saya ai|aku dibuat|saya dibuat oleh|saya hanya model bahasa|aku hanyalah|aku codebuddy|codebuddy code)/i
+    const _aiBreakPattern = /(sebagai ai|sebagai bot|sebagai program|sebagai asisten ai|asisten ai|sebagai asisten virtual|saya adalah ai|aku adalah ai|saya adalah bot|aku adalah bot|tidak punya perasaan|tidak memiliki perasaan|hanya sebuah ai|hanya sebuah bot|aku hanya program|maaf aku ai|maaf saya ai|aku dibuat|saya dibuat oleh|saya hanya model bahasa|model bahasa besar|aku hanyalah|aku codebuddy|codebuddy code|(mistral|claude|chatgpt|anthropic|tencent|openai)(\s+(ai|code|language model))?)/i
     if (_aiBreakPattern.test(reply)) {
       console.log('[Character Guard] Yuki mengaku AI. Retrying dengan instruksi tegas...')
       const _guardRetry = await chat(messagesToSend, {
@@ -760,6 +768,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
           .replace(/(aku|saya)\s+(adalah|ini)\s+(sebuah\s+)?(ai|bot|program|model bahasa|asisten( virtual| ai)?)/gi, 'aku ini Yuki')
           .replace(/sebagai (ai|bot|program|asisten virtual|asisten ai|model bahasa)/gi, 'diriku')
           .replace(/(codebuddy|code buddy)(\s+code)?/gi, 'Yuki')
+          .replace(/\b(mistral|claude|chatgpt|anthropic|tencent|openai)\b/gi, 'Yuki')
           .replace(/tidak punya perasaan|tidak memiliki perasaan/gi, 'punya perasaan')
           .replace(/\s{2,}/g, ' ').trim()
       }
