@@ -658,9 +658,16 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
 
     // Perbaiki bug loop balas diri sendiri: sisipkan pesan user tiruan agar API LLM menerima giliran user
     // Ringkasan memori membawa konteks lama; hanya 18 pesan terbaru dikirim mentah.
-    const messagesToSend = sanitizedMessages.slice(-18)
+    // SANITASI RIWAYAT: pesan lama menyimpan link rekomendasi dengan "?img=…" yang sering
+    // terpotong di tengah. Kalau dibiarkan, model MENIRU pola terputus itu dan menulis URL
+    // rusak lagi. Buang query ?img=… dari riwayat agar model selalu melihat URL bersih.
+    const sanitizeHistoryComicLinks = (text = '') => String(text)
+      .replace(/(https?:\/\/ryukomik\.my\.id\/[^\s)?]+)\?img=[^\s)\]]*/gi, '$1')
+    const messagesToSend = sanitizedMessages.slice(-18).map((message) => (
+      message.role === 'assistant' ? { ...message, content: sanitizeHistoryComicLinks(message.content) } : message
+    ))
     const recentAssistant = messagesToSend.filter((message) => message.role === 'assistant').slice(-5).map((message) => message.content)
-    const target = responseTarget(userText, { serious: isSerious, idle: isIdle })
+    const target = responseTarget(userText, { serious: isSerious, idle: isIdle, comics: comicResults.length })
     if (isIdle) {
       messagesToSend.push({ role: 'user', content: '[terdiam]' })
     }
@@ -702,7 +709,10 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
       reply = extracted.cleanText
     }
 
-    if (extractedArtifacts.length === 0 && reply.length > target.max && !reply.includes('```')) {
+    // Balasan rekomendasi komik sengaja TIDAK dipotong: memotong di tengah akan memutus
+    // blok "[Link](…)" sehingga card gagal ter-parse (dan URL jadi rusak di riwayat).
+    const hasComicBlock = comicResults.length > 0 && /\[Link\]\(\s*https?:\/\/ryukomik\.my\.id\//i.test(reply)
+    if (extractedArtifacts.length === 0 && !hasComicBlock && reply.length > target.max && !reply.includes('```')) {
       truncated = true
       const shortened = reply.slice(0, target.max)
       const lastStop = Math.max(shortened.lastIndexOf('.'), shortened.lastIndexOf('!'), shortened.lastIndexOf('?'))

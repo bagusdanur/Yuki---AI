@@ -85,14 +85,37 @@ function loadHistory(userId?: string): Message[] {
 function legacyComics(text: string) {
   const normalized = text.replace(/\*\s*\n([^\n*]+)\n\s*\*/g, '**$1**')
   const comics: ComicRecommendation[] = []
-  const clean = normalized.replace(/\*\*([^*\n]+)\*\*\s*\n([^\n]+)\s*\n\[Link\]\s*\n?\((https?:\/\/ryukomik\.my\.id\/[^\s)]+)\)/gi, (_block, title, meta, rawUrl) => {
+  // Blok rekomendasi: **Judul**\n<info>…\n[Link](URL)
+  // Toleran terhadap URL terpotong (tanpa ')'), ada/tanpa ?img=, dan format info apa pun.
+  const blockRe = /\*\*([^*\n]+)\*\*[ \t]*\n+[ \t]*([^\n]*)\n+[ \t]*\[Link\]\s*\(?\s*(https?:\/\/ryukomik\.my\.id\/[^\s)]+)\)?/gi
+  const clean = normalized.replace(blockRe, (_block, rawTitle, rawMeta, rawUrl) => {
     try {
-      const parsed = new URL(rawUrl)
-      const image = parsed.searchParams.get('img') || ''
-      parsed.searchParams.delete('img')
-      const [type = '', chapter = ''] = String(meta).split(/\s*[·•]\s*/)
-      comics.push({ title: String(title).trim(), type, chapter, image, url: parsed.toString() })
-    } catch { /* abaikan */ }
+      // URL bersih = sebelum '?' ; buang sisa tanda baca ekor dari URL yang terpotong.
+      const cleanUrl = String(rawUrl).split('?')[0].replace(/[.,;:)\]]+$/, '')
+      const parsed = new URL(cleanUrl)
+      // Cover: ambil dari ?img=… bila ada. URL riwayat sering TERPOTONG di tengah,
+      // jadi hanya pakai kalau terlihat utuh (punya ekstensi gambar) — kalau tidak,
+      // biarkan kosong agar ComicCard mengambil cover via /api/comic-cover.
+      let image = ''
+      const imgMatch = String(rawUrl).match(/[?&]img=([^&\s)]+)/i)
+      if (imgMatch) {
+        let candidate = imgMatch[1]
+        try { candidate = decodeURIComponent(candidate) } catch { /* pakai apa adanya */ }
+        if (/^https?:\/\/\S+\.(jpe?g|png|webp|gif|avif)(\?|$)/i.test(candidate)) image = candidate
+      }
+      // Info: "[MANGA] · Slice of Life · Chapter 150 · Update 1 jam lalu · ★8.5"
+      const parts = String(rawMeta).split(/\s*[·•|]\s*/).map(part => part.trim()).filter(Boolean)
+      let format = '', type = '', chapter = '', score = ''
+      for (const part of parts) {
+        const fmt = part.match(/^\[([^\]]+)\]$/)
+        if (fmt) { format = fmt[1].toUpperCase(); continue }
+        if (/^★/.test(part)) { score = part.replace(/^★\s*/, ''); continue }
+        if (/^chapter\b/i.test(part) || /^ch\.?\s*\d/i.test(part)) { chapter = part; continue }
+        if (/^(update|updated|up)\b/i.test(part)) { continue }
+        if (!type) type = part
+      }
+      comics.push({ title: String(rawTitle).trim(), url: parsed.toString(), type, chapter, score, image, format })
+    } catch { /* abaikan blok yang tidak valid */ }
     return ''
   })
   return { clean: clean.trim(), comics }
@@ -117,6 +140,18 @@ function ComicCard({ comic, isBookmarked, onToggleBookmark }: {
     window.open(target.toString(), '_blank', 'noopener,noreferrer')
   }
 
+  // Cover bisa kosong kalau URL riwayat terpotong → minta ke server (cache per-URL).
+  const [cover, setCover] = useState(comic.image || '')
+  useEffect(() => {
+    if (comic.image || !comic.url) return
+    let alive = true
+    fetch(`/api/comic-cover?url=${encodeURIComponent(comic.url)}`)
+      .then(response => response.json())
+      .then(data => { if (alive && data?.image) setCover(data.image) })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [comic.image, comic.url])
+
   return (
     <div
       className="comic-card"
@@ -132,7 +167,7 @@ function ComicCard({ comic, isBookmarked, onToggleBookmark }: {
       }}
     >
       <div className="comic-cover">
-        {comic.image ? <img src={comic.image} alt="" loading="lazy" referrerPolicy="no-referrer" /> : <BookOpen size={20} />}
+        {cover ? <img src={cover} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setCover('')} /> : <BookOpen size={20} />}
       </div>
       <div className="comic-details">
         <div className="comic-title-row">
@@ -687,7 +722,36 @@ function MessageBody({ message, bookmarks, onToggleBookmark, onOpenArtifact, onA
   onApproval?: (id: string, decision: 'approve' | 'reject') => void
 }) {
   const legacy = legacyComics(message.content)
-  const comics = message.comics?.length ? message.comics : legacy.comics
+  // Gabungkan: parser mengambil judul/info dari TEKS (tahan URL terpotong), sedangkan
+  // message.comics dari server membawa COVER & URL asli yang lengkap. Cocokkan per-URL
+  // (fallback: per-judul) supaya cover selalu terisi walau /api/comic-cover gagal.
+  const comics = (() => {
+    const fromServer = message.comics || []
+    const fromText = legacy.comics
+    if (!fromServer.length) return fromText
+    if (!fromText.length) return fromServer
+    const norm = (s: string) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '')
+    const byUrl = new Map(fromServer.map(c => [norm(c.url), c]))
+    const byTitle = new Map(fromServer.map(c => [norm(c.title), c]))
+    const merged = fromText.map(c => {
+      const match = byUrl.get(norm(c.url)) || byTitle.get(norm(c.title))
+      if (!match) return c
+      return {
+        ...match,
+        ...c,
+        image: c.image || match.image,
+        url: c.url || match.url,
+        format: c.format || match.format,
+        type: c.type || match.type,
+        chapter: c.chapter || match.chapter,
+        score: c.score || match.score,
+      }
+    })
+    // Sertakan juga entri server yang tidak tertangkap teks (mis. format tak terduga).
+    const covered = new Set(merged.map(c => norm(c.url)))
+    for (const s of fromServer) if (!covered.has(norm(s.url))) merged.push(s)
+    return merged
+  })()
   const rawText = message.comics?.length ? message.content : legacy.clean
   const textWithoutComics = cleanComicText(rawText, comics)
   const text = cleanMessageContent(textWithoutComics)
