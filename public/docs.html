@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Yuki AI 3.1 — Dokumentasi Agent & Sistem Karakter</title>
+  <title>Yuki AI 3.2 — Dokumentasi Karakter & Sistem</title>
 
   <!-- Google Fonts: Outfit (Header) & Plus Jakarta Sans (Body) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -864,12 +864,12 @@
       </a>
       <a href="#versi-3" class="nav-item" data-sec="versi-3">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18m9-9H3" /></svg>
-        Sistem Versi 3.1
+        Sistem Versi 3.2
       </a>
     </nav>
 
     <div class="sidebar-footer">
-      <div>Yuki AI v3.1.0</div>
+      <div>Yuki AI v3.2.0</div>
       <div style="margin-top: 4px; opacity: 0.7;">Panduan Pendamping Resmi</div>
     </div>
   </aside>
@@ -879,7 +879,7 @@
 
     <!-- ==================== PENGENALAN ==================== -->
     <section id="pengenalan">
-      <div class="version-chip">VERSION 3.1 / LIVE</div>
+      <div class="version-chip">VERSION 3.2 / LIVE</div>
       <h1>Yuki, lebih konsisten dan lebih manusiawi.</h1>
       <div class="subtitle">Mengenal Lebih Dekat Pendamping mu</div>
 
@@ -946,7 +946,7 @@
 
       <p>
         Sikap Yuki padamu bergantung sepenuhnya pada nilai <strong>Kedekatan (Bond Level)</strong> yang berkisar antara
-        <code>0</code> hingga <code>100</code>. Nilai ini persisten dan tersimpan bersama Kunci Ingatan. Pada versi 3.1, kedekatan dipengaruhi konsistensi, perhatian, konflik, permintaan maaf, dan perlindungan anti-spam.
+        <code>0</code> hingga <code>100</code>. Nilai ini persisten dan tersimpan bersama Kunci Ingatan. Pada versi 3.2, kedekatan dipengaruhi konsistensi, perhatian, konflik, permintaan maaf, dan perlindungan anti-spam.
       </p>
 
       <div class="table-responsive">
@@ -1176,6 +1176,10 @@
         balasannya.
       </p>
       <p>
+        <em>Catatan:</em> fitur suara bisa dinyalakan atau dimatikan dari dashboard. Saat sedang dimatikan, tombol
+        suara tidak melakukan apa-apa (tanpa pesan error) — sisa fitur lainnya berjalan seperti biasa.
+      </p>
+      <p>
         Menariknya, <strong>intonasi dan kecepatan suara Yuki akan berubah sesuai emosinya</strong>:
       </p>
       <ul>
@@ -1227,7 +1231,7 @@
       <div class="subtitle">Mencegah Hilangnya Kenangan dengan Yuki</div>
 
       <p>
-        Di <strong>YUKI 3.1</strong>, Kunci Ingatan memulihkan percakapan, tingkat hubungan, suasana hati, dan hal-hal penting yang Yuki kenal tentangmu. Ingatannya mencakup preferensi, orang penting, momen emosional, serta cerita yang belum selesai.
+        Di <strong>YUKI 3.2</strong>, Kunci Ingatan memulihkan percakapan, tingkat hubungan, suasana hati, dan hal-hal penting yang Yuki kenal tentangmu. Ingatannya mencakup preferensi, orang penting, momen emosional, serta cerita yang belum selesai.
       </p>
 
       <div class="card accent">
@@ -1249,7 +1253,7 @@
       
       <div class="info-box">
         <p>
-          <strong>Percakapan YUKI 3.1:</strong> balasan dibuat lebih utuh, tidak mudah terpotong, tidak berulang-ulang, dan tetap sesuai dengan hal yang benar-benar Yuki ingat tentangmu.
+          <strong>Percakapan YUKI 3.2:</strong> balasan dibuat lebih utuh, tidak mudah terpotong, tidak berulang-ulang, dan tetap sesuai dengan hal yang benar-benar Yuki ingat tentangmu.
         </p>
       </div>
     </section>
@@ -1335,16 +1339,16 @@
     </section>
 
     <section id="versi-3">
-      <div class="version-chip">SYSTEM NOTES / YUKI 3.1</div>
-      <h2>Apa yang Baru di Yuki 3.1?</h2>
-      <div class="subtitle">Agent lebih tahan gagal, dapat dilanjutkan, terverifikasi, dan aman dikendalikan pengguna</div>
+      <div class="version-chip">SYSTEM NOTES / YUKI 3.2</div>
+      <h2>Apa yang Baru di Yuki 3.2?</h2>
+      <div class="subtitle">Fokus ke pengalaman ngobrol: balasan lebih cepat & stabil, kartu komik rapi, obrolan tetap obrolan</div>
       <div class="persona-grid v3-grid">
-        <div class="p-item"><div class="p-label"><i data-lucide="workflow"></i>WORKFLOW DURABLE</div><div class="p-val">Tugas dan checkpoint approval disimpan hingga 24 jam, sehingga dapat dipulihkan setelah refresh atau restart layanan.</div></div>
-        <div class="p-item"><div class="p-label"><i data-lucide="shield-check"></i>BUKTI HASIL</div><div class="p-val">Aksi file, artifact, HTTP, jadwal, dan catatan harus mengembalikan evidence yang cocok sebelum Yuki mengklaim berhasil.</div></div>
-        <div class="p-item"><div class="p-label"><i data-lucide="mouse-pointer-click"></i>APPROVAL AMAN</div><div class="p-val">Approval memakai idempotency key dan atomic claim untuk mencegah satu tindakan dieksekusi dua kali akibat double-click.</div></div>
-        <div class="p-item"><div class="p-label"><i data-lucide="clock-3"></i>TIMEZONE</div><div class="p-val">Agenda dan scheduler menyimpan waktu UTC dengan timezone pengguna serta mendukung eksekusi sekali jalan dan berulang.</div></div>
-        <div class="p-item"><div class="p-label"><i data-lucide="key-round"></i>PRIVASI</div><div class="p-val">Kunci baru disimpan sebagai hash, ditampilkan tersamarkan, dan penghapusan akun membersihkan seluruh data terkait.</div></div>
-        <div class="p-item"><div class="p-label"><i data-lucide="activity"></i>OBSERVABILITY</div><div class="p-val">Event operasional terstruktur menyimpan metadata aman tanpa prompt, token, cookie, atau credential pengguna.</div></div>
+        <div class="p-item"><div class="p-label"><i data-lucide="zap"></i>BALASAN LEBIH CEPAT</div><div class="p-val">Koreksi kecil (gestur ganda atau balasan kepanjangan) kini dirapikan langsung tanpa mengirim ulang ke model. Retry penuh hanya dipakai untuk masalah serius — waktu balas jadi jauh lebih stabil, tanpa lonjakan mendadak.</div></div>
+        <div class="p-item"><div class="p-label"><i data-lucide="images"></i>KARTU KOMIK RAPI</div><div class="p-val">Kartu rekomendasi komik tampil dengan cover asli, judul utuh, dan tombol baca — termasuk saat tautan dari riwayat lama terpotong. Tidak ada lagi kartu yang hilang atau tampil setengah.</div></div>
+        <div class="p-item"><div class="p-label"><i data-lucide="message-circle"></i>OBROLAN TETAP OBROLAN</div><div class="p-val">Yuki tidak lagi menyelipkan rekomendasi komik yang tidak kamu minta ke tengah obrolan biasa. Kartu komik hanya muncul saat kamu memang memintanya.</div></div>
+        <div class="p-item"><div class="p-label"><i data-lucide="sparkles"></i>BALASAN BERSIH</div><div class="p-val">Penanda suasana hati internal tidak lagi bocor ke teks balasan. Yang kamu baca murni ucapan dan gestur Yuki.</div></div>
+        <div class="p-item"><div class="p-label"><i data-lucide="heart-handshake"></i>HUBUNGAN BERTAHAP</div><div class="p-val">Kenaikan kedekatan diperlambat agar terasa lebih wajar — setiap tahap benar-benar perlu diperjuangkan, sementara kesalahan tetap berbobot seperti sebelumnya.</div></div>
+        <div class="p-item"><div class="p-label"><i data-lucide="shield-check"></i>SUARA OPSIONAL</div><div class="p-val">Fitur suara tersedia dan bisa dinyalakan/dimatikan dari dashboard. Saat dimatikan, tombol suara tidak melakukan apa-apa dan tidak menampilkan error.</div></div>
       </div>
     </section>
   </main>
