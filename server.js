@@ -15,7 +15,7 @@ import {
   saveComicBookmark, getComicBookmarks, deleteComicBookmark
   , getScheduledReminderMessages, dbHandle, APP_DATA_LABELS
 } from './lib/memory.js'
-import { responseTarget, shouldInitiate, validateCharacterReply } from './lib/character-quality.js'
+import { responseTarget, shouldInitiate, validateCharacterReply, repairCharacterReply } from './lib/character-quality.js'
 import { warmupEmbedder } from './lib/semantic.js'
 import { searchComics, latestComics, wantsComic, wantsLatestComics, detectRequestedGenre, extractQuery, buildComicContext } from './lib/ryukomik.js'
 import { executeTool, initSkills, listSkills } from './lib/agent/skills-engine.js'
@@ -689,16 +689,27 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
     })
 
     const quality = validateCharacterReply(reply, recentAssistant, target, memoryContext, { gestureRequired: gestureCue })
-    if (!quality.ok) {
-      console.log(`[Quality Guard] Retrying: ${quality.issues.join(', ')}`)
+    if (!quality.okFatal) {
+      // Hanya masalah FATAL (kosong, terpotong, bocor, klaim memori palsu, terlalu mirip)
+      // yang layak ditulis ulang oleh model.
+      console.log(`[Quality Guard] Retrying: ${quality.fatal.join(', ')}`)
       const retryResult = await chat(messagesToSend, {
         emotionDirective: emotion.directive(), memoryContext, comicContext, isIdle,
         bondName: bond.name, isSerious, userMsgLength: userText.length,
         shouldAskQuestion, sessionTurns: _turns, responseStyle: target.style, recentAssistant, gestureCue,
-        retryReason: `Balasan sebelumnya bermasalah: ${quality.issues.join(', ')}. Tulis ulang secara utuh, natural, tidak repetitif, dan sesuai panjang yang diminta.`
+        retryReason: `Balasan sebelumnya bermasalah: ${quality.fatal.join(', ')}. Tulis ulang secara utuh, natural, tidak repetitif, dan sesuai panjang yang diminta.`
       })
       reply = retryResult.reply
       llmMood = retryResult.emotion || llmMood
+    } else if (!quality.ok) {
+      // Masalah KOSMETIK saja (gesture berlebih/berulang, kepanjangan). Dulu ini memicu
+      // panggilan LLM ulang penuh — 39% pesan jadi 2x request & latensi melonjak.
+      // Cukup rapikan di sini tanpa menyentuh model.
+      const repaired = repairCharacterReply(reply, recentAssistant)
+      if (repaired.changed) {
+        console.log(`[Quality Guard] Kosmetik dirapikan lokal: ${repaired.notes.join(', ')} (tanpa retry)`)
+        reply = repaired.reply
+      }
     }
 
     let extractedArtifacts = []

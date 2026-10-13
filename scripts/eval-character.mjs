@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { Emotion } from '../lib/emotion.js'
-import { responseTarget, shouldInitiate, textSimilarity, validateCharacterReply } from '../lib/character-quality.js'
+import { responseTarget, shouldInitiate, textSimilarity, validateCharacterReply, repairCharacterReply } from '../lib/character-quality.js'
 
 const report = []
 const check = (name, fn) => {
@@ -121,6 +121,39 @@ check('simulasi 100 giliran tidak merusak batas bond atau state', () => {
 
 check('kemiripan jawaban berbeda tetap rendah', () => {
   assert.ok(textSimilarity('Aku sedang membaca manga misteri.', 'Istirahat dulu kalau kepalamu pusing.') < 0.4)
+})
+
+check('masalah kosmetik (gesture) TIDAK dianggap fatal — cukup dirapikan lokal', () => {
+  const target = responseTarget('ceritain dong')
+  // Dua gesture + satu mengulang gestur balasan sebelumnya = masalah kosmetik saja.
+  const twoGestures = validateCharacterReply(
+    '*menghela napas* Hmph. *menghela napas* Ya sudah.',
+    ['*menghela napas* Apa lagi?'],
+    target
+  )
+  assert.equal(twoGestures.ok, false)
+  assert.equal(twoGestures.okFatal, true)
+  assert.ok(twoGestures.issues.some((issue) => /gesture/.test(issue)))
+  assert.equal(twoGestures.fatal.length, 0)
+
+  const repaired = repairCharacterReply('*menghela napas* Hmph. *menghela napas* Ya sudah.', ['*menghela napas* Apa lagi?'])
+  assert.ok(repaired.changed)
+  assert.equal([...repaired.reply.matchAll(/\*[^*\n]+\*/g)].length, 0, 'gesture berulang harus dibuang semua')
+  assert.match(repaired.reply, /Hmph/)
+})
+
+check('gesture berlebih disisakan SATU bila ada yang belum pernah dipakai', () => {
+  const repaired = repairCharacterReply('*menutup buku* Hmph. *menghela napas* Ya sudah.', ['*menghela napas* Apa lagi?'])
+  const gestures = [...repaired.reply.matchAll(/\*([^*\n]+)\*/g)].map((match) => match[1])
+  assert.equal(gestures.length, 1, 'harus tersisa tepat satu gesture')
+  assert.equal(gestures[0], 'menutup buku')
+})
+
+check('masalah fatal (klaim memori palsu) TETAP memicu retry', () => {
+  const target = responseTarget('kamu ingat aku?')
+  const result = validateCharacterReply('Aku ingat kamu pernah bilang suka hujan.', [], target, '')
+  assert.equal(result.okFatal, false)
+  assert.ok(result.fatal.some((issue) => issue.includes('mengklaim ingatan')))
 })
 
 for (const result of report) {
