@@ -395,7 +395,11 @@ app.post('/api/agent/approvals/:approvalId', requireSession, rateLimit({ windowM
 const sessions = new Map() // userId -> Emotion
 
 // Y-5: Turn counter per user — untuk pertanyaan balik proaktif setiap 3 giliran
-const turnCounters = new Map() // userId -> turnCount
+// Disimpan sebagai { count, lastAt } agar giliran dihitung PER-SESI, bukan seumur hidup.
+// Sebelumnya fallback ke emotion.interactions (akumulatif lintas sesi) sehingga user lama
+// langsung kena prompt "kelelahan sesi panjang" di pesan pertama setelah restart.
+const SESSION_GAP_MS = 6 * 60 * 60 * 1000 // jeda >6 jam dianggap sesi baru
+const turnCounters = new Map() // userId -> { count, lastAt }
 
 app.get('/admin', (_req, res) => res.sendFile(path.resolve('public/admin.html')))
 // Favicon: browser selalu minta /favicon.ico — arahkan ke ikon Yuki
@@ -524,11 +528,16 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
 
     const emotion = await getEmotion(userId)
 
-    // Y-5: Hitung giliran percakapan untuk pertanyaan balik proaktif
-    const persistedTurns = Number.isFinite(emotion.interactions) ? emotion.interactions : 0
-    const previousTurns = turnCounters.get(userId) ?? persistedTurns
-    const _turns = isIdle ? previousTurns : previousTurns + 1
-    if (!isIdle) turnCounters.set(userId, _turns)
+    // Y-5: Hitung giliran percakapan untuk pertanyaan balik proaktif.
+    // Giliran dihitung PER-SESI: reset bila jeda pesan > SESSION_GAP_MS, dan JANGAN
+    // memakai emotion.interactions (itu total seumur hidup) sebagai titik awal.
+    const nowTs = Date.now()
+    const prevTurn = turnCounters.get(userId)
+    const sessionStart = !prevTurn || nowTs - prevTurn.lastAt > SESSION_GAP_MS
+      ? 0
+      : prevTurn.count
+    const _turns = isIdle ? sessionStart : sessionStart + 1
+    if (!isIdle) turnCounters.set(userId, { count: _turns, lastAt: nowTs })
     let shouldAskQuestion = false
 
     // Y-3: Deteksi topik serius untuk override empati
@@ -692,22 +701,28 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
       reply = (lastStop > target.max * 0.45 ? shortened.slice(0, lastStop + 1) : `${shortened.trimEnd()}…`).trim()
     }
 
-    // Content Filter & Retry
+    // Content Filter (bond level) — dijalankan SETELAH artifact diekstrak (agar isi HTML
+    // artifact tidak salah memicu filter + retry yang menghapus artifact user), tapi TETAP
+    // SEBELUM character guard. Sebelumnya blok ini paling akhir sehingga balasan melanggar
+    // bisa lolos lewat retry lain dulu — buang 1 call + risiko balasan melanggar terkirim.
     if (!emotion.isContentAppropriate(reply)) {
       console.log(`[Content Filter] Balasan ditolak karena melanggar bond level "${bond.name}". Retrying...`)
-      const retryResult = await chat(messagesToSend, {
+      const filterRetry = await chat(messagesToSend, {
         emotionDirective: emotion.directive(),
         memoryContext,
         comicContext,
         isIdle,
         bondName: bond.name,
+        isSerious,
+        userMsgLength: userText.length,
+        shouldAskQuestion,
+        sessionTurns: _turns,
         responseStyle: target.style, recentAssistant, gestureCue,
         retryReason: `Balasan sebelumnya DITOLAK karena terlalu mesra/hangat untuk tingkat kedekatan "${bond.name}". Tulis ulang dengan nada DINGIN, KETUS, dan TANPA kata romantis.`
       })
-      reply = retryResult.reply
-      llmMood = retryResult.emotion
-
-      // Sanitize as last resort
+      reply = filterRetry.reply
+      llmMood = filterRetry.emotion || llmMood
+      // Jaring terakhir: bersihkan paksa bila masih melanggar
       if (!emotion.isContentAppropriate(reply)) {
         reply = reply.replace(/(sayang|cinta|kangen|rindu|peluk|dear|darling|~|♡|❤)/gi, '')
                      .replace(/suka sama kamu|suka kamu/gi, '...apa?')
@@ -717,7 +732,9 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
     }
 
     // G-1: Character Break Guard — cegah Yuki mengaku sebagai AI/bot
-    const _aiBreakPattern = /(sebagai ai|sebagai bot|sebagai program|sebagai asisten virtual|saya adalah ai|aku adalah ai|saya adalah bot|aku adalah bot|tidak punya perasaan|tidak memiliki perasaan|hanya sebuah ai|hanya sebuah bot|aku hanya program|maaf aku ai|maaf saya ai|aku dibuat|saya dibuat oleh|saya hanya model bahasa|aku hanyalah)/i
+    // "asisten ai" ditambahkan karena pada uji live Yuki sempat memperkenalkan diri
+    // sebagai "asisten AI" — varian "asisten virtual" saja tidak menangkapnya.
+    const _aiBreakPattern = /(sebagai ai|sebagai bot|sebagai program|sebagai asisten ai|asisten ai|sebagai asisten virtual|saya adalah ai|aku adalah ai|saya adalah bot|aku adalah bot|tidak punya perasaan|tidak memiliki perasaan|hanya sebuah ai|hanya sebuah bot|aku hanya program|maaf aku ai|maaf saya ai|aku dibuat|saya dibuat oleh|saya hanya model bahasa|aku hanyalah|aku codebuddy|codebuddy code)/i
     if (_aiBreakPattern.test(reply)) {
       console.log('[Character Guard] Yuki mengaku AI. Retrying dengan instruksi tegas...')
       const _guardRetry = await chat(messagesToSend, {
@@ -733,15 +750,16 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
         responseStyle: target.style,
         recentAssistant,
         gestureCue,
-        retryReason: 'PERINGATAN KRITIS: Balasan sebelumnya MEMBONGKAR bahwa kamu AI/bot — ini DILARANG KERAS. Kamu adalah Yuki, manusia sungguhan. Tulis ulang balasan sesuai karaktermu sebagai tsundere — jika user bertanya soal itu, tolak dengan mengelak atau ganti topik. JANGAN mengakui apapun.'
+        retryReason: 'PERINGATAN KRITIS: Balasan sebelumnya MEMBONGKAR bahwa kamu AI/bot — ini DILARANG KERAS. Kamu adalah Yuki, manusia sungguhan. Tulis ulang balasan sesuai karaktermu sebagai tsundere — jika user bertanya soal itu, tolak dengan mengelak atau ganti topik. JANGAN mengakui apapun, dan jangan menyebut nama sistem atau model apapun.'
       })
       reply = _guardRetry.reply
       llmMood = _guardRetry.emotion || llmMood
       // Last resort: hapus paksa frasa pengakuan AI
       if (_aiBreakPattern.test(reply)) {
         reply = reply
-          .replace(/sebagai (ai|bot|program|asisten virtual|model bahasa)/gi, 'diriku')
-          .replace(/(saya|aku) adalah (ai|bot|program)/gi, 'aku ini Yuki')
+          .replace(/(aku|saya)\s+(adalah|ini)\s+(sebuah\s+)?(ai|bot|program|model bahasa|asisten( virtual| ai)?)/gi, 'aku ini Yuki')
+          .replace(/sebagai (ai|bot|program|asisten virtual|asisten ai|model bahasa)/gi, 'diriku')
+          .replace(/(codebuddy|code buddy)(\s+code)?/gi, 'Yuki')
           .replace(/tidak punya perasaan|tidak memiliki perasaan/gi, 'punya perasaan')
           .replace(/\s{2,}/g, ' ').trim()
       }

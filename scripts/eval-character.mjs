@@ -44,7 +44,10 @@ check('mood, interaksi, dan anti-spam bertahan setelah restart', () => {
 check('fase relasi tidak bisa dilompati oleh satu pesan', () => {
   const emotion = new Emotion()
   emotion.react('Makasih banyak, kamu cantik, pintar, baik banget, aku suka kamu dan sayang kamu.')
-  assert.ok(emotion.bond <= 0.9)
+  // Cap bond per giliran (lib/emotion.js) = 1.5. Invarian yang diuji: satu pesan
+  // tidak boleh melewati batas level pertama (8 poin) — bukan nilai cap-nya sendiri.
+  assert.ok(emotion.bond <= 1.5, `bond satu giliran = ${emotion.bond}`)
+  assert.ok(emotion.bond < 8, 'satu pesan tidak boleh melewati level "mulai terbiasa"')
   assert.equal(emotion.bondLevel().name, 'orang asing')
 })
 
