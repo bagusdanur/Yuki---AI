@@ -15,7 +15,7 @@ import {
   saveComicBookmark, getComicBookmarks, deleteComicBookmark
   , getScheduledReminderMessages, dbHandle, APP_DATA_LABELS
 } from './lib/memory.js'
-import { responseTarget, shouldInitiate, validateCharacterReply, repairCharacterReply } from './lib/character-quality.js'
+import { responseTarget, shouldInitiate, validateCharacterReply, repairCharacterReply, stripStrayComicBlocks } from './lib/character-quality.js'
 import { warmupEmbedder } from './lib/semantic.js'
 import { searchComics, latestComics, wantsComic, wantsLatestComics, detectRequestedGenre, extractQuery, buildComicContext } from './lib/ryukomik.js'
 import { executeTool, initSkills, listSkills } from './lib/agent/skills-engine.js'
@@ -718,6 +718,17 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
     if (extracted.artifacts.length > 0) {
       extractedArtifacts = extracted.artifacts
       reply = extracted.cleanText
+    }
+
+    // Guard komik nyasar: bila server TIDAK mendeteksi intent komik (comicResults kosong),
+    // Yuki tidak boleh menempelkan kartu komik ke obrolan biasa. Ini biasanya terjadi
+    // karena riwayat lama berisi link membuat model meniru polanya.
+    if (!comicResults.length) {
+      const stripped = stripStrayComicBlocks(reply)
+      if (stripped.changed) {
+        console.log('[Comic Guard] Blok rekomendasi nyasar dibuang dari obrolan biasa.')
+        reply = stripped.reply
+      }
     }
 
     // Balasan rekomendasi komik sengaja TIDAK dipotong: memotong di tengah akan memutus

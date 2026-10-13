@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { Emotion } from '../lib/emotion.js'
-import { responseTarget, shouldInitiate, textSimilarity, validateCharacterReply, repairCharacterReply } from '../lib/character-quality.js'
+import { responseTarget, shouldInitiate, textSimilarity, validateCharacterReply, repairCharacterReply, stripStrayComicBlocks } from '../lib/character-quality.js'
 
 const report = []
 const check = (name, fn) => {
@@ -154,6 +154,34 @@ check('masalah fatal (klaim memori palsu) TETAP memicu retry', () => {
   const result = validateCharacterReply('Aku ingat kamu pernah bilang suka hujan.', [], target, '')
   assert.equal(result.okFatal, false)
   assert.ok(result.fatal.some((issue) => issue.includes('mengklaim ingatan')))
+})
+
+check('blok komik nyasar dibuang dari obrolan biasa, obrolan tetap utuh', () => {
+  const reply = [
+    '*menghela napas pendek*',
+    '',
+    'Hmph, kerjaan kantor lagi?',
+    '',
+    '**Horimiya**',
+    '[MANGA] · Slice of Life · Chapter 151',
+    '[Link](https://ryukomik.my.id/komik/komiku/horimiya)',
+    '',
+    '**Solo Leveling**',
+    '[MANHWA] · Aksi · Chapter 200',
+    '[Link](https://ryukomik.my.id/komik/komiku/solo-leveling)'
+  ].join('\n')
+  const out = stripStrayComicBlocks(reply)
+  assert.ok(out.changed)
+  assert.ok(!/Horimiya/.test(out.reply), 'judul komik nyasar harus hilang')
+  assert.ok(!/\[Link\]/.test(out.reply), 'blok [Link] harus hilang')
+  assert.match(out.reply, /kerjaan kantor lagi\?/, 'obrolan asli harus tetap ada')
+})
+
+check('balasan yang bukan blok komik tidak disentuh', () => {
+  const reply = '*melirik* Ya sudah, istirahat.\n\nAda yang mau diceritain?'
+  const out = stripStrayComicBlocks(reply)
+  assert.equal(out.changed, false)
+  assert.equal(out.reply, reply)
 })
 
 for (const result of report) {
