@@ -103,7 +103,10 @@ check('panjang respons mengikuti bobot pesan', () => {
 
 check('inisiatif terkontrol dan tidak muncul setiap giliran', () => {
   const decisions = Array.from({ length: 12 }, (_, index) => shouldInitiate({ turns: index + 1, userText: 'Aku lanjut cerita soal kerjaan.' }))
-  assert.equal(decisions.filter(Boolean).length, 3)
+  // Cadangan tanya-balik kini setiap 3 giliran (4x dari 12) — sebelumnya setiap 4 (3x).
+  // Masih jauh dari "setiap giliran", itulah inti tes ini.
+  assert.equal(decisions.filter(Boolean).length, 4)
+  assert.ok(decisions.filter(Boolean).length <= 6, 'tanya-balik tidak boleh muncul hampir tiap giliran')
   assert.equal(shouldInitiate({ turns: 4, userText: 'hmm' }), false)
   assert.equal(shouldInitiate({ turns: 2, serious: true, userText: 'Aku sedang berduka.' }), true)
 })

@@ -989,6 +989,43 @@ function AgendaModal({ onClose, companionOnly = false }: { onClose: () => void; 
   </div>
 }
 
+// Label ingatan yang manusiawi — sebelumnya user lihat teks mentah kategori
+// (open_loop, preference...) tanpa penjelasan apa artinya.
+const MEMORY_CATEGORY_LABELS: Record<string, string> = {
+  preference: 'Kesukaan',
+  habit: 'Kebiasaan',
+  open_loop: 'Rencana & hal yang belum selesai',
+  promise: 'Janji',
+  relationship: 'Orang penting',
+  technical: 'Hal teknis',
+  fact: 'Fakta tentangmu',
+  catatan: 'Catatan'
+}
+const MEMORY_STATUS_LABELS: Record<string, string> = {
+  active: 'masih diingat',
+  resolved: 'sudah selesai',
+  archived: 'diarsipkan'
+}
+// Alasan singkat kenapa Yuki menyimpan memori per kategori (biar tidak "asal").
+const MEMORY_REASON_LABELS: Record<string, string> = {
+  preference: 'Kamu pernah menyatakan suka/tidak suka ini',
+  habit: 'Kebiasaan yang kamu ceritakan berulang',
+  open_loop: 'Ada rencanamu yang belum diselesaikan',
+  promise: 'Kamu pernah minta diingatkan soal ini',
+  relationship: 'Orang ini penting bagimu',
+  technical: 'Hal yang pernah kamu ajarkan/bahas',
+  fact: 'Info yang kamu ceritakan ke Yuki',
+  catatan: 'Catatan obrolan yang tidak masuk kategori lain'
+}
+function memoryDate(value?: string) {
+  if (!value) return ''
+  try {
+    const normalized = value.includes('T') ? value : value.replace(' ', 'T')
+    const withZone = /Z|[+-]\d{2}:\d{2}$/.test(normalized) ? normalized : normalized + 'Z'
+    return new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(withZone))
+  } catch { return '' }
+}
+
 function MemoryCenterModal({ onClose, companionOnly = false }: { onClose: () => void; companionOnly?: boolean }) {
   const [tab, setTab] = useState<'user' | 'project' | 'task' | 'lesson' | 'skills'>('user')
   const [memories, setMemories] = useState<AgentMemory[]>([])
@@ -1020,26 +1057,42 @@ function MemoryCenterModal({ onClose, companionOnly = false }: { onClose: () => 
     {notice && <div className="memory-notice">{notice}</div>}
     <div className="memory-list">
       {tab !== 'skills' && shown.length === 0 && plainFacts.length === 0 && plainStructured.length === 0 && <div className="agenda-empty">{companionOnly ? 'Yuki belum mencatat hal penting tentangmu. Ceritakan sesuatu, nanti ia ingat.' : 'Belum ada memory pada scope ini.'}</div>}
-      {tab !== 'skills' && shown.map(item => <article className="memory-item" key={item.id}>
-        <div><span>{item.category}</span><b>{Math.round(item.confidence * 100)}% yakin</b></div><p>{item.content}</p>
-        <small>{item.evidence.length ? `Bukti: ${item.evidence.map(value => value.ref).join(', ')}` : 'Belum ada referensi bukti'}</small>
-        <footer><button onClick={() => { const content = window.prompt('Koreksi memory', item.content); if (content) void run(() => updateMemory(item.id, { content })) }}>Koreksi</button><button onClick={() => run(() => updateMemory(item.id, { status: item.status === 'active' ? 'archived' : 'active' }))}>{item.status === 'active' ? 'Arsipkan' : 'Aktifkan'}</button><button className="danger" onClick={() => { if (window.confirm('Hapus memory ini secara permanen?')) void run(() => deleteMemory(item.id)) }}>Hapus</button></footer>
-      </article>)}
+      {tab !== 'skills' && shown.map(item => {
+        const categoryLabel = MEMORY_CATEGORY_LABELS[item.category] || item.category
+        const reason = MEMORY_REASON_LABELS[item.category] || ''
+        const statusLabel = item.status !== 'active' ? MEMORY_STATUS_LABELS[item.status] : ''
+        const date = memoryDate(item.createdAt || item.updatedAt)
+        return (
+        <article className={`memory-item${item.status !== 'active' ? ' memory-inactive' : ''}`} key={item.id}>
+          <div><span>{categoryLabel}</span><b>{statusLabel || `${Math.round(item.confidence * 100)}% yakin`}</b></div><p>{item.content}</p>
+          <small>{reason ? `${reason}. ` : ''}{date ? `Dicatat ${date}.` : ''}{item.evidence.length ? ` Bukti: ${item.evidence.map(value => value.ref).join(', ')}` : ''}</small>
+          <footer><button onClick={() => { const content = window.prompt('Koreksi memory', item.content); if (content) void run(() => updateMemory(item.id, { content })) }}>Koreksi</button><button onClick={() => run(() => updateMemory(item.id, { status: item.status === 'active' ? 'archived' : 'active' }))}>{item.status === 'active' ? 'Arsipkan' : 'Aktifkan'}</button><button className="danger" onClick={() => { if (window.confirm('Hapus memory ini secara permanen?')) void run(() => deleteMemory(item.id)) }}>Hapus</button></footer>
+        </article>)
+      })}
       {/* Memori non-agent: fakta & catatan kebiasaan/janji. Ini juga diingat Yuki
           saat mengobrol, jadi harus terlihat & bisa dihapus dari menu yang sama. */}
       {tab !== 'skills' && tab === 'user' && plainFacts.length > 0 && <>
         <h3 className="memory-section">Fakta yang Yuki ingat</h3>
         {plainFacts.map(item => <article className="memory-item" key={`fact-${item.id}`}>
-          <div><span>fakta</span></div><p>{item.content}</p>
+          <div><span>Fakta</span></div><p>{item.content}</p>
+          <small>{MEMORY_REASON_LABELS.fact}{item.createdAt ? ` Dicatat ${memoryDate(item.createdAt)}.` : ''}</small>
           <footer><button className="danger" onClick={() => { if (window.confirm('Hapus fakta ini secara permanen?')) void run(() => deletePlainMemory('fact', item.id)) }}>Hapus</button></footer>
         </article>)}
       </>}
       {tab !== 'skills' && tab === 'user' && plainStructured.length > 0 && <>
         <h3 className="memory-section">Kebiasaan, janji & rencana</h3>
-        {plainStructured.map(item => <article className="memory-item" key={`structured-${item.id}`}>
-          <div><span>{item.category || 'catatan'}</span><b>{item.status === 'resolved' ? 'selesai' : 'aktif'}</b></div><p>{item.content}</p>
-          <footer><button className="danger" onClick={() => { if (window.confirm('Hapus catatan ini secara permanen?')) void run(() => deletePlainMemory('structured', item.id)) }}>Hapus</button></footer>
-        </article>)}
+        {plainStructured.map(item => {
+          const categoryLabel = MEMORY_CATEGORY_LABELS[item.category || ''] || item.category || 'Catatan'
+          const reason = MEMORY_REASON_LABELS[item.category || ''] || ''
+          const statusLabel = item.status === 'resolved' ? MEMORY_STATUS_LABELS.resolved : ''
+          const date = memoryDate(item.createdAt)
+          return (
+          <article className={`memory-item${item.status === 'resolved' ? ' memory-inactive' : ''}`} key={`structured-${item.id}`}>
+            <div><span>{categoryLabel}</span>{statusLabel && <b>{statusLabel}</b>}</div><p>{item.content}</p>
+            <small>{reason ? `${reason}. ` : ''}{date ? `Dicatat ${date}.` : ''}</small>
+            <footer><button className="danger" onClick={() => { if (window.confirm('Hapus catatan ini secara permanen?')) void run(() => deletePlainMemory('structured', item.id)) }}>Hapus</button></footer>
+          </article>)
+        })}
       </>}
       {tab === 'skills' && <><button className="new-skill" onClick={draftSkill}><Wrench size={14}/>Buat skill draft</button>{skills.length === 0 && <div className="agenda-empty">Belum ada dynamic skill.</div>}{skills.map(skill => <article className="memory-item skill-draft" key={skill.id}>
         <div><span>{skill.name}</span><b>{skill.status}</b></div><p>{skill.description}</p><small>{skill.toolAllowlist.length ? `Tools: ${skill.toolAllowlist.join(', ')}` : 'Instruction-only · tanpa tool tambahan'}</small>

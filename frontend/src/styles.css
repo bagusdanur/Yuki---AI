@@ -1341,6 +1341,8 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 .memory-list { min-height: 150px; max-height: 58dvh; padding: 12px 14px calc(18px + env(safe-area-inset-bottom)); overflow-y: auto; display: flex; flex-direction: column; gap: 9px; }
 .memory-section { margin: 14px 0 8px; color: #bbb8ff; font: 700 10px/1.2 ui-monospace, monospace; text-transform: uppercase; letter-spacing: 0.08em; }
 .memory-item { padding: 12px; border: 1px solid #2f333d; border-radius: 8px; background: #11141a; }
+.memory-item.memory-inactive { opacity: 0.62; border-style: dashed; }
+.memory-item.memory-inactive > div span { color: #8a8d99; }
 .memory-item > div { display: flex; justify-content: space-between; gap: 10px; }
 .memory-item > div span { color: #bbb8ff; font: 700 9px/1 ui-monospace, monospace; text-transform: uppercase; }
 .memory-item > div b { color: #777c88; font: 700 8px/1 ui-monospace, monospace; text-transform: uppercase; }

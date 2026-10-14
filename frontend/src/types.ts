@@ -144,6 +144,7 @@ export interface AgentMemory {
   sourceMessageId?: number
   evidence: Array<{ kind: string; ref: string }>
   status: 'active' | 'resolved' | 'archived'
+  createdAt?: string
   updatedAt: string
 }
 
