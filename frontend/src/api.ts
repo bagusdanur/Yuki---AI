@@ -1,4 +1,4 @@
-import type { AgendaResponse, AgentMemory, AgentProgressResponse, BookmarkedComic, ChatMode, ChatResponse, ComicRecommendation, DynamicSkill, Message, Milestone, SkillInfo } from './types'
+import type { AgendaResponse, AgentMemory, AgentProgressResponse, BookmarkedComic, ChatMode, ChatResponse, ComicRecommendation, DynamicSkill, Message, Milestone, PlainMemory, SkillInfo } from './types'
 
 async function parse<T>(response: Response): Promise<T> {
   const rawText = await response.text()
@@ -185,6 +185,13 @@ export async function getChatHistoryPage(before = 0, limit = 60) {
   )
 }
 
+/** Cari pesan di seluruh riwayat obrolan. */
+export async function searchChatHistory(query: string, limit = 60) {
+  return request<{ messages: Message[]; total: number; hasMore: boolean }>(
+    `/api/chat/history?q=${encodeURIComponent(query)}&limit=${Math.max(1, limit)}`, { method: 'GET' }, 15_000, 0
+  )
+}
+
 export async function getAgenda() {
   return request<AgendaResponse>('/api/agenda', { method: 'GET' }, 10_000, 0)
 }
@@ -206,7 +213,7 @@ export async function savePushSubscription(subscription: PushSubscriptionJSON) {
 }
 
 export async function getMemories(scopeType = '') {
-  return request<{ memories: AgentMemory[]; settings: { autoCapture: boolean } }>(`/api/memories${scopeType ? `?scopeType=${encodeURIComponent(scopeType)}` : ''}`, { method: 'GET' }, 10_000, 0)
+  return request<{ memories: AgentMemory[]; settings: { autoCapture: boolean }; facts: PlainMemory[]; structured: PlainMemory[] }>(`/api/memories${scopeType ? `?scopeType=${encodeURIComponent(scopeType)}` : ''}`, { method: 'GET' }, 10_000, 0)
 }
 export async function setMemoryAutoCapture(autoCapture: boolean) {
   return request<{ settings: { autoCapture: boolean } }>('/api/memories/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ autoCapture }) }, 10_000, 0)
@@ -216,6 +223,9 @@ export async function updateMemory(id: number, body: Record<string, unknown>) {
 }
 export async function deleteMemory(id: number) {
   return request<{ success: true }>(`/api/memories/${id}`, { method: 'DELETE' }, 10_000, 0)
+}
+export async function deletePlainMemory(source: 'fact' | 'structured', id: number) {
+  return request<{ success: true }>(`/api/memories/${source}/${id}`, { method: 'DELETE' }, 10_000, 0)
 }
 export async function getDynamicSkills() {
   return request<{ skills: DynamicSkill[] }>('/api/agent/dynamic-skills', { method: 'GET' }, 10_000, 0)

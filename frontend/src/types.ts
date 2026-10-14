@@ -147,6 +147,18 @@ export interface AgentMemory {
   updatedAt: string
 }
 
+// Memori non-agent yang TETAP diingat Yuki: fakta (facts) dan
+// catatan kebiasaan/janji/rencana (structured_memory).
+export interface PlainMemory {
+  id: number
+  source: 'fact' | 'structured'
+  content: string
+  category?: string
+  status?: string
+  importance?: number
+  createdAt?: string
+}
+
 export interface DynamicSkill {
   id: string
   name: string

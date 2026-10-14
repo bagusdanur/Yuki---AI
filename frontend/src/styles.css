@@ -1315,6 +1315,10 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 .memory-modal { width: min(660px, 96vw); height: auto; max-height: min(780px, 90dvh); }
 /* Riwayat obrolan (menu "Riwayat obrolan") — tersedia di app penuh & embed. */
 .history-modal { width: min(620px, 96vw); height: auto; max-height: min(780px, 90dvh); display: flex; flex-direction: column; }
+.history-search { display: flex; gap: 8px; padding: 10px 16px 0; }
+.history-search input { flex: 1; padding: 9px 11px; border: 1px solid #2f333d; border-radius: 8px; background: #11141a; color: #e8e8ee; font-size: 12px; outline: none; }
+.history-search input:focus { border-color: #bbb8ff; }
+.history-search button { padding: 0 12px; border: 1px solid #2f333d; border-radius: 8px; background: #1b1e26; color: #9aa0ac; font-size: 11px; cursor: pointer; }
 .history-list { flex: 1 1 auto; min-height: 140px; max-height: 62dvh; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 9px; overscroll-behavior: contain; }
 .history-item { padding: 10px 12px; border: 1px solid #2c2f38; border-radius: 9px; background: #11141a; }
 .history-item.from-user { border-color: #3a3760; background: #17162a; }
@@ -1335,6 +1339,7 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 .memory-control small { color: #757985; font-size: 9px; text-align: right; }
 .memory-notice { margin: 10px 14px 0; padding: 9px 10px; border: 1px solid #594348; border-radius: 6px; color: #e7b3b8; background: #1d1417; font-size: 10px; }
 .memory-list { min-height: 150px; max-height: 58dvh; padding: 12px 14px calc(18px + env(safe-area-inset-bottom)); overflow-y: auto; display: flex; flex-direction: column; gap: 9px; }
+.memory-section { margin: 14px 0 8px; color: #bbb8ff; font: 700 10px/1.2 ui-monospace, monospace; text-transform: uppercase; letter-spacing: 0.08em; }
 .memory-item { padding: 12px; border: 1px solid #2f333d; border-radius: 8px; background: #11141a; }
 .memory-item > div { display: flex; justify-content: space-between; gap: 10px; }
 .memory-item > div span { color: #bbb8ff; font: 700 9px/1 ui-monospace, monospace; text-transform: uppercase; }

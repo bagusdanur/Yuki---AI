@@ -15,6 +15,7 @@ import {
   consumeRateLimit, pruneRateLimits, deleteUserData, getAdminStats, userExists,
   saveComicBookmark, getComicBookmarks, deleteComicBookmark
   , getScheduledReminderMessages, dbHandle, APP_DATA_LABELS
+  , listAllMemories, deleteFactMemory, deleteStructuredMemory, searchChatHistory
 } from './lib/memory.js'
 import { responseTarget, shouldInitiate, validateCharacterReply, repairCharacterReply, stripStrayComicBlocks } from './lib/character-quality.js'
 import { warmupEmbedder } from './lib/semantic.js'
@@ -272,7 +273,10 @@ app.get('/api/agent/skills', rateLimit({ max: 60 }), async (_req, res) => {
 })
 
 app.get('/api/memories', requireSession, rateLimit({ max: 60 }), (req, res) => {
-  res.json({ memories: listAgentMemories(req.authUserId, { scopeType: String(req.query.scopeType || ''), scopeId: String(req.query.scopeId || ''), status: String(req.query.status || '') }), settings: getMemorySettings(req.authUserId) })
+  // Menu ingatan harus menampilkan SEMUA yang Yuki ingat (facts + structured + agent),
+  // bukan hanya agent_memories — sebelumnya user hanya melihat sebagian kecil.
+  const { facts, structured } = listAllMemories(req.authUserId)
+  res.json({ memories: listAgentMemories(req.authUserId, { scopeType: String(req.query.scopeType || ''), scopeId: String(req.query.scopeId || ''), status: String(req.query.status || '') }), settings: getMemorySettings(req.authUserId), facts, structured })
 })
 app.put('/api/memories/settings', requireSession, rateLimit({ windowMs: 60_000, max: 20 }), (req, res) => {
   res.json({ settings: setMemorySettings(req.authUserId, { autoCapture: req.body?.autoCapture === true }) })
@@ -284,6 +288,15 @@ app.patch('/api/memories/:memoryId', requireSession, rateLimit({ windowMs: 60_00
 })
 app.delete('/api/memories/:memoryId', requireSession, rateLimit({ windowMs: 60_000, max: 20 }), (req, res) => {
   if (!deleteAgentMemory(req.params.memoryId, req.authUserId)) return res.status(404).json({ error: 'Memori tidak ditemukan atau bukan milikmu.' })
+  res.json({ success: true })
+})
+// Hapus per-sumber untuk memori non-agent (fakta & catatan kebiasaan/janji).
+app.delete('/api/memories/fact/:factId', requireSession, rateLimit({ windowMs: 60_000, max: 20 }), (req, res) => {
+  if (!deleteFactMemory(req.authUserId, req.params.factId)) return res.status(404).json({ error: 'Fakta tidak ditemukan atau bukan milikmu.' })
+  res.json({ success: true })
+})
+app.delete('/api/memories/structured/:memoryId', requireSession, rateLimit({ windowMs: 60_000, max: 20 }), (req, res) => {
+  if (!deleteStructuredMemory(req.authUserId, req.params.memoryId)) return res.status(404).json({ error: 'Memori tidak ditemukan atau bukan milikmu.' })
   res.json({ success: true })
 })
 
@@ -482,6 +495,11 @@ app.get('/api/chat/reminders', requireSession, rateLimit({ windowMs: 60_000, max
 // aplikasi penuh maupun versi embed. Berbeda dari /api/login-code yang hanya
 // mengirim 40 pesan terakhir, endpoint ini bisa menelusuri seluruh riwayat.
 app.get('/api/chat/history', requireSession, rateLimit({ max: 60 }), (req, res) => {
+  const query = String(req.query.q || '').trim()
+  if (query) {
+    const limit = Math.max(1, Math.min(200, Number(req.query.limit || 60) || 60))
+    return res.json({ ...searchChatHistory(req.authUserId, query, limit), hasMore: false, query })
+  }
   const beforeId = Math.max(0, Number(req.query.before || 0) || 0)
   const limit = Math.max(1, Math.min(200, Number(req.query.limit || 60) || 60))
   res.json(getChatHistoryPage(req.authUserId, { beforeId, limit }))
@@ -497,6 +515,7 @@ app.patch('/api/agenda/:taskId', requireSession, rateLimit({ windowMs: 60_000, m
   const action = String(req.body?.action || '')
   let result
   if (action === 'pause' || action === 'resume') result = setScheduledTaskStatus(taskId, req.authUserId, action === 'pause' ? 'paused' : 'active')
+  else if (action === 'cancel') result = setScheduledTaskStatus(taskId, req.authUserId, 'cancelled')
   else if (action === 'snooze') result = snoozeScheduledTask(taskId, req.authUserId, req.body?.minutes)
   else if (action === 'edit') result = updateScheduledTask({ taskId, userId: req.authUserId, title: req.body?.title, description: req.body?.description, schedule: req.body?.schedule, timezone: req.body?.timezone })
   else return res.status(400).json({ error: 'Aksi agenda tidak dikenali.' })
