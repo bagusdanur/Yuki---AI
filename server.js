@@ -39,6 +39,7 @@ import { traceEvent } from './lib/agent/observability.js'
 import { captureMemoryCandidates, deleteAgentMemory, deleteAgentMemoryData, getMemorySettings, listAgentMemories, setMemorySettings, updateAgentMemory } from './lib/agent/memory-store.js'
 import { approveDynamicSkill, createDynamicSkill, deleteDynamicSkillData, disableDynamicSkill, listDynamicSkills, validateDynamicSkill } from './lib/agent/dynamic-skills.js'
 import { deleteScheduledTasks, getAgenda, restoreScheduledJobs, setScheduledTaskStatus, setTaskTriggerCallback, shutdownScheduler, snoozeScheduledTask, updateScheduledTask } from './lib/scheduler.js'
+import { handleCompanionReminder } from './lib/companion-reminder.js'
 import { deletePushSubscriptions, getPushConfig, removePushSubscription, savePushSubscription, sendPushToUser } from './lib/push.js'
 import { closeBrowser } from './lib/browser.js'
 import { deleteWorkspaceData, importWorkspaceFiles } from './skills/computing/workspace-files/handler.js'
@@ -700,6 +701,20 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
       messagesToSend.push({ role: 'user', content: '[terdiam]' })
     }
 
+    // 2.5) Pengingat nyata untuk chat biasa. Sebelumnya user bilang "ingatkan aku besok jam 7",
+    //      Yuki menjawab "nggak bakal lupa" — tapi TIDAK PERNAH ada jadwal yang dibuat (janji
+    //      palsu). Sekarang jadwalnya benar-benar dibuat, dan konteksnya diberikan ke model
+    //      supaya jawabannya jujur sesuai yang terjadi.
+    let reminderContext = ''
+    if (!isIdle) {
+      try {
+        const reminder = handleCompanionReminder(userId, userText)
+        reminderContext = reminder.context || ''
+      } catch (error) {
+        console.error('[companion-reminder] error:', error.message)
+      }
+    }
+
     // 3) balas + emosi yang DIPILIH SENDIRI oleh Yuki (lewat tag [emosi: X])
     //    Saat user meminta streaming: alirkan potongan teks realtime, lalu seluruh guard
     //    di bawah tetap berjalan dan hasil FINAL dikirim lewat event "done" (otoritatif).
@@ -708,6 +723,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
       emotionDirective: emotion.directive(),
       memoryContext,
       comicContext,
+      reminderContext,
       isIdle,
       bondName: bond.name,
       isSerious,
@@ -732,7 +748,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
       // yang layak ditulis ulang oleh model.
       console.log(`[Quality Guard] Retrying: ${quality.fatal.join(', ')}`)
       const retryResult = await chat(messagesToSend, {
-        emotionDirective: emotion.directive(), memoryContext, comicContext, isIdle,
+        emotionDirective: emotion.directive(), memoryContext, comicContext, reminderContext, isIdle,
         bondName: bond.name, isSerious, userMsgLength: userText.length,
         shouldAskQuestion, sessionTurns: _turns, responseStyle: target.style, recentAssistant, gestureCue,
         retryReason: `Balasan sebelumnya bermasalah: ${quality.fatal.join(', ')}. Tulis ulang secara utuh, natural, tidak repetitif, dan sesuai panjang yang diminta.`
@@ -789,6 +805,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
         emotionDirective: emotion.directive(),
         memoryContext,
         comicContext,
+        reminderContext,
         isIdle,
         bondName: bond.name,
         isSerious,
@@ -819,6 +836,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
         emotionDirective: emotion.directive(),
         memoryContext,
         comicContext,
+        reminderContext,
         isIdle,
         bondName: bond.name,
         isSerious,
