@@ -29,7 +29,6 @@
 
 <!-- Topbar -->
   <header class="topbar">
-    <button class="menu-toggle" id="menu-toggle"><i class="ico" data-icon="menu"></i></button>
     <div class="brand">
       <div class="brand-mark">Y</div>
       <div>
@@ -44,38 +43,26 @@
       <span class="stat-chip">CHAT <b id="chip-messages">—</b></span>
       <span class="stat-chip">TOKEN <b id="chip-tokens">—</b></span>
     </div>
+    <div class="topbar-actions">
+      <span class="status-line" id="last-updated">—</span>
+      <button class="btn ghost sm icon-btn" id="btn-refresh" aria-label="Muat ulang data" title="Muat ulang"><i class="ico" data-icon="refresh"></i></button>
+      <button class="btn ghost sm icon-btn" id="btn-password" aria-label="Ganti password" title="Ganti password"><i class="ico" data-icon="key"></i></button>
+      <button class="btn bad sm" id="btn-logout">Keluar</button>
+    </div>
 </header>
-  <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
   <div class="shell">
-    <!-- Sidebar -->
-<aside class="sidebar">
-      <div class="nav-group">
-        <span>Utama</span>
-        <button class="nav-link active" data-view="view-overview"><i class="ico" data-icon="grid"></i>Overview</button>
-        <button class="nav-link" data-view="view-usage"><i class="ico" data-icon="trend"></i>Penggunaan</button>
-      </div>
-
-      <div class="nav-group">
-        <span>Data</span>
-        <button class="nav-link" data-view="view-users"><i class="ico" data-icon="users"></i>Pengguna</button>
-        <button class="nav-link" data-view="view-database"><i class="ico" data-icon="database"></i>Database</button>
-      </div>
-
-      <div class="nav-group">
-        <span>Sistem</span>
-        <button class="nav-link" data-view="view-providers"><i class="ico" data-icon="plug"></i>Provider LLM</button>
-        <button class="nav-link" data-view="view-tts"><i class="ico" data-icon="volume"></i>Suara (TTS)</button>
-        <button class="nav-link" data-view="view-alerts"><i class="ico" data-icon="bell"></i>Alert<span class="nav-badge" id="nav-alert-count">0</span></button>
-      </div>
-
-      <div class="side-foot">
-        <span class="status-line" id="last-updated">—</span>
-        <button class="btn ghost sm block" id="btn-refresh"><i class="ico" data-icon="refresh"></i> Refresh</button>
-        <button class="btn ghost sm block" id="btn-password"><i class="ico" data-icon="key"></i> Ganti Password</button>
-        <button class="btn bad sm block" id="btn-logout">Keluar</button>
-      </div>
-    </aside>
+    <!-- Navigasi: satu baris tab (pengganti sidebar + hamburger) -->
+    <nav class="tabbar" aria-label="Menu dashboard">
+      <button class="nav-link active" data-view="view-overview"><i class="ico" data-icon="grid"></i>Overview</button>
+      <button class="nav-link" data-view="view-summary"><i class="ico" data-icon="star"></i>Ringkasan</button>
+      <button class="nav-link" data-view="view-usage"><i class="ico" data-icon="trend"></i>Penggunaan</button>
+      <button class="nav-link" data-view="view-users"><i class="ico" data-icon="users"></i>Pengguna</button>
+      <button class="nav-link" data-view="view-database"><i class="ico" data-icon="database"></i>Database</button>
+      <button class="nav-link" data-view="view-providers"><i class="ico" data-icon="plug"></i>Provider LLM</button>
+      <button class="nav-link" data-view="view-tts"><i class="ico" data-icon="volume"></i>Suara (TTS)</button>
+      <button class="nav-link" data-view="view-alerts"><i class="ico" data-icon="bell"></i>Alert<span class="nav-badge" id="nav-alert-count">0</span></button>
+    </nav>
 
     <!-- Konten -->
     <main class="content">
@@ -296,6 +283,37 @@
             <div id="ov-provider-detail"></div>
           </div>
         </div>
+
+      <!-- ══════ RINGKASAN (kartu siap screenshot — lebar HP) ══════ -->
+      <div class="view" id="view-summary">
+        <div class="share-card">
+          <header class="share-head">
+            <div class="share-brand">Y</div>
+            <div class="share-title">
+              <h2>Yuki AI</h2>
+              <p>Ringkasan sistem · <span id="sh-date">—</span></p>
+            </div>
+            <span class="pill on">LIVE</span>
+          </header>
+          <div class="kpi hero share-hero">
+            <span class="kpi-label"><i class="ico" data-icon="users"></i> Total Pengguna</span>
+            <span class="kpi-value" id="sh-users">—</span>
+            <span class="kpi-sub" id="sh-users-sub">—</span>
+          </div>
+          <div class="share-grid">
+            <div class="share-cell"><span>TOTAL PESAN</span><b id="sh-messages">—</b></div>
+            <div class="share-cell"><span>TOKEN LLM</span><b id="sh-tokens">—</b></div>
+            <div class="share-cell"><span>REQUEST API</span><b id="sh-calls">—</b></div>
+            <div class="share-cell"><span>BOND RATA-RATA</span><b id="sh-bond">—</b></div>
+            <div class="share-cell"><span>AKTIF HARI INI</span><b id="sh-active">—</b></div>
+            <div class="share-cell"><span>UPTIME</span><b id="sh-uptime">—</b></div>
+          </div>
+          <footer class="share-foot">
+            <span><i class="ico" data-icon="zap"></i> yuki.ryukomik.web.id</span>
+            <span id="sh-success">—</span>
+          </footer>
+        </div>
+      </div>
 
       <!-- ══════ PENGGUNAAN ══════ -->
       <div class="view" id="view-usage">

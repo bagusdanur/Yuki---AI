@@ -464,10 +464,30 @@ function showView(id) {
 
 const VIEW_LOADERS = {
   'view-overview': loadOverview,
+  'view-summary': () => loadSummary(),
   'view-users': () => loadUsers(),
   'view-database': () => loadDbTables(),
   'view-providers': () => loadProviders(),
   'view-alerts': loadOverview,
+}
+
+/* ─────────── Ringkasan (kartu siap screenshot — lebar HP) ─────────── */
+async function loadSummary() {
+  try {
+    const data = await request('/api/admin/overview', { headers: headers() })
+    const db = data.database || {}, pt = data.providerTotals || {}, rt = data.runtime || {}
+    const set = (id, v) => { const el = $(id); if (el) el.textContent = v }
+    set('sh-date', new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }))
+    set('sh-users', fmt(db.users))
+    set('sh-users-sub', `+${fmt(db.newUsersToday)} hari ini · +${fmt(db.newUsersWeek)} minggu ini`)
+    set('sh-messages', fmt(db.messages))
+    set('sh-tokens', compact((pt.inputTokens || 0) + (pt.outputTokens || 0) || pt.tokens))
+    set('sh-calls', fmt(pt.calls || rt.requests))
+    set('sh-bond', Number(db.averageBond || 0).toFixed(1))
+    set('sh-active', fmt(db.activeToday))
+    set('sh-uptime', fmtDuration(rt.uptime))
+    set('sh-success', `${pct(pt.successRate)} sukses`)
+  } catch (e) { console.warn('[Summary]', e.message) }
 }
 
 /* ─────────── Hamburger sidebar toggle ─────────── */
