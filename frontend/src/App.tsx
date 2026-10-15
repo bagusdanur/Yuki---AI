@@ -1274,6 +1274,9 @@ export default function App() {
   const currentAudio = useRef<HTMLAudioElement | null>(null)
   const requestTimers = useRef<number[]>([])
   const reminderCursor = useRef(0)
+  // Ref mirror dari `busy` — dipakai interval sync riwayat supaya tidak perlu
+  // re-attach listener setiap kali status menunggu balasan berubah.
+  const busyRef = useRef(false)
   const closeOverlays = () => {
     setSettingsOpen(false); setAgendaOpen(false); setMemoryOpen(false); setSkillsModalOpen(false)
     setTimelineOpen(false); setBookmarksOpen(false); setSelectedArtifact(null); setHistoryOpen(false)
@@ -1397,6 +1400,60 @@ export default function App() {
       })
   }, [session?.userId, session?.sessionToken])
 
+  useEffect(() => { busyRef.current = busy }, [busy])
+  // ===== Sinkronisasi riwayat lintas-perangkat =====
+  // Riwayat chat tersimpan di SERVER (terikat kunci ingatan), tapi tampilan
+  // hanya mengambil dari server saat boot. Kalau pengguna chat di embed
+  // (ryukomik.my.id → iframe yuki.ryukomik.web.id) lalu membuka tab web yang
+  // sudah terbuka dari tadi, chat baru TIDAK pernah muncul — tab itu diam di
+  // cache lamanya → terasa "tidak sinkron". Fix: tarik 100 pesan terbaru dari
+  // server (1) saat tab kembali aktif/fokus/online, (2) setiap 15 detik selama
+  // tab terlihat, (3) sekali saat effect terpasang.
+  // Merge aman terhadap duplikat: hanya menerima pesan yang messageId-nya LEBIH
+  // BESAR dari yang sudah ada (pesan dari tempat lain selalu lebih baru), dan
+  // pesan optimistik lokal (tanpa messageId, sedang menunggu balasan) dipertahankan
+  // di ekor kecuali isinya sudah ada di server. Jangan jalan saat busy/streaming.
+  useEffect(() => {
+    if (!session?.sessionToken) return
+    let stopped = false
+    const pull = async () => {
+      if (stopped || busyRef.current || document.hidden || !navigator.onLine) return
+      try {
+        const data = await getChatHistoryPage(0, 100)
+        const incoming = EMBED_COMPANION_ONLY
+          ? (data.messages || []).filter(message => message.mode !== 'agent')
+          : (data.messages || [])
+        if (!incoming.length) return
+        setMessages(current => {
+          let lastId = 0
+          for (const message of current) if ((message.messageId || 0) > lastId) lastId = message.messageId || 0
+          const fresh = incoming.filter(message => (message.messageId || 0) > lastId)
+          if (!fresh.length) return current
+          const keyed = current.filter(message => Boolean(message.messageId))
+          const optimistic = current.filter(message => !message.messageId)
+          const freshKeys = new Set(fresh.map(message => `${message.role}:${(message.content || '').trim()}`))
+          const keptOptimistic = optimistic.filter(message => !freshKeys.has(`${message.role}:${(message.content || '').trim()}`))
+          // Optimistik selalu LEBIH TUA dari fresh (fresh = id terbesar), jadi
+          // disisipkan di antara keyed dan fresh — bukan di ekor, supaya urutan
+          // percakapan tetap benar.
+          return [...keyed, ...keptOptimistic, ...fresh]
+        })
+      } catch { /* server tidak terjangkau — biarkan tampilan apa adanya */ }
+    }
+    const onWake = () => { if (!document.hidden) void pull() }
+    document.addEventListener('visibilitychange', onWake)
+    window.addEventListener('focus', onWake)
+    window.addEventListener('online', onWake)
+    const timer = window.setInterval(pull, 15_000)
+    void pull()
+    return () => {
+      stopped = true
+      document.removeEventListener('visibilitychange', onWake)
+      window.removeEventListener('focus', onWake)
+      window.removeEventListener('online', onWake)
+      window.clearInterval(timer)
+    }
+  }, [session?.userId, session?.sessionToken])
   useEffect(() => {
     if (!session?.sessionToken) return
     getRelationship(session.userId).then(data => {
