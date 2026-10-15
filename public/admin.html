@@ -192,8 +192,6 @@
           <div class="block-head"><div><small>Terbaru</small><h2><i class="ico" data-icon="hand"></i> Pengguna Baru</h2></div></div>
           <div class="block-body" id="recent-users" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px"></div>
         </div>
-      </div>
-
         <div class="block">
           <div class="block-head">
             <div><small>Provider LLM</small><h2><i class="ico" data-icon="zap"></i> Token &amp; Estimasi Biaya</h2></div>
@@ -285,6 +283,8 @@
         </div>
 
       <!-- ══════ RINGKASAN (kartu siap screenshot — lebar HP) ══════ -->
+      </div>
+
       <div class="view" id="view-summary">
         <div class="share-card">
           <header class="share-head">
@@ -300,16 +300,18 @@
             <span class="kpi-value" id="sh-users">—</span>
             <span class="kpi-sub" id="sh-users-sub">—</span>
           </div>
-          <div class="share-grid">
-            <div class="share-cell"><span>TOTAL PESAN</span><b id="sh-messages">—</b></div>
-            <div class="share-cell"><span>TOKEN LLM</span><b id="sh-tokens">—</b></div>
-            <div class="share-cell"><span>REQUEST API</span><b id="sh-calls">—</b></div>
-            <div class="share-cell"><span>BOND RATA-RATA</span><b id="sh-bond">—</b></div>
-            <div class="share-cell"><span>AKTIF HARI INI</span><b id="sh-active">—</b></div>
-            <div class="share-cell"><span>UPTIME</span><b id="sh-uptime">—</b></div>
+          <div class="share-metrics">
+            <div class="share-metric"><span>TOTAL PESAN</span><b id="sh-messages">—</b><small>Pesan tersimpan</small></div>
+            <div class="share-metric"><span>PESAN HARI INI</span><b id="sh-msg-today">—</b><small>24 jam terakhir</small></div>
+            <div class="share-metric"><span>TOKEN LLM</span><b id="sh-tokens">—</b><small>input + output</small></div>
+            <div class="share-metric"><span>REQUEST API</span><b id="sh-calls">—</b><small>total panggilan</small></div>
+            <div class="share-metric"><span>BOND RATA-RATA</span><b id="sh-bond">—</b><small>kedekatan user</small></div>
+            <div class="share-metric"><span>AKTIF HARI INI</span><b id="sh-active">—</b><small>user aktif hari ini</small></div>
+            <div class="share-metric"><span>LATENSI</span><b id="sh-latency">—</b><small>rata-rata respons</small></div>
+            <div class="share-metric"><span>ESTIMASI BIAYA</span><b id="sh-cost">—</b><small>tarif retail · aktual $0</small></div>
           </div>
           <footer class="share-foot">
-            <span><i class="ico" data-icon="zap"></i> yuki.ryukomik.web.id</span>
+            <span>UPTIME <b id="sh-uptime">—</b></span>
             <span id="sh-success">—</span>
           </footer>
         </div>

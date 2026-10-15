@@ -487,6 +487,12 @@ async function loadSummary() {
     set('sh-active', fmt(db.activeToday))
     set('sh-uptime', fmtDuration(rt.uptime))
     set('sh-success', `${pct(pt.successRate)} sukses`)
+    // Tambahan: pesan hari ini, latensi, estimasi biaya retail
+    const todayMsgs = (data.hourly || []).reduce((a, b) => a + (b.messages || 0), 0)
+    set('sh-msg-today', fmt(todayMsgs))
+    set('sh-latency', `${fmt(pt.averageLatencyMs || rt.averageLatency || 0)} ms`)
+    const inTok = pt.inputTokens || 0, outTok = pt.outputTokens || 0
+    set('sh-cost', usd((inTok * 0.14 + outTok * 0.28) / 1e6))
   } catch (e) { console.warn('[Summary]', e.message) }
 }
 
@@ -841,20 +847,26 @@ async function boot() {
     $('dot-health').className = 'dot bad'
   }
 
+  // Pasang listener hash SEBELUM await lambat — klik tab yang terjadi di
+  // tengah boot harus langsung direspons, bukan menunggu load data.
+  const hashNow = () => location.hash.replace('#', '')
+  const valid = ['view-overview', 'view-summary', 'view-usage', 'view-users', 'view-memory', 'view-schedule', 'view-database', 'view-providers', 'view-tts', 'view-alerts']
+  window.addEventListener('hashchange', () => {
+    const h = hashNow()
+    if (valid.includes(h)) { showView(h); const f = VIEW_LOADERS[h]; if (f) f() }
+  })
+
   await loadOverview()
   await loadProviders()
 
-  const hash = location.hash.replace('#', '')
-  const valid = ['view-overview', 'view-usage', 'view-users', 'view-memory', 'view-schedule', 'view-database', 'view-providers', 'view-tts', 'view-alerts']
-  const target = valid.includes(hash) ? hash : 'view-overview'
+  // Baca hash TERAKHIR (klik user selama loading tetap terhormati); kalau
+  // hash kosong, pertahankan view yang sedang aktif — jangan dipaksa reset.
+  const hash = hashNow()
+  const activeNow = document.querySelector('.view.active')?.id
+  const target = valid.includes(hash) ? hash : (activeNow || 'view-overview')
   showView(target)
   const fn = VIEW_LOADERS[target]
   if (fn) fn()
-
-  window.addEventListener('hashchange', () => {
-    const h = location.hash.replace('#', '')
-    if (valid.includes(h)) { showView(h); const f = VIEW_LOADERS[h]; if (f) f() }
-  })
 
   setInterval(loadOverview, 45000)
 }
