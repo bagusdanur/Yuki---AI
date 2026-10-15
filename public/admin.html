@@ -13,7 +13,7 @@
 
 <!-- ══════════ LOGIN ══════════ -->
 <section id="login-gate" class="login-gate">
-  <h2><i class="ico" data-icon="layout-dashboard"></i> Yuki Control</h2>
+  <h2><i class="ico" data-icon="grid"></i> Yuki Control</h2>
   <p>Masukkan password admin untuk mengakses dashboard.</p>
   <div class="field">
     <label for="admin-key">Password admin</label>
@@ -52,26 +52,26 @@
 <aside class="sidebar">
       <div class="nav-group">
         <span>Utama</span>
-        <button class="nav-link active" data-view="view-overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Overview</button>
-        <button class="nav-link" data-view="view-usage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg>Penggunaan</button>
+        <button class="nav-link active" data-view="view-overview"><i class="ico" data-icon="grid"></i>Overview</button>
+        <button class="nav-link" data-view="view-usage"><i class="ico" data-icon="trend"></i>Penggunaan</button>
       </div>
 
       <div class="nav-group">
         <span>Data</span>
-        <button class="nav-link" data-view="view-users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M16 11a3 3 0 100-6"/><path d="M18 20c0-2.4-.8-4.3-2.2-5.3"/></svg>Pengguna</button>
-        <button class="nav-link" data-view="view-database"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>Database</button>
+        <button class="nav-link" data-view="view-users"><i class="ico" data-icon="users"></i>Pengguna</button>
+        <button class="nav-link" data-view="view-database"><i class="ico" data-icon="database"></i>Database</button>
       </div>
 
       <div class="nav-group">
         <span>Sistem</span>
-        <button class="nav-link" data-view="view-providers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 2v6M15 2v6"/><path d="M6 8h12v3a6 6 0 01-12 0z"/><path d="M12 17v5"/></svg>Provider LLM</button>
-        <button class="nav-link" data-view="view-tts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3v12"/><circle cx="12" cy="18" r="3"/><path d="M5 6v6a7 7 0 0014 0V6"/></svg>Suara (TTS)</button>
-        <button class="nav-link" data-view="view-alerts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 8a6 6 0 10-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>Alert<span class="nav-badge" id="nav-alert-count">0</span></button>
+        <button class="nav-link" data-view="view-providers"><i class="ico" data-icon="plug"></i>Provider LLM</button>
+        <button class="nav-link" data-view="view-tts"><i class="ico" data-icon="volume"></i>Suara (TTS)</button>
+        <button class="nav-link" data-view="view-alerts"><i class="ico" data-icon="bell"></i>Alert<span class="nav-badge" id="nav-alert-count">0</span></button>
       </div>
 
       <div class="side-foot">
         <span class="status-line" id="last-updated">—</span>
-        <button class="btn ghost sm block" id="btn-refresh"><i class="ico" data-icon="key"></i> Refresh</button>
+        <button class="btn ghost sm block" id="btn-refresh"><i class="ico" data-icon="refresh"></i> Refresh</button>
         <button class="btn ghost sm block" id="btn-password"><i class="ico" data-icon="key"></i> Ganti Password</button>
         <button class="btn bad sm block" id="btn-logout">Keluar</button>
       </div>
@@ -84,7 +84,7 @@
       <div class="view active" id="view-overview">
         <div class="block">
           <div class="block-head">
-            <div><small>Ringkasan</small><h2><i class="ico" data-icon="layout-dashboard"></i> Statistik Utama</h2></div>
+            <div><small>Ringkasan</small><h2><i class="ico" data-icon="grid"></i> Statistik Utama</h2></div>
             <span class="pill" id="ov-pill">memuat…</span>
           </div>
           <div class="block-body">
@@ -140,7 +140,7 @@
 
         <div class="block">
           <div class="block-head">
-            <div><small>30 Hari Terakhir</small><h2><i class="ico" data-icon="chart-line"></i> Tren Percakapan</h2></div>
+            <div><small>30 Hari Terakhir</small><h2><i class="ico" data-icon="trend"></i> Tren Percakapan</h2></div>
             <div class="row" style="gap:8px"><span class="tag" id="trend-peak">—</span><span class="tag" id="trend-total">—</span></div>
           </div>
           <div class="block-body">
@@ -222,7 +222,7 @@
                 <span class="kpi-sub">prompt terkirim</span>
               </div>
               <div class="kpi pink">
-                <span class="kpi-label"><i class="ico" data-icon="file-text"></i> Output Token</span>
+                <span class="kpi-label"><i class="ico" data-icon="text"></i> Output Token</span>
                 <span class="kpi-value sm" id="ov-output-tokens">—</span>
                 <span class="kpi-sub">balasan Yuki</span>
               </div>
@@ -242,7 +242,7 @@
           <!-- Diagram batang token -->
           <div class="block-body">
             <div class="between" style="margin-bottom:14px">
-              <h2 style="font:900 13px/1 var(--sans);text-transform:uppercase;margin:0"><i class="ico" data-icon="chart-line"></i> Komposisi Token</h2>
+              <h2 class="mini-h"><i class="ico" data-icon="trend"></i> Komposisi Token</h2>
               <span class="tag">perbandingan input vs output</span>
             </div>
             <div class="hbar-list" id="token-bars"></div>
@@ -256,12 +256,12 @@
           <!-- Estimasi biaya -->
           <div class="block-body">
             <div class="between" style="margin-bottom:14px">
-              <h2 style="font:900 13px/1 var(--sans);text-transform:uppercase;margin:0"><i class="ico" data-icon="coins"></i> Estimasi Biaya</h2>
+              <h2 class="mini-h"><i class="ico" data-icon="coins"></i> Estimasi Biaya</h2>
               <span class="tag">harga retail DeepSeek v4.1</span>
             </div>
             <div class="kpi-grid">
               <div class="kpi money">
-                <span class="kpi-label"><i class="ico" data-icon="circle-dollar-sign"></i> Estimasi Modal</span>
+                <span class="kpi-label"><i class="ico" data-icon="money"></i> Estimasi Modal</span>
                 <span class="kpi-value sm" id="ov-est-cost">—</span>
                 <span class="kpi-sub" id="ov-est-cost-sub">kalau bayar retail</span>
               </div>
@@ -271,7 +271,7 @@
                 <span class="kpi-sub">via 9Router (gratis)</span>
               </div>
               <div class="kpi">
-                <span class="kpi-label"><i class="ico" data-icon="trending-down"></i> Penghematan</span>
+                <span class="kpi-label"><i class="ico" data-icon="down"></i> Penghematan</span>
                 <span class="kpi-value sm" id="ov-savings">—</span>
                 <span class="kpi-sub">hemat vs retail</span>
               </div>
@@ -290,7 +290,7 @@
           <!-- Kesehatan provider -->
           <div class="block-body">
             <div class="between" style="margin-bottom:14px">
-              <h2 style="font:900 13px/1 var(--sans);text-transform:uppercase;margin:0"><i class="ico" data-icon="plug"></i> Status Provider</h2>
+              <h2 class="mini-h"><i class="ico" data-icon="plug"></i> Status Provider</h2>
               <span class="pill" id="ov-success-rate">—</span>
             </div>
             <div id="ov-provider-detail"></div>
@@ -301,7 +301,7 @@
       <div class="view" id="view-usage">
         <div class="block">
           <div class="block-head">
-            <div><small>Token &amp; Biaya</small><h2><i class="ico" data-icon="credit-card"></i> Penggunaan LLM</h2></div>
+            <div><small>Token &amp; Biaya</small><h2><i class="ico" data-icon="card"></i> Penggunaan LLM</h2></div>
             <button class="btn ghost sm" id="btn-reset-stats">Reset Statistik</button>
           </div>
           <div class="block-body">
@@ -353,7 +353,7 @@
             </div>
           </div>
           <div class="block-body" id="user-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px"></div>
-          <div class="block-body between" id="user-pager" style="border-top:3px solid var(--line)">
+          <div class="block-body between pager" id="user-pager" style="border-top:3px solid var(--line)">
             <button class="btn ghost sm" id="u-first">« Awal</button>
             <button class="btn ghost sm" id="u-prev">‹ Sebelumnya</button>
             <span class="status-line" id="u-pageinfo">—</span>
@@ -404,7 +404,7 @@
           <div class="block-body" style="padding:0">
             <div class="scroll-x" id="db-wrap"><p class="muted" style="padding:16px">Pilih tabel untuk menampilkan data.</p></div>
           </div>
-          <div class="block-body between" id="db-pager" style="border-top:3px solid var(--line)">
+          <div class="block-body between pager" id="db-pager" style="border-top:3px solid var(--line)">
             <button class="btn ghost sm" id="db-first">« Awal</button>
             <button class="btn ghost sm" id="db-prev">‹ Sebelumnya</button>
             <span class="status-line" id="db-pageinfo">—</span>
@@ -428,7 +428,7 @@
 
             <div class="block-body">
               <div class="between" style="margin-bottom:12px">
-                <h2 style="font:900 13px/1 var(--sans);text-transform:uppercase;margin:0">01 · Primary</h2>
+                <h2 class="mini-h">01 · Primary</h2>
                 <span class="pill" id="primary-live">idle</span>
               </div>
               <div class="grid-2">
@@ -446,7 +446,7 @@
 
             <div class="block-body">
               <div class="between" style="margin-bottom:12px">
-                <h2 style="font:900 13px/1 var(--sans);text-transform:uppercase;margin:0">02 · Backup</h2>
+                <h2 class="mini-h">02 · Backup</h2>
                 <span class="pill" id="backup-live">idle</span>
               </div>
               <div class="grid-2">
@@ -474,7 +474,7 @@
       <div class="view" id="view-tts">
         <div class="block">
           <div class="block-head">
-            <div><small>Suara</small><h2><i class="ico" data-icon="volume-2"></i> Mesin TTS Yuki</h2></div>
+            <div><small>Suara</small><h2><i class="ico" data-icon="volume"></i> Mesin TTS Yuki</h2></div>
             <span class="pill" id="tts-engine-state">—</span>
           </div>
           <div class="block-body">
@@ -498,7 +498,7 @@
               <div class="daemon">
                 <div class="daemon-head">
                   <div>
-                    <h2 style="font:900 13px/1 var(--sans);text-transform:uppercase;margin:0 0 5px"><i class="ico" data-icon="power"></i> Kontrol Daemon</h2>
+                    <h2 class="mini-h"><i class="ico" data-icon="power"></i> Kontrol Daemon</h2>
                     <span class="muted" style="font-size:11px">Daemon menahan RAM hanya saat hidup.</span>
                   </div>
                   <span class="pill" id="tts-vv-status">memeriksa…</span>
@@ -513,7 +513,7 @@
                 <div class="btn-row">
                   <button type="button" class="btn" id="tts-vv-start"><i class="ico" data-icon="power"></i> Nyalakan</button>
                   <button type="button" class="btn bad" id="tts-vv-stop"><i class="ico" data-icon="square"></i> Matikan</button>
-                  <button type="button" class="btn ghost" id="tts-vv-refresh"><i class="ico" data-icon="refresh-cw"></i> Periksa</button>
+                  <button type="button" class="btn ghost" id="tts-vv-refresh"><i class="ico" data-icon="refresh"></i> Periksa</button>
                 </div>
 
                 <div class="field">
@@ -535,7 +535,7 @@
             </div>
 
             <div class="block-body" id="tts-edge-group">
-              <h2 style="font:900 13px/1 var(--sans);text-transform:uppercase;margin:0 0 4px"><i class="ico" data-icon="file-text"></i> Edge TTS (cadangan)</h2>
+              <h2 class="mini-h"><i class="ico" data-icon="text"></i> Edge TTS (cadangan)</h2>
               <p class="muted" style="font-size:11px;margin:0 0 14px">Dipakai otomatis bila mesin utama gagal.</p>
               <div class="field"><label>Voice</label><input name="edgeVoice" maxlength="120" placeholder="id-ID-GadisNeural"></div>
               <div class="grid-2">
@@ -566,7 +566,7 @@
         <div class="block">
           <div class="block-head">
             <div><small>Peristiwa</small><h2><i class="ico" data-icon="bell"></i> Alert Sistem</h2></div>
-            <button class="btn ghost sm" id="alert-refresh"><i class="ico" data-icon="refresh-cw"></i> Refresh</button>
+            <button class="btn ghost sm" id="alert-refresh"><i class="ico" data-icon="refresh"></i> Refresh</button>
           </div>
           <div class="block-body"><div class="alert-list" id="alert-list"><p class="muted">Tidak ada alert.</p></div></div>
         </div>
@@ -579,7 +579,7 @@
 
 <!-- Panel ganti password -->
 <section id="password-panel" class="block hidden" style="max-width:520px;margin:20px auto">
-  <div class="block-head"><div><small>Keamanan</small><h2><i class="ico" data-icon="key"></i> Ganti Password</h2></div><button class="btn ghost sm" id="pw-close"><i class="ico" data-icon="key"></i></button></div>
+  <div class="block-head"><div><small>Keamanan</small><h2><i class="ico" data-icon="key"></i> Ganti Password</h2></div><button class="btn ghost sm" id="pw-close" aria-label="Tutup"><i class="ico" data-icon="x"></i></button></div>
   <div class="block-body">
     <div class="field"><label>Password baru (min. 8 karakter)</label><input id="new-password" type="password" autocomplete="new-password"></div>
     <button class="btn" id="pw-save">Simpan Password</button>

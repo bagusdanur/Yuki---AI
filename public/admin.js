@@ -73,9 +73,11 @@ const icon = (name, size = 16) =>
 function hydrateIcons(root = document) {
   root.querySelectorAll('i[data-icon]:not([data-done])').forEach(el => {
     const size = Number(el.dataset.size) || 16
-    el.innerHTML = window.YUKI_LUCIDE && window.YUKI_LUCIDE[el.dataset.icon]
-      ? window.YUKI_LUCIDE[el.dataset.icon]
-      : '<path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/>'
+    // Path Lucide harus dibungkus <svg> — path mentah di dalam <i> TIDAK
+    // dirender browser (selama ini semua ikon data-icon jadi kotak kosong).
+    const body = (window.YUKI_LUCIDE && window.YUKI_LUCIDE[el.dataset.icon])
+      || '<path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/>'
+    el.innerHTML = `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`
     el.classList.add('ico-wrap')
     el.dataset.done = '1'
     el.setAttribute('aria-hidden', 'true')
