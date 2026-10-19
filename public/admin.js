@@ -724,6 +724,65 @@ function renderUserTable(data) {
 if ($('ud-close')) $('ud-close').onclick = () => $('user-detail').classList.add('hidden')
 
 /* ═══════════════════════════════════════════════════════
+   PENCARI KUNCI INGANAN (bantuan saat user lupa kunci)
+   ═══════════════════════════════════════════════════════ */
+async function lookupKey() {
+  const q = ($('lk-search')?.value || '').trim()
+  if (!q) {
+    $('lk-status').textContent = 'Isi nama akun dulu.'
+    $('lk-wrap').innerHTML = '<p class="muted" style="padding:16px">Ketik nama akun lalu tekan “Cari Kunci”.</p>'
+    if ($('lk-total')) $('lk-total').textContent = '—'
+    return
+  }
+  $('lk-status').textContent = 'Mencari…'
+  try {
+    const data = await request(`/api/admin/lookup-key?q=${encodeURIComponent(q)}`, { headers: headers() })
+    const users = data.users || []
+    if ($('lk-total')) $('lk-total').textContent = `${fmt(data.total || 0)} akun`
+    if (!users.length) {
+      $('lk-status').textContent = 'Tidak ada akun yang cocok.'
+      $('lk-wrap').innerHTML = '<p class="muted" style="padding:16px">Tidak ada akun yang cocok dengan pencarian itu.</p>'
+      return
+    }
+    $('lk-status').textContent = `${users.length} akun ditemukan`
+    $('lk-wrap').innerHTML = `<table class="tbl">
+      <thead><tr>
+        <th>Nama akun</th><th>Kunci ingatan</th><th>Kedekatan</th><th>Pesan</th><th>Aktif terakhir</th><th></th>
+      </tr></thead>
+      <tbody>${users.map(u => `<tr>
+        <td><b>${esc(u.username || '(tanpa nama)')}</b><br><span class="muted" style="font-size:10px">${esc(u.userId)}</span></td>
+        <td>${u.keyRecoverable
+          ? `<code class="lk-code">${esc(u.accessCode)}</code>`
+          : `<span class="lk-locked" title="Kunci disimpan sebagai hash SHA-256 — tidak dapat dikembalikan.">Tersimpan terenkripsi</span>`}</td>
+        <td>${bondTag(u.bond, u.bondName)}</td>
+        <td>${fmt(u.messages)}</td>
+        <td>${u.lastActive ? esc(String(u.lastActive).slice(0, 16)) : '—'}</td>
+        <td>${u.keyRecoverable ? `<button class="btn ghost sm" data-copy="${esc(u.accessCode)}">Salin</button>` : ''}</td>
+      </tr>`).join('')}</tbody></table>`
+    // Tombol salin kunci
+    $('lk-wrap').querySelectorAll('[data-copy]').forEach(btn => {
+      btn.onclick = async () => {
+        const val = btn.getAttribute('data-copy')
+        try {
+          await navigator.clipboard.writeText(val)
+          btn.textContent = 'Tersalin ✓'
+        } catch { btn.textContent = 'Gagal salin' }
+        setTimeout(() => { btn.textContent = 'Salin' }, 1600)
+      }
+    })
+    hydrateIcons()
+  } catch (e) { showError(e.message); $('lk-status').textContent = 'Gagal mencari.' }
+}
+
+function bondTag(bond, name) {
+  const warna = bond >= 78 ? 'var(--accent-3)' : bond >= 50 ? 'var(--ok)' : bond >= 24 ? 'var(--info)' : bond >= 8 ? 'var(--accent)' : 'var(--ink-dim)'
+  return `<span class="pill" style="color:${warna}">${esc(name || 'orang asing')} · ${fmt(bond ?? 0)}</span>`
+}
+
+if ($('lk-find')) $('lk-find').onclick = () => lookupKey()
+if ($('lk-search')) $('lk-search').onkeydown = (e) => { if (e.key === 'Enter') lookupKey() }
+
+/* ═══════════════════════════════════════════════════════
    DATABASE
    ═══════════════════════════════════════════════════════ */
 const dbState = { table: '', page: 1, pageSize: 50, search: '', pageCount: 1 }

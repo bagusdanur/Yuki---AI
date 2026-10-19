@@ -22,7 +22,7 @@ import { warmupEmbedder } from './lib/semantic.js'
 import { searchComics, latestComics, wantsComic, wantsLatestComics, detectRequestedGenre, extractQuery, buildComicContext } from './lib/ryukomik.js'
 import { executeTool, initSkills, listSkills } from './lib/agent/skills-engine.js'
 import { getProviderOperations, flushProviderOperations, resetProviderOperations } from './lib/provider-router.js'
-import { listTables, readTable, listDirectory, readTextFile, workspaceSummary, listUsers, listUserTables, readUserTable } from './lib/admin-browser.js'
+import { listTables, readTable, listDirectory, readTextFile, workspaceSummary, listUsers, listUserTables, readUserTable, findMemoryKeys } from './lib/admin-browser.js'
 import { getPublicProviderSettings, saveProviderSettings, testProviderConnection } from './lib/provider-settings.js'
 import {
   getTtsSettings, saveTtsSettings, TTS_ENGINES,
@@ -1218,6 +1218,14 @@ app.get('/api/admin/users', rateLimit({ max: 120 }), requireAdmin, (req, res) =>
       db: dbHandle, search: String(req.query.search || ''),
       page: Number(req.query.page) || 1, pageSize: Number(req.query.pageSize) || 24
     }))
+  } catch (error) { res.status(500).json({ error: error.message }) }
+})
+// === Pencari kunci ingatan (bantuan saat user lupa kuncinya) ===
+// Butuh sesi admin (requireAdmin) karena endpoint ini MENAMPILKAN access_code
+// yang normalnya disensor oleh REDACT_COLUMNS.
+app.get('/api/admin/lookup-key', rateLimit({ max: 60 }), requireAdmin, (req, res) => {
+  try {
+    res.json(findMemoryKeys({ db: dbHandle, search: String(req.query.q || ''), limit: Number(req.query.limit) || 25 }))
   } catch (error) { res.status(500).json({ error: error.message }) }
 })
 app.get('/api/admin/users/:userId/tables', rateLimit({ max: 120 }), requireAdmin, (req, res) => {

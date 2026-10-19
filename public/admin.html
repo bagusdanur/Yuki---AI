@@ -399,6 +399,29 @@
 
       <!-- ══════ DATABASE ══════ -->
       <div class="view" id="view-database">
+        <!-- Pencari kunci ingatan: bantuan admin saat user lupa kuncinya -->
+        <div class="block">
+          <div class="block-head">
+            <div><small>Bantuan akun</small><h2><i class="ico" data-icon="key"></i> Cari Kunci Ingatan</h2></div>
+            <span class="tag" id="lk-total">—</span>
+          </div>
+          <div class="block-body">
+            <div class="note">Ketik <b>nama akun</b> untuk menemukan kunci ingatannya beserta tingkat kedekatannya. Kunci yang masih tersimpan mentah akan tampil lengkap; yang sudah dienkripsi ditandai <span class="lk-locked" style="padding:2px 7px;font-size:11px">Tersimpan terenkripsi</span> — kuncinya tidak bisa dikembalikan dari server. Pakai hanya saat user melaporkan lupa kunci.</div>
+          </div>
+          <div class="block-body" style="border-top:3px solid var(--line)">
+            <div class="row">
+              <input id="lk-search" type="search" placeholder="Nama akun, mis. Renn…" style="width:240px">
+              <button class="btn" id="lk-find">Cari Kunci</button>
+              <span class="status-line" id="lk-status">Siap mencari.</span>
+            </div>
+          </div>
+          <div class="block-body" style="padding:0">
+            <div class="scroll-x" id="lk-wrap">
+              <p class="muted" style="padding:16px">Ketik nama akun lalu tekan “Cari Kunci”.</p>
+            </div>
+          </div>
+        </div>
+
         <div class="block">
           <div class="block-head">
             <div><small>Penyimpanan</small><h2><i class="ico" data-icon="database"></i> Ukuran &amp; Tabel</h2></div>
