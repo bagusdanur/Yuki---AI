@@ -15,6 +15,7 @@ import {
   consumeRateLimit, pruneRateLimits, deleteUserData, getAdminStats, userExists,
   saveComicBookmark, getComicBookmarks, deleteComicBookmark
   , getScheduledReminderMessages, dbHandle, APP_DATA_LABELS
+  , regenerateAccessCode
   , listAllMemories, deleteFactMemory, deleteStructuredMemory, searchChatHistory
 } from './lib/memory.js'
 import { responseTarget, shouldInitiate, validateCharacterReply, repairCharacterReply, stripStrayComicBlocks } from './lib/character-quality.js'
@@ -1226,6 +1227,17 @@ app.get('/api/admin/users', rateLimit({ max: 120 }), requireAdmin, (req, res) =>
 app.get('/api/admin/lookup-key', rateLimit({ max: 60 }), requireAdmin, (req, res) => {
   try {
     res.json(findMemoryKeys({ db: dbHandle, search: String(req.query.q || ''), limit: Number(req.query.limit) || 25 }))
+  } catch (error) { res.status(500).json({ error: error.message }) }
+})
+// === Buat kunci ingatan baru (user kehilangan kunci, kunci lama tak bisa
+// dipulihkan karena disimpan ter-hash). Kunci lama otomatis hangus; sesi
+// yang sedang berjalan tetap login. ===
+app.post('/api/admin/users/:userId/reset-key', rateLimit({ max: 20 }), requireAdmin, (req, res) => {
+  try {
+    const result = regenerateAccessCode(String(req.params.userId || ''))
+    if (!result) return res.status(404).json({ error: 'User tidak ditemukan.' })
+    console.log(`[admin] Kunci ingatan diganti untuk ${result.username} (${result.userId})`)
+    res.json(result)
   } catch (error) { res.status(500).json({ error: error.message }) }
 })
 app.get('/api/admin/users/:userId/tables', rateLimit({ max: 120 }), requireAdmin, (req, res) => {

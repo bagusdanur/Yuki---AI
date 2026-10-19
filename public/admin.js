@@ -757,7 +757,9 @@ async function lookupKey() {
         <td>${bondTag(u.bond, u.bondName)}</td>
         <td>${fmt(u.messages)}</td>
         <td>${u.lastActive ? esc(String(u.lastActive).slice(0, 16)) : '—'}</td>
-        <td>${u.keyRecoverable ? `<button class="btn ghost sm" data-copy="${esc(u.accessCode)}">Salin</button>` : ''}</td>
+        <td class="lk-actions">${u.keyRecoverable
+          ? `<button class="btn ghost sm" data-copy="${esc(u.accessCode)}">Salin</button>`
+          : `<button class="btn sm" data-newkey="${esc(u.userId)}" data-name="${esc(u.username || '')}">Buat Kunci Baru</button>`}</td>
       </tr>`).join('')}</tbody></table>`
     // Tombol salin kunci
     $('lk-wrap').querySelectorAll('[data-copy]').forEach(btn => {
@@ -768,6 +770,41 @@ async function lookupKey() {
           btn.textContent = 'Tersalin ✓'
         } catch { btn.textContent = 'Gagal salin' }
         setTimeout(() => { btn.textContent = 'Salin' }, 1600)
+      }
+    })
+    // Tombol buat kunci baru (kunci lama hangus, sesi login tetap berjalan)
+    $('lk-wrap').querySelectorAll('[data-newkey]').forEach(btn => {
+      btn.onclick = async () => {
+        const uid = btn.getAttribute('data-newkey')
+        const nama = btn.getAttribute('data-name') || 'user ini'
+        const setuju = confirm(`Buat kunci ingatan BARU untuk "${nama}"?\n\nKunci lama akan hangus dan TIDAK bisa dipakai lagi.\nSesi login yang sedang berjalan tetap aktif.\n\nKunci baru akan langsung ditampilkan.`)
+        if (!setuju) return
+        btn.disabled = true
+        btn.textContent = 'Membuat…'
+        try {
+          const data = await request(`/api/admin/users/${encodeURIComponent(uid)}/reset-key`,
+            { method: 'POST', headers: headers() })
+          const row = btn.closest('tr')
+          row.querySelector('.lk-code')?.remove()
+          const lock = row.querySelector('.lk-locked')
+          if (lock) lock.remove()
+          const cell = row.children[1]
+          const kode = document.createElement('code')
+          kode.className = 'lk-code lk-new'
+          kode.textContent = data.accessCode
+          cell.appendChild(kode)
+          row.querySelector('.lk-actions').innerHTML =
+            `<button class="btn ghost sm" data-copy="${esc(data.accessCode)}">Salin</button>`
+          row.querySelector('[data-copy]').onclick = async () => {
+            try { await navigator.clipboard.writeText(data.accessCode) } catch { /* abaikan */ }
+          }
+          $('lk-status').textContent = `Kunci baru dibuat untuk ${data.username}.`
+          hydrateIcons()
+        } catch (e) {
+          showError(e.message)
+          btn.disabled = false
+          btn.textContent = 'Buat Kunci Baru'
+        }
       }
     })
     hydrateIcons()
