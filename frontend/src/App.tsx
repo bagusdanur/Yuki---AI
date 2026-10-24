@@ -1726,7 +1726,8 @@ export default function App() {
           <span><i className={`connection-dot ${connection}`} /> {connectionLabel[connection]}</span>
         </div>
         <div className="header-actions">
-          <a href="/docs" target="_blank" aria-label="Dokumentasi"><BookOpen size={17} /></a>
+          <a href="/docs" target="_blank" aria-label="Dokumentasi" title="Panduan"><BookOpen size={17} /></a>
+          <a href="/changelog" target="_blank" aria-label="Log pembaruan" title="Log pembaruan"><HistoryIcon size={17} /></a>
           <button
             type="button"
             onClick={() => setAvatarOff(value => {

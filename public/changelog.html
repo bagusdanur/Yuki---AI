@@ -4,72 +4,73 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Log Pembaruan — Yuki AI</title>
-<meta name="description" content="Catatan pembaruan Yuki AI: apa yang berubah di setiap versi, ditulis sederhana." />
+<meta name="description" content="Catatan pembaruan Yuki AI per versi, ditulis sederhana." />
 <style>
   :root {
-    --bg: #0b0d12; --panel: #12141b; --panel-2: #171a23; --line: #262a35;
-    --ink: #e9e9ef; --ink-soft: #a9abb6; --ink-faint: #767a86;
-    --accent: #aaa7ff; --ok: #7ee0a8;
+    --bg:#0b0d12; --panel:#12141b; --line:#242833; --ink:#e9e9ef; --soft:#b1b3bf;
+    --faint:#868b98; --accent:#aaa7ff; --ok:#7ee0a8;
   }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; background: radial-gradient(120% 60% at 50% 0%, #141827 0%, var(--bg) 60%);
-    color: var(--ink); font: 15px/1.65 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-    -webkit-font-smoothing: antialiased;
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:radial-gradient(110% 50% at 50% 0%,#141827 0%,var(--bg) 55%);
+    color:var(--ink);font:14px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;
   }
-  a { color: var(--accent); text-decoration: none; }
-  a:hover { text-decoration: underline; }
-  .wrap { width: min(820px, calc(100% - 32px)); margin: 0 auto; padding: 36px 0 64px; }
-  header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-  .brand { display: flex; align-items: center; gap: 10px; }
-  .mark {
-    width: 36px; height: 36px; display: grid; place-items: center; border-radius: 9px;
-    background: var(--accent); color: #12131b; font: 800 16px/1 ui-monospace, monospace;
-  }
-  .brand strong { display: block; font-size: 15px; }
-  .brand span { display: block; font-size: 11px; color: var(--ink-faint); letter-spacing: .08em; text-transform: uppercase; }
-  .back { font-size: 12.5px; color: var(--ink-soft); border: 1px solid var(--line); padding: 7px 11px; border-radius: 999px; }
-  .back:hover { border-color: #4a4d63; color: var(--ink); text-decoration: none; }
+  a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{width:min(720px,calc(100% - 28px));margin:0 auto;padding:26px 0 48px}
 
-  .hero { margin: 30px 0 26px; }
-  .hero h1 { margin: 8px 0 10px; font: 500 30px/1.25 Georgia, "Times New Roman", serif; letter-spacing: -.01em; }
-  .hero p { margin: 0; color: var(--ink-soft); max-width: 60ch; }
-  .chip {
-    display: inline-flex; align-items: center; gap: 7px; padding: 5px 10px; border-radius: 999px;
-    border: 1px solid #3a3d52; color: #cfccff; background: #191c28;
-    font: 700 10px/1 ui-monospace, monospace; letter-spacing: .1em; text-transform: uppercase;
-  }
-  .chip i { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }
+  /* header */
+  .top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .brand{display:flex;align-items:center;gap:9px}
+  .mark{width:30px;height:30px;display:grid;place-items:center;border-radius:8px;
+    background:var(--accent);color:#12131b;font:800 14px/1 ui-monospace,monospace}
+  .brand strong{font-size:13.5px} 
+  .brand span{display:block;font-size:10px;color:var(--faint);letter-spacing:.09em;text-transform:uppercase}
+  .back{font-size:12px;color:var(--soft);border:1px solid var(--line);padding:6px 10px;border-radius:999px}
+  .back:hover{border-color:#4a4d63;color:var(--ink);text-decoration:none}
 
-  .entry {
-    position: relative; margin: 0 0 16px; padding: 18px 20px 18px 22px;
-    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
-  }
-  .entry.latest { border-color: #4b4780; box-shadow: 0 18px 50px rgba(80,74,160,.16); }
-  .entry::before {
-    content: ""; position: absolute; left: 0; top: 18px; bottom: 18px; width: 3px;
-    border-radius: 0 3px 3px 0; background: #2b2f3d;
-  }
-  .entry.latest::before { background: linear-gradient(var(--accent), #6f68e0); }
-  .entry-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-  .ver { font: 800 15px/1 ui-monospace, monospace; color: #fff; }
-  .entry.latest .ver { color: var(--accent); }
-  .date { font-size: 12px; color: var(--ink-faint); }
-  .tagbaru {
-    font: 700 9px/1 ui-monospace, monospace; letter-spacing: .1em; text-transform: uppercase;
-    color: #12131b; background: var(--ok); padding: 4px 7px; border-radius: 4px;
-  }
-  ul { margin: 12px 0 0; padding-left: 18px; }
-  li { margin: 0 0 7px; color: #d5d6df; }
-  li::marker { color: #5b5f74; }
-  li b { color: #fff; font-weight: 650; }
+  /* judul ringkas */
+  .hero{margin:22px 0 18px}
+  .hero h1{margin:0 0 4px;font:500 23px/1.3 Georgia,"Times New Roman",serif;letter-spacing:-.01em}
+  .hero p{margin:0;color:var(--soft);font-size:12.5px}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:999px;
+    border:1px solid #3a3d52;color:#cfccff;background:#191c28;font:700 9.5px/1.4 ui-monospace,monospace;
+    letter-spacing:.09em;text-transform:uppercase;margin-bottom:8px}
+  .pill i{width:5px;height:5px;border-radius:50%;background:var(--ok)}
 
-  footer { margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--ink-faint); font-size: 12px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-  @media (max-width: 560px) {
-    .wrap { padding-top: 24px; }
-    .hero h1 { font-size: 24px; }
-    .entry { padding: 16px 16px 16px 18px; }
-    li { font-size: 14px; }
+  /* kartu versi terbaru */
+  .latest{background:var(--panel);border:1px solid #4b4780;border-radius:10px;padding:14px 16px;
+    box-shadow:0 14px 40px rgba(80,74,160,.14);margin-bottom:12px}
+  .head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .ver{font:800 13.5px/1 ui-monospace,monospace;color:var(--accent)}
+  .date{font-size:11px;color:var(--faint)}
+  .tag{font:700 8.5px/1 ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;
+    color:#12131b;background:var(--ok);padding:3px 6px;border-radius:4px}
+  ul{margin:10px 0 0;padding-left:16px}
+  li{margin:0 0 5px;color:#d3d4de;font-size:13px}
+  li::marker{color:#565a6e}
+  li b{color:#fff;font-weight:640}
+
+  /* versi lama: bisa dilipat supaya ringkas */
+  details{background:var(--panel);border:1px solid var(--line);border-radius:10px;margin-bottom:8px}
+  details[open]{border-color:#3b3f52}
+  summary{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;list-style:none}
+  summary::-webkit-details-marker{display:none}
+  summary .ver{color:#dcdcf0;font-size:12.5px}
+  summary .ringkas{flex:1;color:var(--soft);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  summary .ver{order:1} summary .date{order:2} summary .ringkas{order:3}
+  summary .chev{order:4;width:14px;height:14px;flex:0 0 auto;margin-left:4px;color:var(--faint);transition:transform .18s}
+  details[open] summary .chev{transform:rotate(90deg)}
+  summary:hover .ver{color:var(--accent)}
+  details ul{margin:0 12px 12px 14px;padding-left:14px}
+
+  footer{margin-top:22px;padding-top:14px;border-top:1px solid var(--line);color:var(--faint);
+    font-size:11.5px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  @media (max-width:520px){
+    .wrap{padding-top:18px}
+    .hero h1{font-size:20px}
+    summary .ringkas{display:none}
+    li{font-size:12.5px}
   }
 </style>
 </head>
@@ -80,76 +81,79 @@
       <div class="mark">Y</div>
       <div><strong>Yuki AI</strong><span>Log pembaruan</span></div>
     </div>
-    <a class="back" href="/docs">← Panduan</a>
+    <a class="back" href="/docs">Panduan →</a>
   </header>
 
   <div class="hero">
-    <span class="chip"><i></i> Versi terbaru 3.3.0</span>
+    <span class="pill"><i></i> Versi terbaru 3.3.0</span>
     <h1>Yang berubah di Yuki</h1>
-    <p>Catatan singkat setiap pembaruan — ditulis apa adanya, tanpa istilah rumit. Terakhir diperbarui 24 Oktober 2026.</p>
+    <p>Ringkasan tiap versi. Versi lama bisa dibuka untuk melihat rinciannya. · Diperbarui 24 Okt 2026</p>
   </div>
 
-  <article class="entry latest">
-    <div class="entry-head">
+  <article class="latest">
+    <div class="head">
       <span class="ver">3.3.0</span>
-      <span class="date">24 Oktober 2026</span>
-      <span class="tagbaru">Terbaru</span>
+      <span class="date">24 Okt 2026</span>
+      <span class="tag">Terbaru</span>
     </div>
     <ul>
-      <li><b>Wajah Yuki lebih hidup, tapi tenang.</b> Enam ekspresi (tenang, senang, malu, sedih, kesal, lesu) dengan gerakan kecil yang tidak berlebihan. Ukurannya selalu sama, jadi tidak terlihat meloncat saat wajahnya berganti.</li>
-      <li><b>Panel karakter bisa disembunyikan.</b> Tombol ikon mata di kanan atas membuat obrolan memakai layar penuh. Pilihanmu diingat di perangkat itu.</li>
-      <li><b>Tombol salin balasan.</b> Setiap balasan Yuki bisa disalin sekali tekan — berguna untuk menyimpan kalimat atau mengirim ke teman.</li>
-      <li><b>Tombol “Pesan terbaru”.</b> Muncul saat kamu menggulir jauh ke atas; sekali tekan langsung kembali ke pesan paling akhir.</li>
-      <li><b>Kolom tulis memanjang.</b> Pesan panjang tetap terlihat utuh sebelum dikirim. Shift+Enter untuk baris baru, Enter untuk mengirim.</li>
-      <li><b>Lebih ringan.</b> Gambar karakter dipangkas dan dimampatkan tanpa mengurangi ketajaman, jadi halaman lebih cepat dibuka dan hemat kuota.</li>
-      <li><b>Mode hemat data.</b> Kalau ponsel mengaktifkan mode hemat data, karakter tampil sebagai potret diam dan gambar tidak dimuat di awal.</li>
-      <li><b>Yuki tahu beda hari.</b> Kalau kamu bilang “besok ada presentasi”, ia mencatat tanggalnya. Besoknya ia tahu itu hari ini, dan setelah lewat ia menanyakan hasilnya — bukan mengulang “besok” lagi.</li>
-      <li><b>Panduan publik diperbarui</b> dengan bagian baru tentang wajah karakter dan kebiasaan mengobrol.</li>
+      <li><b>Wajah karakter lebih halus</b> — enam ekspresi, gerakan kecil, ukuran selalu sama.</li>
+      <li><b>Panel karakter bisa disembunyikan</b> lewat ikon mata; pilihan diingat.</li>
+      <li><b>Salin balasan</b> sekali tekan, dan tombol <b>Pesan terbaru</b> saat menggulir ke atas.</li>
+      <li><b>Kolom tulis memanjang</b> — Shift+Enter untuk baris baru.</li>
+      <li><b>Lebih ringan & hemat kuota</b>; mode hemat data membuat karakter diam.</li>
+      <li><b>Yuki tahu beda hari</b> — “besok” dihitung dari tanggal dicatat, bukan diulang terus.</li>
+      <li><b>Panduan publik diperbarui.</b></li>
     </ul>
   </article>
 
-  <article class="entry">
-    <div class="entry-head">
+  <details>
+    <summary>
+      <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span class="ver">3.2.0</span>
-      <span class="date">14 Oktober 2026</span>
-    </div>
+      <span class="date">14 Okt 2026</span>
+      <span class="ringkas">Balasan mengalir, riwayat & ingatan, pengingat dari chat</span>
+    </summary>
     <ul>
-      <li><b>Balasan mengalir.</b> Yuki mengetik di depanmu — teks muncul bertahap, bukan menunggu utuh.</li>
-      <li><b>Riwayat obrolan & ingatan.</b> Menu baru untuk membaca semua percakapan (dengan pencarian) dan melihat, mengoreksi, atau menghapus hal yang Yuki ingat.</li>
-      <li><b>Pengingat nyata dari chat.</b> Minta “ingatkan aku besok jam 7” dan jadwalnya benar-benar dibuat — bisa dijeda, ditunda, atau dihapus.</li>
-      <li><b>Kartu komik rapi.</b> Cover asli, judul utuh, dan tombol baca; tidak ada lagi kartu setengah jadi.</li>
-      <li><b>Balasan lebih cepat.</b> Koreksi kecil tidak lagi membuat Yuki menulis ulang dari awal.</li>
-      <li><b>Riwayat tersinkron.</b> Obrolan di versi tempel (embed) dan di situs Yuki kini menampilkan percakapan yang sama.</li>
+      <li><b>Balasan mengalir</b> — Yuki mengetik di depanmu, bukan menunggu utuh.</li>
+      <li><b>Riwayat obrolan & ingatan</b> dengan pencarian; bisa dikoreksi atau dihapus.</li>
+      <li><b>Pengingat nyata dari chat</b> — bisa dijeda, ditunda, dihapus.</li>
+      <li><b>Kartu komik rapi</b> dengan cover asli dan tombol baca.</li>
+      <li><b>Balasan lebih cepat</b>; riwayat embed & web tersinkron.</li>
     </ul>
-  </article>
+  </details>
 
-  <article class="entry">
-    <div class="entry-head">
+  <details>
+    <summary>
+      <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span class="ver">3.1.0</span>
-      <span class="date">13 Oktober 2026</span>
-    </div>
+      <span class="date">13 Okt 2026</span>
+      <span class="ringkas">Yuki lebih manusiawi, kedekatan lebih realistis, keamanan</span>
+    </summary>
     <ul>
-      <li><b>Yuki konsisten sebagai manusia</b>, bukan karakter fiksi — dengan kesibukan, perasaan, dan batasannya sendiri.</li>
-      <li><b>Kedekatan lebih realistis.</b> Naiknya bertahap; satu obrolan tidak bisa melompat ke tahap paling dekat.</li>
-      <li><b>Panel admin diperbarui.</b> Pengaturan suara, statistik terpisah, ikon yang konsisten, dan validasi kata sandi.</li>
-      <li><b>Keamanan.</b> Celah perintah tersembunyi di dalam pesan ditutup, dan nama teknis di balik layar tidak lagi terbaca di obrolan.</li>
+      <li><b>Yuki konsisten sebagai manusia</b>, bukan karakter fiksi.</li>
+      <li><b>Kedekatan naik bertahap</b> — tidak bisa melompat dalam satu obrolan.</li>
+      <li><b>Panel admin diperbarui</b> — pengaturan suara, statistik, validasi sandi.</li>
+      <li><b>Keamanan</b> — celah perintah tersembunyi di pesan ditutup.</li>
     </ul>
-  </article>
+  </details>
 
-  <article class="entry">
-    <div class="entry-head">
+  <details>
+    <summary>
+      <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span class="ver">3.0.0</span>
-      <span class="date">18 September 2026</span>
-    </div>
+      <span class="date">18 Sep 2026</span>
+      <span class="ringkas">Panel admin baru dan tampilan lebih konsisten</span>
+    </summary>
     <ul>
-      <li><b>Panel admin baru</b> dengan menu samping, penjelajah data, dan pengaturan penyedia yang lebih rapi.</li>
-      <li><b>Tampilan lebih konsisten</b> — ikon seragam dan formulir yang tidak lagi terpotong.</li>
+      <li><b>Panel admin baru</b> dengan menu samping dan penjelajah data.</li>
+      <li><b>Tampilan lebih konsisten</b> — ikon seragam, formulir tidak terpotong.</li>
     </ul>
-  </article>
+  </details>
 
   <footer>
     <span>Yuki AI · Ryukomik</span>
-    <span><a href="/docs">Panduan pengguna</a> · <a href="/">Buka Yuki</a></span>
+    <span><a href="/docs">Panduan</a> · <a href="/">Buka Yuki</a></span>
   </footer>
 </div>
 </body>
