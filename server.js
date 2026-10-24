@@ -25,7 +25,8 @@ import { executeTool, initSkills, listSkills } from './lib/agent/skills-engine.j
 import { getProviderOperations, flushProviderOperations, resetProviderOperations } from './lib/provider-router.js'
 // Mesin game (persiapan v4). Modul ini murni — tidak menyentuh model bahasa.
 import { createBoard as tttBoard, applyMove as tttMove, chooseYukiMove as tttYukiMove, MARK_USER as TTT_USER, MARK_YUKI as TTT_YUKI } from './lib/games/tic-tac-toe.js'
-import { loadSession as loadGameSession, saveSession as saveGameSession, clearSession as clearGameSession, getStats as gameStats, gameMemoryText } from './lib/games/store.js'
+import { loadSession as loadGameSession, saveSession as saveGameSession, clearSession as clearGameSession, getStats as gameStats, gameMemoryText, GAME_RPS } from './lib/games/store.js'
+import { hasilRonde as rpsHasil, normalisasi as rpsNormalisasi, acak as rpsAcak, stateBaru as rpsStateBaru, catatRonde as rpsCatat } from './lib/games/rps.js'
 import { listTables, readTable, listDirectory, readTextFile, workspaceSummary, listUsers, listUserTables, readUserTable, findMemoryKeys } from './lib/admin-browser.js'
 import { getPublicProviderSettings, saveProviderSettings, testProviderConnection } from './lib/provider-settings.js'
 import {
@@ -587,6 +588,80 @@ if (process.env.GAMES_ENABLED === 'true') {
       const result = state.status === 'playing' ? null : state.status
       const stats = saveGameSession(req.authUserId, state, result)
       res.json({ game: state, yukiMove, result, stats, line: baris, source: dariModel ? 'yuki' : 'cadangan', bond: Math.round(bond) })
+    } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
+  })
+
+  // ===== Batu-Kertas-Gunting =====
+  // Aturan & skor dihitung kode; pilihan Yuki datang dari model (boleh membaca
+  // pola lawan), dengan cadangan acak bila model salah format/timeout.
+  app.get('/api/game/rps', requireSession, batasGame, khususBeta, (req, res) => {
+    try {
+      const sesi = loadGameSession(req.authUserId, GAME_RPS)
+      res.json({
+        game: sesi?.state || null,
+        stats: sesi?.stats || { wins: 0, losses: 0, draws: 0 },
+        last: sesi?.result || null
+      })
+    } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
+  })
+
+  app.post('/api/game/rps/play', requireSession, batasGame, khususBeta, async (req, res) => {
+    try {
+      const pilihan = rpsNormalisasi(req.body?.choice)
+      if (!pilihan) return res.status(400).json({ error: 'Pilih batu, kertas, atau gunting.' })
+
+      const sesi = loadGameSession(req.authUserId, GAME_RPS)
+      const state = sesi?.state?.score ? sesi.state : rpsStateBaru()
+      const emo = await getEmotion(req.authUserId).catch(() => null)
+      const bond = Math.round(emo?.bond || 0)
+      const riwayat = (state.history || []).slice(-3).map((h) => `dia ${h.you}, kamu ${h.yuki}`).join('; ') || 'belum ada'
+
+      const aturan = [
+        'Kamu Yuki, perempuan 19 tahun, tsundere, bicara santai bahasa Indonesia sehari-hari (aku/kamu).',
+        `Kedekatanmu dengan pemain: bond ${bond}/100.`,
+        'Kalian main batu-kertas-gunting. Pilih satu: batu, kertas, atau gunting.',
+        'Riwayat hanya untuk membaca pola — JANGAN meniru langkah terakhirnya, dan jangan memilih pilihan yang sama terus.',
+        `Kamu boleh sesekali lengah kalau bond tinggi (bond ${bond}).`,
+        'Jangan pernah menyebut dirimu AI, bot, asisten, atau model.',
+        'Balas HANYA JSON: {"pick":"batu|kertas|gunting","line":"satu kalimat maks 10 kata"}'
+      ].join('\n')
+
+      const jawab = await Promise.race([
+        callLLM([
+          { role: 'system', content: aturan },
+          // Pilihan pemain ronde INI sengaja TIDAK dikirim: kalau dikirim, Yuki
+          // selalu bisa mengalahkan (curang) dan permainan jadi tidak seru.
+          { role: 'user', content: `Riwayat ronde sebelumnya: ${riwayat}. Pilih langkahmu sekarang.` }
+        ], { max_tokens: 80, temperature: 0.9 }),
+        new Promise((resolve) => setTimeout(() => resolve(null), 3500))
+      ])
+
+      let pick = ''
+      let baris = ''
+      try {
+        const teks = String(jawab?.content || '')
+        const cocok = teks.match(/\{[\s\S]*\}/)
+        const obj = cocok ? JSON.parse(cocok[0]) : {}
+        pick = rpsNormalisasi(obj.pick)
+        baris = String(obj.line || '').replace(/^["'“”]+|["'“”]+$/g, '').trim().slice(0, 120)
+      } catch { /* format aneh -> acak */ }
+
+      const dariModel = Boolean(pick)
+      if (!pick) pick = rpsAcak()
+
+      const hasil = rpsHasil(pilihan, pick)
+      const next = rpsCatat(state, pilihan, pick, hasil)
+      const stats = saveGameSession(req.authUserId, next, hasil, GAME_RPS)
+      // Jeda buatan supaya tidak terasa instan seperti mesin.
+      await new Promise((r) => setTimeout(r, 500))
+      res.json({ you: pilihan, yuki: pick, hasil, line: baris, state: next, stats, source: dariModel ? 'yuki' : 'cadangan' })
+    } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
+  })
+
+  app.post('/api/game/rps/reset', requireSession, batasGame, khususBeta, (req, res) => {
+    try {
+      const stats = saveGameSession(req.authUserId, rpsStateBaru(), null, GAME_RPS)
+      res.json({ game: rpsStateBaru(), stats })
     } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
   })
 

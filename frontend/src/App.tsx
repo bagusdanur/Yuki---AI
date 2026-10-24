@@ -18,6 +18,7 @@ import type {
 } from './types'
 import AvatarStage from './AvatarStage'
 import TicTacToe from './TicTacToe'
+import RockPaperScissors from './RockPaperScissors'
 
 const SESSION_KEYS = {
   userId: 'yuki_uid_v3', username: 'yuki_username_v3', accessCode: 'yuki_access_code_v3',
@@ -1266,6 +1267,7 @@ export default function App() {
   // Mini game masih BETA: server hanya mengizinkan akun tertentu.
   const [gameEligible, setGameEligible] = useState(false)
   const [gameOpen, setGameOpen] = useState(false)
+  const [rpsOpen, setRpsOpen] = useState(false)
   const [showJump, setShowJump] = useState(false)
   const composerRef = useRef<HTMLTextAreaElement | null>(null)
   const messagesRef = useRef<HTMLDivElement | null>(null)
@@ -1975,6 +1977,14 @@ export default function App() {
         />
       )}
 
+      {rpsOpen && session && (
+        <RockPaperScissors
+          token={session.sessionToken}
+          onClose={() => setRpsOpen(false)}
+          onMood={next => setMood(next)}
+        />
+      )}
+
       {showJump && (
         <button
           type="button"
@@ -2003,9 +2013,15 @@ export default function App() {
       </form>
       <div className="activities" aria-label="Aktivitas bersama">
         {gameEligible && (
-          <button type="button" onClick={() => setGameOpen(true)} title="Main Tic-Tac-Toe melawan Yuki">
+          <button type="button" onClick={() => { setGameOpen(true); setRpsOpen(false) }} title="Main Tic-Tac-Toe melawan Yuki">
             <Gamepad2 size={12} />
             <span>Tic-Tac-Toe <b className="beta-tag">beta</b></span>
+          </button>
+        )}
+        {gameEligible && (
+          <button type="button" onClick={() => { setRpsOpen(true); setGameOpen(false) }} title="Main batu-kertas-gunting melawan Yuki">
+            <Gamepad2 size={12} />
+            <span>Batu-Kertas-Gunting <b className="beta-tag">beta</b></span>
           </button>
         )}
         {(chatMode === 'agent' ? agentSuggestions : companionSuggestions).map(item => {

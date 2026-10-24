@@ -1960,3 +1960,40 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 /* Loading saat Yuki berpikir: papan meredup halus, gelembung tidak "patah" */
 .ttt-card.menunggu .ttt-board { opacity: .5; transition: opacity .2s; }
 .ttt-bubble { min-height: 42px; align-items: center; }
+
+
+/* ===== Batu-Kertas-Gunting (beta v4) ===== */
+.rps-papan { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.rps-pilih {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 8px 4px; border: 1px solid #2b2f3b; border-radius: 9px;
+  background: #0f1117; color: #cfd0da; cursor: pointer;
+  transition: border-color .14s, background .14s, transform .1s;
+}
+.rps-pilih span { font-size: 22px; line-height: 1; }
+.rps-pilih b { font-size: 10.5px; font-weight: 600; color: #9b9daa; }
+.rps-pilih:hover:not(:disabled) { border-color: #5a568f; background: #161a26; }
+.rps-pilih:active:not(:disabled) { transform: scale(.97); }
+.rps-pilih.dipilih { border-color: #7b76d8; background: #191c2b; }
+.rps-pilih:disabled { cursor: default; }
+
+.rps-hasil {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 34px; font-size: 12px; color: #a7aab8;
+}
+.rps-hasil em { color: #6f7280; font-style: normal; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+.rps-putusan { font-size: 11.5px; font-weight: 700; padding: 2px 7px; border-radius: 4px; border: 1px solid #2f3340; }
+.rps-putusan.user_win { color: #7ee0a8; border-color: #2f5a44; }
+.rps-putusan.yuki_win { color: #ffb2c4; border-color: #5a3341; }
+.rps-putusan.draw { color: #d6cf9a; border-color: #55503a; }
+.rps-tunggu { display: inline-flex; align-items: center; gap: 6px; color: #8b8f9d; font-style: italic; }
+
+@media (max-width: 760px) {
+  .rps-pilih span { font-size: 20px; }
+  .rps-hasil { font-size: 11.5px; }
+}
+
+.rps-orang { display: inline-flex; align-items: center; gap: 4px; color: #a7aab8; }
+.rps-orang b { color: #e6e3ff; font-weight: 650; }
+.rps-orang i { font-style: normal; font-size: 15px; line-height: 1; }
+.rps-pilih span { font-size: 24px; }
