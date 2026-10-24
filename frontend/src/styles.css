@@ -1760,3 +1760,18 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 .character.mood-tenang {
   animation: character-enter .3s ease-out both, idle-soft 10s ease-in-out infinite !important;
 }
+
+/* v3.3.3 — FIX tombol mata: di layar kecil .chat-panel dipaksa grid-row: 2,
+   sehingga saat panel karakter disembunyikan baris pertama tetap ada dan
+   tampil sebagai area hitam di atas. Chat harus naik ke baris pertama. */
+.app-shell.avatar-off { grid-template-rows: minmax(0, 1fr); }
+.app-shell.avatar-off .chat-panel { grid-row: 1; }
+.app-shell.avatar-off .character-panel { display: none; }
+
+/* v3.3.3b — penanda status tombol mata: saat avatar disembunyikan, tombolnya
+   terlihat "menyala" supaya jelas sedang aktif (bukan ikon biasa). */
+.header-actions button[aria-pressed="true"] {
+  color: #12131b;
+  border-color: #aaa7ff;
+  background: #aaa7ff;
+}

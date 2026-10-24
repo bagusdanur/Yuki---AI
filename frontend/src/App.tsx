@@ -1735,6 +1735,7 @@ export default function App() {
               return next
             })}
             aria-label={avatarOff ? 'Tampilkan avatar Yuki' : 'Sembunyikan avatar Yuki'}
+            aria-pressed={avatarOff}
             title={avatarOff ? 'Tampilkan avatar' : 'Sembunyikan avatar (hemat kuota)'}
           >{avatarOff ? <Eye size={17} /> : <EyeOff size={17} />}</button>
           <button onClick={() => setSettingsOpen(!settingsOpen)} aria-label="Pengaturan"><Settings size={17} /></button>
