@@ -2030,3 +2030,21 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 @media (max-width: 760px) {
   .games-pop { width: 214px; }
 }
+
+/* Ikon pilihan (bukan emoji): warna beda tipis per pilihan, tetap senada tema */
+.rps-pilih svg { color: #d7d4ff; transition: color .14s, transform .12s; }
+.rps-pilih[data-p="batu"] svg { color: #e3b98d; }
+.rps-pilih[data-p="kertas"] svg { color: #9fc9ea; }
+.rps-pilih[data-p="gunting"] svg { color: #f0a6bf; }
+.rps-pilih:hover:not(:disabled) svg { transform: translateY(-1px); filter: brightness(1.15); }
+.rps-pilih.dipilih svg { filter: brightness(1.25); }
+.rps-orang svg { color: #c3c6d4; }
+
+/* dropdown game: bebas keluar layar + bisa digulir bila layar pendek */
+.games-scrim { z-index: 31; }
+.games-pop {
+  position: fixed; z-index: 32;
+  max-height: min(70vh, 420px); overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.games-menu { position: static; }

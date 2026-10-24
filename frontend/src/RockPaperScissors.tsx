@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { X as XIcon, RotateCcw, LoaderCircle } from 'lucide-react'
+import { X as XIcon, RotateCcw, LoaderCircle, HandFist, Scroll, Scissors } from 'lucide-react'
 
 /**
  * Batu-Kertas-Gunting (beta v4).
@@ -20,13 +20,15 @@ interface Props {
   onMood?: (mood: string) => void
 }
 
+// Ikon garis, bukan emoji: emoji tampil beda-beda tiap perangkat dan terlihat
+// seperti tempelan. HandFist = batu (kepalan), Scroll = kertas, Scissors = gunting.
 const PILIHAN = [
-  { id: 'batu', emoji: '🪨', label: 'Batu' },
-  { id: 'kertas', emoji: '📄', label: 'Kertas' },
-  { id: 'gunting', emoji: '✂️', label: 'Gunting' }
+  { id: 'batu', ikon: HandFist, label: 'Batu' },
+  { id: 'kertas', ikon: Scroll, label: 'Kertas' },
+  { id: 'gunting', ikon: Scissors, label: 'Gunting' }
 ] as const
 
-const EMOJI: Record<string, string> = { batu: '🪨', kertas: '📄', gunting: '✂️' }
+const IKON: Record<string, typeof HandFist> = { batu: HandFist, kertas: Scroll, gunting: Scissors }
 const NAMA: Record<string, string> = { batu: 'Batu', kertas: 'Kertas', gunting: 'Gunting' }
 
 const WAJAH: Record<string, string> = { user_win: 'malu', yuki_win: 'senang', draw: 'tenang' }
@@ -111,19 +113,23 @@ export default function RockPaperScissors({ token, onClose, onMood }: Props) {
         </header>
 
         <div className="rps-papan">
-          {PILIHAN.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              className={`rps-pilih${hasil?.you === p.id ? ' dipilih' : ''}`}
-              onClick={() => main(p.id)}
-              disabled={menunggu || loading}
-              aria-label={p.label}
-            >
-              <span aria-hidden="true">{p.emoji}</span>
-              <b>{p.label}</b>
-            </button>
-          ))}
+          {PILIHAN.map((p) => {
+            const Ikon = p.ikon
+            return (
+              <button
+                key={p.id}
+                type="button"
+                data-p={p.id}
+                className={`rps-pilih${hasil?.you === p.id ? ' dipilih' : ''}`}
+                onClick={() => main(p.id)}
+                disabled={menunggu || loading}
+                aria-label={p.label}
+              >
+                <Ikon size={24} strokeWidth={1.6} aria-hidden="true" />
+                <b>{p.label}</b>
+              </button>
+            )
+          })}
         </div>
 
         <div className="rps-hasil" aria-live="polite">
@@ -131,9 +137,15 @@ export default function RockPaperScissors({ token, onClose, onMood }: Props) {
             <span className="rps-tunggu">Yuki memilih <span className="ttt-dots"><i /><i /><i /></span></span>
           ) : hasil ? (
             <>
-              <span className="rps-orang">Kamu <b>{NAMA[hasil.you]}</b> <i aria-hidden="true">{EMOJI[hasil.you]}</i></span>
+              <span className="rps-orang">
+                Kamu <b>{NAMA[hasil.you]}</b>
+                {(() => { const I = IKON[hasil.you]; return I ? <I size={13} strokeWidth={1.8} aria-hidden="true" /> : null })()}
+              </span>
               <em>vs</em>
-              <span className="rps-orang">Yuki <b>{NAMA[hasil.yuki]}</b> <i aria-hidden="true">{EMOJI[hasil.yuki]}</i></span>
+              <span className="rps-orang">
+                Yuki <b>{NAMA[hasil.yuki]}</b>
+                {(() => { const I = IKON[hasil.yuki]; return I ? <I size={13} strokeWidth={1.8} aria-hidden="true" /> : null })()}
+              </span>
               <b className={`rps-putusan ${hasil.hasil}`}>{teks}</b>
             </>
           ) : (

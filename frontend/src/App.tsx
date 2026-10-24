@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeSanitize from 'rehype-sanitize'
@@ -1269,6 +1270,10 @@ export default function App() {
   const [gameOpen, setGameOpen] = useState(false)
   const [rpsOpen, setRpsOpen] = useState(false)
   const [gamesOpen, setGamesOpen] = useState(false)
+  // Dropdown game diposisikan manual: kalau pakai absolute+right:0, di layar
+  // sempit ia melewati tepi kanan dan terpotong.
+  const gameBtnRef = useRef<HTMLButtonElement | null>(null)
+  const [gamePos, setGamePos] = useState({ top: 64, left: 8, width: 238 })
   const [showJump, setShowJump] = useState(false)
   const composerRef = useRef<HTMLTextAreaElement | null>(null)
   const messagesRef = useRef<HTMLDivElement | null>(null)
@@ -1512,6 +1517,26 @@ export default function App() {
       .catch(() => setGameEligible(false))
   }, [session?.userId, session?.sessionToken])
 
+  // Ikut menyesuaikan saat layar diputar / diubah ukurannya.
+  useEffect(() => {
+    if (!gamesOpen) return
+    const ubah = () => hitungPosisiGame()
+    window.addEventListener('resize', ubah)
+    window.addEventListener('orientationchange', ubah)
+    return () => {
+      window.removeEventListener('resize', ubah)
+      window.removeEventListener('orientationchange', ubah)
+    }
+  }, [gamesOpen])
+
+  const hitungPosisiGame = () => {
+    const r = gameBtnRef.current?.getBoundingClientRect()
+    const width = Math.min(238, window.innerWidth - 16)
+    const left = r ? Math.min(Math.max(8, r.right - width), window.innerWidth - width - 8) : 8
+    const top = r ? Math.min(r.bottom + 8, Math.max(8, window.innerHeight - 240)) : 64
+    setGamePos({ top, left, width })
+  }
+
   const avatarExpression = useMemo(() => moodImage[mood] || 'tenang', [mood])
   const canBlink = blinkExpressions.has(avatarExpression)
 
@@ -1752,40 +1777,19 @@ export default function App() {
           {gameEligible && (
             <div className="games-menu">
               <button
+                ref={gameBtnRef}
                 type="button"
                 className="games-trigger"
-                onClick={() => setGamesOpen(v => !v)}
+                onClick={() => {
+                  if (!gamesOpen) hitungPosisiGame()
+                  setGamesOpen(v => !v)
+                }}
                 aria-label="Mini game"
                 aria-expanded={gamesOpen}
                 title="Mini game"
               >
                 <Gamepad2 size={17} />
               </button>
-              {gamesOpen && (
-                <>
-                  <div className="games-scrim" onClick={() => setGamesOpen(false)} />
-                  <div className="games-pop" role="menu" aria-label="Daftar mini game">
-                    <header>Mini game <span className="beta-tag">beta</span></header>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => { setGameOpen(true); setRpsOpen(false); setGamesOpen(false) }}
-                    >
-                      <b>Tic-Tac-Toe</b>
-                      <small>papan 3×3, dia ikut berpikir</small>
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => { setRpsOpen(true); setGameOpen(false); setGamesOpen(false) }}
-                    >
-                      <b>Batu-Kertas-Gunting</b>
-                      <small>cepat, satu ronde sekali main</small>
-                    </button>
-                    <footer>Segera: tebak kata, sambung cerita.</footer>
-                  </div>
-                </>
-              )}
             </div>
           )}
           <a href="/docs" target="_blank" aria-label="Dokumentasi" title="Panduan"><BookOpen size={17} /></a>
@@ -2008,6 +2012,38 @@ export default function App() {
         {error && <div className="error-banner"><span>{error}</span><button onClick={() => setError('')}><X size={14}/></button></div>}
         <div ref={endRef} />
       </div>
+
+      {gamesOpen && createPortal(
+        <>
+          <div className="games-scrim" onClick={() => setGamesOpen(false)} />
+          <div
+            className="games-pop"
+            role="menu"
+            aria-label="Daftar mini game"
+            style={{ position: 'fixed', top: gamePos.top, left: gamePos.left, width: gamePos.width, right: 'auto' }}
+          >
+            <header>Mini game <span className="beta-tag">beta</span></header>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => { setGameOpen(true); setRpsOpen(false); setGamesOpen(false) }}
+            >
+              <b>Tic-Tac-Toe</b>
+              <small>papan 3×3, dia ikut berpikir</small>
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => { setRpsOpen(true); setGameOpen(false); setGamesOpen(false) }}
+            >
+              <b>Batu-Kertas-Gunting</b>
+              <small>cepat, satu ronde sekali main</small>
+            </button>
+            <footer>Segera: tebak kata, sambung cerita.</footer>
+          </div>
+        </>,
+        document.body
+      )}
 
       {gameOpen && session && (
         <TicTacToe
