@@ -17,6 +17,7 @@ import type {
   Message, Milestone, PlainMemory, Session, SkillInfo
 } from './types'
 import AvatarStage from './AvatarStage'
+import TicTacToe from './TicTacToe'
 
 const SESSION_KEYS = {
   userId: 'yuki_uid_v3', username: 'yuki_username_v3', accessCode: 'yuki_access_code_v3',
@@ -1262,6 +1263,9 @@ export default function App() {
     try { return localStorage.getItem('yuki_changelog_seen') === CHANGELOG_VERSION } catch { return true }
   })
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
+  // Mini game masih BETA: server hanya mengizinkan akun tertentu.
+  const [gameEligible, setGameEligible] = useState(false)
+  const [gameOpen, setGameOpen] = useState(false)
   const [showJump, setShowJump] = useState(false)
   const composerRef = useRef<HTMLTextAreaElement | null>(null)
   const messagesRef = useRef<HTMLDivElement | null>(null)
@@ -1494,6 +1498,15 @@ export default function App() {
     }).catch(() => {})
     getBookmarks().then(data => setBookmarks(data.bookmarks || [])).catch(() => {})
     if (!EMBED_COMPANION_ONLY) getSkills().then(data => setSkills(data.skills || [])).catch(() => {})
+  }, [session?.userId, session?.sessionToken])
+
+  // Cek apakah akun ini punya akses beta mini game (server yang menentukan).
+  useEffect(() => {
+    if (!session?.sessionToken || EMBED_COMPANION_ONLY) { setGameEligible(false); return }
+    fetch('/api/game/status', { headers: { Authorization: `Bearer ${session.sessionToken}` } })
+      .then(res => (res.ok ? res.json() : { eligible: false }))
+      .then(data => setGameEligible(Boolean(data?.eligible)))
+      .catch(() => setGameEligible(false))
   }, [session?.userId, session?.sessionToken])
 
   const avatarExpression = useMemo(() => moodImage[mood] || 'tenang', [mood])
@@ -1834,6 +1847,8 @@ export default function App() {
         <div className="timeline-list">{milestones.map((item, index) => <article key={`${item.kind}-${index}`}><i/><div><strong>{item.title}</strong><span>{item.detail || `Terbuka pada bond ${Math.round(item.bondValue)}`}</span></div></article>)}</div>
       </section></div>}
 
+      {gameOpen && session && <TicTacToe token={session.sessionToken} onClose={() => setGameOpen(false)} />}
+
       {bookmarksOpen && <div className="timeline-overlay" onClick={() => setBookmarksOpen(false)}><section className="timeline-card bookmarks-modal" onClick={event => event.stopPropagation()}>
         <header><div><small>Ryukomik archive</small><h2>Komik Tersimpan</h2></div><button onClick={() => setBookmarksOpen(false)}><X size={17}/></button></header>
         <div className="bookmarks-list">
@@ -1981,6 +1996,12 @@ export default function App() {
         <button disabled={busy || !input.trim()} aria-label="Kirim pesan">{busy ? <LoaderCircle className="spin" size={19}/> : <Send size={19}/>}</button>
       </form>
       <div className="activities" aria-label="Aktivitas bersama">
+        {gameEligible && (
+          <button type="button" onClick={() => setGameOpen(true)} title="Main Tic-Tac-Toe melawan Yuki">
+            <Gamepad2 size={12} />
+            <span>Tic-Tac-Toe <b className="beta-tag">beta</b></span>
+          </button>
+        )}
         {(chatMode === 'agent' ? agentSuggestions : companionSuggestions).map(item => {
           const Icon = item.icon
           return (

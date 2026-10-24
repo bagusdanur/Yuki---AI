@@ -1789,3 +1789,62 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   background: #7ee0a8;
   box-shadow: 0 0 0 2px #0b0d12;
 }
+
+/* ===== Tic-Tac-Toe (beta v4) ===== */
+.beta-tag {
+  margin-left: 5px; padding: 1px 4px; border-radius: 3px;
+  background: rgba(126,224,168,.16); color: #7ee0a8;
+  font: 700 8px/1.3 ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase;
+}
+.ttt-overlay {
+  position: fixed; inset: 0; z-index: 25; display: grid; place-items: center; padding: 18px;
+  background: rgba(5,6,9,.74); backdrop-filter: blur(7px);
+}
+.ttt-card {
+  width: min(360px, 100%); padding: 16px 16px 14px;
+  border: 1px solid #2f323d; border-radius: 12px; background: #12141b;
+  box-shadow: 0 26px 64px rgba(0,0,0,.55);
+}
+.ttt-card header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.ttt-card header small { display: block; color: #8b8f9d; font: 700 9px/1 ui-monospace, monospace; letter-spacing: .12em; text-transform: uppercase; }
+.ttt-card header h2 { margin: 6px 0 0; font-size: 18px; }
+.ttt-card header button {
+  width: 30px; height: 30px; display: grid; place-items: center; padding: 0;
+  border: 1px solid transparent; border-radius: 7px; color: #8b8f9d; background: transparent; cursor: pointer;
+}
+.ttt-card header button:hover { color: #e6e3ff; border-color: #363a48; background: #191d27; }
+
+.ttt-score { display: flex; gap: 14px; margin: 12px 0 10px; color: #b9bbc7; font-size: 12.5px; }
+.ttt-score b { color: #ffffff; font-size: 15px; }
+
+.ttt-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+.ttt-cell {
+  aspect-ratio: 1 / 1; display: grid; place-items: center;
+  border: 1px solid #2b2f3b; border-radius: 10px; background: #0f1117;
+  color: #cfcaff; font: 800 32px/1 ui-monospace, monospace;
+  cursor: pointer; transition: border-color .14s, background .14s, box-shadow .14s;
+}
+.ttt-cell:hover:not(:disabled) { border-color: #5a568f; background: #161a26; }
+.ttt-cell:disabled { cursor: default; }
+.ttt-cell.yuki { color: #ffb2c4; }
+.ttt-cell.terisi { background: #12151d; }
+.ttt-cell.menang { box-shadow: inset 0 0 0 2px #7ee0a8; }
+
+.ttt-say { min-height: 36px; margin: 12px 0 10px; color: #a9abb6; font-size: 12.5px; font-style: italic; line-height: 1.5; }
+.ttt-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ttt-primary, .ttt-ghost {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px;
+  border-radius: 7px; font-size: 12.5px; cursor: pointer;
+}
+.ttt-primary { border: 1px solid #7b76d8; background: #2a2b45; color: #e8e5ff; }
+.ttt-primary:hover { background: #34355a; }
+.ttt-ghost { border: 1px solid #33374400; background: transparent; color: #9b9daa; }
+.ttt-ghost:hover { color: #d7d4ff; }
+.ttt-status { font: 700 10.5px/1 ui-monospace, monospace; letter-spacing: .07em; text-transform: uppercase; color: #aeb2c0; }
+.ttt-status.user_win { color: #7ee0a8; }
+.ttt-status.yuki_win { color: #ffb2c4; }
+.ttt-status.draw { color: #d6cf9a; }
+@media (max-width: 420px) {
+  .ttt-card { width: 100%; }
+  .ttt-cell { font-size: 28px; }
+}

@@ -449,15 +449,30 @@ async function getEmotion(userId) {
 // Route hanya dipasang bila GAMES_ENABLED=true. Belum ada tombol/menu yang
 // menautkannya, jadi walau kode ini ada di repo, pemain tidak bisa memakainya
 // sampai v4 dirilis.
+// Beta: hanya user yang terdaftar di GAMES_BETA_IDS yang bisa memakai.
+// GAMES_PUBLIC=true membuka untuk semua (dipakai nanti saat v4 rilis).
+const GAMES_PUBLIC = process.env.GAMES_PUBLIC === 'true'
+const GAMES_BETA_IDS = new Set(String(process.env.GAMES_BETA_IDS || '').split(',').map((s) => s.trim()).filter(Boolean))
+const gameEligible = (userId) => GAMES_PUBLIC || GAMES_BETA_IDS.has(String(userId || ''))
+
 if (process.env.GAMES_ENABLED === 'true') {
   const batasGame = rateLimit({ max: 120 })
+  const khususBeta = (req, res, next) => {
+    if (!gameEligible(req.authUserId)) return res.status(404).json({ error: 'Tidak tersedia.' })
+    next()
+  }
 
-  app.get('/api/game/ttt', requireSession, batasGame, (req, res) => {
+  // Dipakai UI untuk memutuskan apakah tombol game perlu ditampilkan.
+  app.get('/api/game/status', requireSession, (req, res) => {
+    res.json({ eligible: gameEligible(req.authUserId) })
+  })
+
+  app.get('/api/game/ttt', requireSession, batasGame, khususBeta, (req, res) => {
     const sesi = loadGameSession(req.authUserId)
     res.json({ game: sesi?.state || null, result: sesi?.result || null, stats: gameStats(req.authUserId) })
   })
 
-  app.post('/api/game/ttt/new', requireSession, batasGame, (req, res) => {
+  app.post('/api/game/ttt/new', requireSession, batasGame, khususBeta, (req, res) => {
     try {
       const state = tttBoard()
       saveGameSession(req.authUserId, state, null)
@@ -465,7 +480,7 @@ if (process.env.GAMES_ENABLED === 'true') {
     } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
   })
 
-  app.post('/api/game/ttt/move', requireSession, batasGame, async (req, res) => {
+  app.post('/api/game/ttt/move', requireSession, batasGame, khususBeta, async (req, res) => {
     try {
       const cell = Number(req.body?.cell)
       if (!Number.isInteger(cell)) return res.status(400).json({ error: 'Kotak tidak valid.' })
@@ -497,7 +512,7 @@ if (process.env.GAMES_ENABLED === 'true') {
   })
 
   // Reset = papan baru, TAPI rekor menang/kalah/seri tetap disimpan.
-  app.post('/api/game/ttt/reset', requireSession, batasGame, (req, res) => {
+  app.post('/api/game/ttt/reset', requireSession, batasGame, khususBeta, (req, res) => {
     try {
       const state = tttBoard()
       saveGameSession(req.authUserId, state, null)
