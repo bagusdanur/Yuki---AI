@@ -1775,3 +1775,17 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   border-color: #aaa7ff;
   background: #aaa7ff;
 }
+
+/* v3.3.1 — Badge "ada pembaruan" pada tombol log di header chat.
+   Titik kecil di pojok kanan-atas ikon; hilang setelah /changelog dibuka. */
+.log-link { position: relative; }
+.log-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #7ee0a8;
+  box-shadow: 0 0 0 2px #0b0d12;
+}

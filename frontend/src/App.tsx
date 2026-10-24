@@ -24,6 +24,9 @@ const SESSION_KEYS = {
   sessionToken: 'yuki_session_token_v3', mode: 'yuki_mode_v3'
 }
 
+// Versi pembaruan terakhir yang tercatat di /changelog. Dipakai untuk menandai
+// tombol log dengan titik "ada yang baru" sampai user membukanya.
+const CHANGELOG_VERSION = '3.3.1'
 const EMBED_COMPANION_ONLY = new URLSearchParams(window.location.search).get('embed') === '1'
   || /\/embed(?:\.html)?$/i.test(window.location.pathname)
 
@@ -1254,6 +1257,10 @@ export default function App() {
   const [avatarCompact, setAvatarCompact] = useState(false)
   // Sembunyikan avatar (hemat kuota / fokus baca). Diingat di perangkat.
   const [avatarOff, setAvatarOff] = useState(() => localStorage.getItem('yuki_avatar_off') === '1')
+  // Titik "ada pembaruan" pada tombol log. Hilang setelah tombolnya dibuka.
+  const [changelogSeen, setChangelogSeen] = useState(() => {
+    try { return localStorage.getItem('yuki_changelog_seen') === CHANGELOG_VERSION } catch { return true }
+  })
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
   const [showJump, setShowJump] = useState(false)
   const composerRef = useRef<HTMLTextAreaElement | null>(null)
@@ -1727,7 +1734,21 @@ export default function App() {
         </div>
         <div className="header-actions">
           <a href="/docs" target="_blank" aria-label="Dokumentasi" title="Panduan"><BookOpen size={17} /></a>
-          <a href="/changelog" target="_blank" aria-label="Log pembaruan" title="Log pembaruan"><HistoryIcon size={17} /></a>
+          <a
+            href="/changelog"
+            target="_blank"
+            rel="noopener"
+            className="log-link"
+            aria-label={changelogSeen ? 'Log pembaruan' : 'Log pembaruan — ada yang baru'}
+            title={changelogSeen ? 'Log pembaruan' : 'Ada pembaruan baru'}
+            onClick={() => {
+              try { localStorage.setItem('yuki_changelog_seen', CHANGELOG_VERSION) } catch { /* mode privat */ }
+              setChangelogSeen(true)
+            }}
+          >
+            <HistoryIcon size={17} />
+            {!changelogSeen && <span className="log-badge" aria-hidden="true" />}
+          </a>
           <button
             type="button"
             onClick={() => setAvatarOff(value => {
