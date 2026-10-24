@@ -2181,3 +2181,13 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 .games-pop .games-item:hover { background: #1a1e28; }
 .games-pop .games-item b { font-size: 12.5px; font-weight: 650; color: #ece9ff; }
 .games-pop .games-item small { font-size: 10.5px; color: #85899a; line-height: 1.4; }
+
+/* Embed / layar pendek: papan dikecilkan agar obrolan tetap terlihat */
+@media (max-height: 640px) {
+  .ttt-board { grid-template-columns: repeat(3, 38px); }
+  .ttt-cell { width: 38px; height: 38px; font-size: 15px; }
+  .rps-pilih { padding: 6px 3px; }
+  .rps-pilih svg { width: 19px; height: 19px; }
+  .ttt-bubble p { font-size: 11px; }
+  .ttt-dock { padding: 4px 10px 0; }
+}

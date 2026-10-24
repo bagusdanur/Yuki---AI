@@ -1511,7 +1511,9 @@ export default function App() {
 
   // Cek apakah akun ini punya akses beta mini game (server yang menentukan).
   useEffect(() => {
-    if (!session?.sessionToken || EMBED_COMPANION_ONLY) { setGameEligible(false); return }
+    // Game tersedia di app penuh MAUPUN embed (3.5): embed tetap chat biasa,
+    // hanya tanpa tab Agent — bukan tanpa mini game.
+    if (!session?.sessionToken) { setGameEligible(false); return }
     fetch('/api/game/status', { headers: { Authorization: `Bearer ${session.sessionToken}` } })
       .then(res => (res.ok ? res.json() : { eligible: false }))
       .then(data => setGameEligible(Boolean(data?.eligible)))
