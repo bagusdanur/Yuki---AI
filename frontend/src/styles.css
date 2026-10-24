@@ -1997,3 +1997,36 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 .rps-orang b { color: #e6e3ff; font-weight: 650; }
 .rps-orang i { font-style: normal; font-size: 15px; line-height: 1; }
 .rps-pilih span { font-size: 24px; }
+
+
+/* ===== Menu mini game (tombol sendiri di header) ===== */
+.games-menu { position: relative; display: inline-flex; }
+.games-trigger[aria-expanded="true"] { color: #f1f0ec; border-color: #555967; }
+.games-scrim { position: fixed; inset: 0; z-index: 29; }
+.games-pop {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 30;
+  width: 238px; padding: 6px;
+  border: 1px solid #2c303c; border-radius: 10px; background: #12141b;
+  box-shadow: 0 20px 44px rgba(0,0,0,.55);
+}
+.games-pop header {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 8px 8px;
+  font: 700 9px/1 ui-monospace, monospace; letter-spacing: .1em; text-transform: uppercase; color: #8b8f9d;
+}
+/* timpa aturan .header-actions button yang membuat semua tombol jadi 38x38 */
+.header-actions .games-pop button {
+  width: 100%; height: auto; display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  padding: 8px; border: 0; border-radius: 7px; background: transparent; color: #e6e3ff;
+  text-align: left; cursor: pointer;
+}
+.header-actions .games-pop button:hover { background: #191d27; border-color: transparent; }
+.games-pop b { font-size: 12.5px; font-weight: 650; }
+.games-pop small { font-size: 10.5px; color: #8f93a1; line-height: 1.3; }
+.games-pop footer {
+  margin-top: 4px; padding: 7px 8px 3px; border-top: 1px solid #22262f;
+  font-size: 10px; color: #767a88;
+}
+@media (max-width: 760px) {
+  .games-pop { width: 214px; }
+}

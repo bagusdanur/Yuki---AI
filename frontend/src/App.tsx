@@ -1268,6 +1268,7 @@ export default function App() {
   const [gameEligible, setGameEligible] = useState(false)
   const [gameOpen, setGameOpen] = useState(false)
   const [rpsOpen, setRpsOpen] = useState(false)
+  const [gamesOpen, setGamesOpen] = useState(false)
   const [showJump, setShowJump] = useState(false)
   const composerRef = useRef<HTMLTextAreaElement | null>(null)
   const messagesRef = useRef<HTMLDivElement | null>(null)
@@ -1748,6 +1749,45 @@ export default function App() {
           <span><i className={`connection-dot ${connection}`} /> {connectionLabel[connection]}</span>
         </div>
         <div className="header-actions">
+          {gameEligible && (
+            <div className="games-menu">
+              <button
+                type="button"
+                className="games-trigger"
+                onClick={() => setGamesOpen(v => !v)}
+                aria-label="Mini game"
+                aria-expanded={gamesOpen}
+                title="Mini game"
+              >
+                <Gamepad2 size={17} />
+              </button>
+              {gamesOpen && (
+                <>
+                  <div className="games-scrim" onClick={() => setGamesOpen(false)} />
+                  <div className="games-pop" role="menu" aria-label="Daftar mini game">
+                    <header>Mini game <span className="beta-tag">beta</span></header>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => { setGameOpen(true); setRpsOpen(false); setGamesOpen(false) }}
+                    >
+                      <b>Tic-Tac-Toe</b>
+                      <small>papan 3×3, dia ikut berpikir</small>
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => { setRpsOpen(true); setGameOpen(false); setGamesOpen(false) }}
+                    >
+                      <b>Batu-Kertas-Gunting</b>
+                      <small>cepat, satu ronde sekali main</small>
+                    </button>
+                    <footer>Segera: tebak kata, sambung cerita.</footer>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
           <a href="/docs" target="_blank" aria-label="Dokumentasi" title="Panduan"><BookOpen size={17} /></a>
           <a
             href="/changelog"
@@ -2012,18 +2052,7 @@ export default function App() {
         <button disabled={busy || !input.trim()} aria-label="Kirim pesan">{busy ? <LoaderCircle className="spin" size={19}/> : <Send size={19}/>}</button>
       </form>
       <div className="activities" aria-label="Aktivitas bersama">
-        {gameEligible && (
-          <button type="button" onClick={() => { setGameOpen(true); setRpsOpen(false) }} title="Main Tic-Tac-Toe melawan Yuki">
-            <Gamepad2 size={12} />
-            <span>Tic-Tac-Toe <b className="beta-tag">beta</b></span>
-          </button>
-        )}
-        {gameEligible && (
-          <button type="button" onClick={() => { setRpsOpen(true); setGameOpen(false) }} title="Main batu-kertas-gunting melawan Yuki">
-            <Gamepad2 size={12} />
-            <span>Batu-Kertas-Gunting <b className="beta-tag">beta</b></span>
-          </button>
-        )}
+
         {(chatMode === 'agent' ? agentSuggestions : companionSuggestions).map(item => {
           const Icon = item.icon
           return (
