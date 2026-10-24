@@ -1848,3 +1848,64 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   .ttt-card { width: 100%; }
   .ttt-cell { font-size: 28px; }
 }
+
+
+/* ===== Tic-Tac-Toe v2: panel menyambung di chat (bukan overlay) =====
+   Overlay penuh membuat Yuki tertutup — sekarang papan menempel di atas kolom
+   tulis, jadi panel karakter tetap terlihat dan ekspresinya ikut bereaksi. */
+.ttt-dock {
+  flex: 0 0 auto;
+  padding: 6px 22px 0;
+  background: linear-gradient(to top, #090b10 40%, transparent);
+}
+.ttt-card {
+  width: 100%;
+  padding: 10px 12px 11px;
+  border: 1px solid #2a2e39;
+  border-radius: 10px;
+  background: #11141b;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ttt-card header { display: flex; align-items: center; gap: 10px; }
+.ttt-face {
+  width: 34px; height: 34px; flex: 0 0 auto;
+  border-radius: 50%; object-fit: cover; object-position: 50% 20%;
+  background: #171a22; border: 1px solid #2f3340;
+}
+.ttt-title { min-width: 0; }
+.ttt-title small {
+  display: block; color: #85899a;
+  font: 700 8.5px/1 ui-monospace, monospace; letter-spacing: .12em; text-transform: uppercase;
+}
+.ttt-title h2 { margin: 3px 0 0; font-size: 13.5px; font-weight: 650; }
+.ttt-card header button {
+  margin-left: auto; width: 26px; height: 26px;
+  display: grid; place-items: center; padding: 0;
+  border: 1px solid transparent; border-radius: 6px;
+  color: #85899a; background: transparent; cursor: pointer;
+}
+.ttt-card header button:hover { color: #e6e3ff; border-color: #363a48; background: #191d27; }
+
+.ttt-score { gap: 12px; margin: 0; font-size: 11px; color: #a7aab8; }
+.ttt-score b { font-size: 12.5px; }
+
+/* papan kecil — cukup untuk main, tanpa mendorong obrolan keluar layar */
+.ttt-board { grid-template-columns: repeat(3, 54px); gap: 6px; justify-content: center; margin: 2px 0; }
+.ttt-cell {
+  width: 54px; height: 54px; aspect-ratio: auto;
+  border-radius: 8px; font-size: 22px;
+}
+.ttt-say { min-height: 0; margin: 0; font-size: 12px; line-height: 1.45; }
+.ttt-actions { gap: 8px; }
+.ttt-primary, .ttt-ghost { padding: 6px 10px; font-size: 11.5px; }
+.ttt-status { font-size: 9.5px; }
+
+@media (max-width: 760px) {
+  .ttt-dock { padding: 5px 14px 0; }
+  .ttt-board { grid-template-columns: repeat(3, 48px); }
+  .ttt-cell { width: 48px; height: 48px; font-size: 20px; }
+  .ttt-card { padding: 9px 10px 10px; }
+}

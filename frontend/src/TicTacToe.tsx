@@ -20,6 +20,17 @@ interface GameState {
 interface Props {
   token: string
   onClose: () => void
+  /** Dipakai supaya ekspresi Yuki di panel karakter ikut bereaksi. */
+  onMood?: (mood: string) => void
+}
+
+// Wajah kecil di dalam panel: pemain bisa lihat reaksi Yuki tanpa kehilangan
+// panel karakter utama (dulu kartunya berupa overlay penuh yang menutup Yuki).
+const WAJAH: Record<string, string> = {
+  playing: 'tenang',
+  user_win: 'malu',
+  yuki_win: 'senang',
+  draw: 'tenang'
 }
 
 const KOMENTAR: Record<string, string[]> = {
@@ -29,7 +40,7 @@ const KOMENTAR: Record<string, string[]> = {
   draw: ['Seri. Setidaknya kamu tidak kalah.', 'Tidak ada yang menang. Aneh, aku biasanya menang.']
 }
 
-export default function TicTacToe({ token, onClose }: Props) {
+export default function TicTacToe({ token, onClose, onMood }: Props) {
   const [game, setGame] = useState<GameState | null>(null)
   const [stats, setStats] = useState({ wins: 0, losses: 0, draws: 0 })
   const [loading, setLoading] = useState(true)
@@ -50,6 +61,8 @@ export default function TicTacToe({ token, onClose }: Props) {
   const pilihKomentar = (status: string) => {
     const daftar = KOMENTAR[status] || KOMENTAR.playing
     setKomentar(daftar[Math.floor(Math.random() * daftar.length)])
+    // Ekspresi Yuki ikut berubah: malu saat kalah, senang saat menang.
+    onMood?.(WAJAH[status] || 'tenang')
   }
 
   useEffect(() => {
@@ -104,11 +117,12 @@ export default function TicTacToe({ token, onClose }: Props) {
   const selesai = game && game.status !== 'playing'
 
   return (
-    <div className="ttt-overlay" role="dialog" aria-modal="true" aria-label="Tic-Tac-Toe melawan Yuki" onClick={onClose}>
-      <section className="ttt-card" onClick={(e) => e.stopPropagation()}>
+    <section className="ttt-dock" aria-label="Tic-Tac-Toe melawan Yuki">
+      <div className="ttt-card">
         <header>
-          <div>
-            <small>Beta v4 · mini game</small>
+          <img className="ttt-face" src={`/expressions/${WAJAH[game?.status || 'playing'] || 'tenang'}.webp`} alt="" aria-hidden="true" />
+          <div className="ttt-title">
+            <small>Beta v4 · main bareng Yuki</small>
             <h2>Tic-Tac-Toe</h2>
           </div>
           <button type="button" onClick={onClose} aria-label="Tutup"><XIcon size={17} /></button>
@@ -157,7 +171,7 @@ export default function TicTacToe({ token, onClose }: Props) {
               : game?.turn === 'X' ? 'Giliranmu' : 'Yuki berpikir'}
           </span>
         </div>
-      </section>
-    </div>
+      </div>
+    </section>
   )
 }

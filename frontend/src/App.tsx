@@ -1847,8 +1847,6 @@ export default function App() {
         <div className="timeline-list">{milestones.map((item, index) => <article key={`${item.kind}-${index}`}><i/><div><strong>{item.title}</strong><span>{item.detail || `Terbuka pada bond ${Math.round(item.bondValue)}`}</span></div></article>)}</div>
       </section></div>}
 
-      {gameOpen && session && <TicTacToe token={session.sessionToken} onClose={() => setGameOpen(false)} />}
-
       {bookmarksOpen && <div className="timeline-overlay" onClick={() => setBookmarksOpen(false)}><section className="timeline-card bookmarks-modal" onClick={event => event.stopPropagation()}>
         <header><div><small>Ryukomik archive</small><h2>Komik Tersimpan</h2></div><button onClick={() => setBookmarksOpen(false)}><X size={17}/></button></header>
         <div className="bookmarks-list">
@@ -1968,6 +1966,14 @@ export default function App() {
         {error && <div className="error-banner"><span>{error}</span><button onClick={() => setError('')}><X size={14}/></button></div>}
         <div ref={endRef} />
       </div>
+
+      {gameOpen && session && (
+        <TicTacToe
+          token={session.sessionToken}
+          onClose={() => setGameOpen(false)}
+          onMood={next => setMood(next)}
+        />
+      )}
 
       {showJump && (
         <button
