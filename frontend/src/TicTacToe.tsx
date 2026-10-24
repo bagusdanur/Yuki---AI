@@ -165,7 +165,7 @@ export default function TicTacToe({ token, onClose, onMood }: Props) {
       <div className={`ttt-card${menunggu ? ' menunggu' : ''}`}>
         <header>
           <div className="ttt-title">
-            <small>Beta v4 · main bareng Yuki</small>
+            <small>Main bareng Yuki</small>
             <h2>Tic-Tac-Toe <span className={`ttt-status ${game?.status || ''}`}>
               {game?.status === 'user_win' ? 'kamu menang'
                 : game?.status === 'yuki_win' ? 'Yuki menang'

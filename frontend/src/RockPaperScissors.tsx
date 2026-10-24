@@ -103,7 +103,7 @@ export default function RockPaperScissors({ token, onClose, onMood }: Props) {
       <div className={`ttt-card${menunggu ? ' menunggu' : ''}`}>
         <header>
           <div className="ttt-title">
-            <small>Beta v4 · main bareng Yuki</small>
+            <small>Main bareng Yuki</small>
             <h2>
               Batu-Kertas-Gunting
               <span className="ttt-status">{state?.round ? `ronde ${state.round + 1}` : 'ronde 1'}</span>

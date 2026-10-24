@@ -30,7 +30,7 @@ const SESSION_KEYS = {
 
 // Versi pembaruan terakhir yang tercatat di /changelog. Dipakai untuk menandai
 // tombol log dengan titik "ada yang baru" sampai user membukanya.
-const CHANGELOG_VERSION = '3.3.1'
+const CHANGELOG_VERSION = '3.5.0'
 const EMBED_COMPANION_ONLY = new URLSearchParams(window.location.search).get('embed') === '1'
   || /\/embed(?:\.html)?$/i.test(window.location.pathname)
 
@@ -2032,7 +2032,7 @@ export default function App() {
           >
             <header>
               <small>Mini game</small>
-              <span className="beta-tag">beta</span>
+              <span className="beta-tag">baru</span>
             </header>
 
             <div className="games-list">

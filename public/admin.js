@@ -493,6 +493,25 @@ async function loadSummary() {
     set('sh-latency', `${fmt(pt.averageLatencyMs || rt.averageLatency || 0)} ms`)
     const inTok = pt.inputTokens || 0, outTok = pt.outputTokens || 0
     set('sh-cost', usd((inTok * 0.14 + outTok * 0.28) / 1e6))
+
+    // Mini game: apakah fitur ini benar-benar dimainkan?
+    const g = data.games || {}
+    set('sh-games-total', fmt(g.totalStarts || 0))
+    set('sh-games-players', fmt(g.players || 0))
+    set('sh-games-rounds', fmt(g.totalRounds || 0))
+    set('sh-games-today', fmt(g.todayStarts || 0))
+    const selesai = g.finishes || 0
+    set('sh-games-note', g.totalStarts
+      ? `${selesai} selesai · ${g.completionRate || 0}% tuntas`
+      : 'belum ada yang main')
+    const daftar = $('sh-games-list')
+    if (daftar) {
+      const nama = { 'tic-tac-toe': 'Tic-Tac-Toe', 'batu-kertas-gunting': 'Batu-Kertas-Gunting' }
+      daftar.innerHTML = (g.byGame || []).map(item => {
+        const judul = nama[item.game] || item.game
+        return `<span>${judul}<b>${fmt(item.starts || 0)} sesi · ${fmt(item.rounds || 0)} ronde · ${fmt(item.players || 0)} pemain</b></span>`
+      }).join('')
+    }
   } catch (e) { console.warn('[Summary]', e.message) }
 }
 

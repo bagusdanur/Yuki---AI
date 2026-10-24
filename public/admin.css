@@ -759,3 +759,17 @@ h2 i.ico { margin-right: 7px; }
 .nav-link i.ico { margin-right: 10px; }
 .btn i.ico { margin-right: 5px; }
 .stat-chip i.ico { margin-right: 5px; }
+
+/* Blok statistik mini game di kartu Ringkasan */
+.share-games { margin-top: 14px; padding-top: 12px; border-top: 1px solid #1f222a; }
+.share-games-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.share-games-head span { font: 700 9px/1 ui-monospace, monospace; letter-spacing: .1em; color: #868b98; }
+.share-games-head small { font-size: 10px; color: #6f7480; }
+.share-games-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.share-games-grid div { display: flex; flex-direction: column; gap: 2px; }
+.share-games-grid b { font-size: 15px; color: #eceaf6; font-variant-numeric: tabular-nums; }
+.share-games-grid small { font-size: 9.5px; color: #7d818e; }
+.share-games-list { margin-top: 8px; display: flex; flex-direction: column; gap: 3px; }
+.share-games-list span { display: flex; justify-content: space-between; gap: 8px; font-size: 10.5px; color: #9aa0ae; }
+.share-games-list b { color: #dcd9ee; font-weight: 600; }
+@media (max-width: 620px) { .share-games-grid { grid-template-columns: repeat(2, 1fr); } }
