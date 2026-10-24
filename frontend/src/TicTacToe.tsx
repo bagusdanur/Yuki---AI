@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { X as XIcon, RotateCcw, LoaderCircle } from 'lucide-react'
 
 /**
- * Kartu Tic-Tac-Toe (beta v4).
+ * Papan Tic-Tac-Toe (beta v4).
  *
- * Papan dihitung server (minimax), bukan model bahasa — komponen ini hanya
- * menampilkan state dan mengirim langkah. Skor & sesi disimpan di server,
- * jadi menutup kartu tidak menghapus permainan yang sedang berjalan.
+ * Aturan & langkah Yuki dihitung server (minimax) — bukan model bahasa, supaya
+ * tidak mungkin curang atau lupa giliran. Yang dibuat model hanyalah KOMENTAR
+ * Yuki, karena kalimat template selalu sama dan terasa seperti bot.
  */
 
 interface GameState {
@@ -20,12 +20,9 @@ interface GameState {
 interface Props {
   token: string
   onClose: () => void
-  /** Dipakai supaya ekspresi Yuki di panel karakter ikut bereaksi. */
   onMood?: (mood: string) => void
 }
 
-// Wajah kecil di dalam panel: pemain bisa lihat reaksi Yuki tanpa kehilangan
-// panel karakter utama (dulu kartunya berupa overlay penuh yang menutup Yuki).
 const WAJAH: Record<string, string> = {
   playing: 'tenang',
   user_win: 'malu',
@@ -33,19 +30,24 @@ const WAJAH: Record<string, string> = {
   draw: 'tenang'
 }
 
-const KOMENTAR: Record<string, string[]> = {
-  playing: ['Hmph, giliranmu. Jangan lama-lama mikir.', 'Coba lagi kalau berani.', 'Jangan salah langkah.'],
-  user_win: ['…bagus juga. Jangan besar kepala dulu.', 'Kali ini kamu menang. Aku lengah, bukan kalah.'],
-  yuki_win: ['Hmph, sudah kubilang. Mau lagi?', 'Sudah selesai. Jangan ngambek.'],
-  draw: ['Seri. Setidaknya kamu tidak kalah.', 'Tidak ada yang menang. Aneh, aku biasanya menang.']
-}
+// Hanya dipakai kalau model tidak menjawab dalam 4,5 detik. Sengaja beberapa
+// variasi agar tidak terasa diulang-ulang.
+const CADANGAN = [
+  'Hmph. Lanjut.',
+  'Coba pikir dulu sebelum menaruh.',
+  'Itu langkah yang berani. Sayangnya belum cukup.',
+  'Kamu lumayan juga, ternyata.'
+]
 
 export default function TicTacToe({ token, onClose, onMood }: Props) {
   const [game, setGame] = useState<GameState | null>(null)
   const [stats, setStats] = useState({ wins: 0, losses: 0, draws: 0 })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [komentar, setKomentar] = useState('')
+  const [line, setLine] = useState('')
+  const [lineBusy, setLineBusy] = useState(false)
+  const riwayat = useRef<string[]>([])
+  const terakhir = useRef<string>('')
 
   const call = async (path: string, body?: unknown) => {
     const res = await fetch(path, {
@@ -58,11 +60,35 @@ export default function TicTacToe({ token, onClose, onMood }: Props) {
     return data
   }
 
-  const pilihKomentar = (status: string) => {
-    const daftar = KOMENTAR[status] || KOMENTAR.playing
-    setKomentar(daftar[Math.floor(Math.random() * daftar.length)])
-    // Ekspresi Yuki ikut berubah: malu saat kalah, senang saat menang.
-    onMood?.(WAJAH[status] || 'tenang')
+  /** Komentar Yuki dibuat model; kalau lambat/gagal, pakai cadangan lokal. */
+  const mintaKomentar = async (event: 'start' | 'move' | 'result', result?: string, moveCount?: number) => {
+    const kunci = `${event}:${result || ''}:${moveCount || 0}`
+    if (kunci === terakhir.current) return
+    terakhir.current = kunci
+    setLineBusy(true)
+    try {
+      const data = await call('/api/game/ttt/line', {
+        event, result, moveCount, avoid: riwayat.current.slice(-3)
+      })
+      const teks = String(data?.line || '').trim()
+      if (teks) {
+        riwayat.current = [...riwayat.current, teks].slice(-6)
+        setLine(teks)
+      } else {
+        setLine(CADANGAN[Math.floor(Math.random() * CADANGAN.length)])
+      }
+    } catch {
+      setLine(CADANGAN[Math.floor(Math.random() * CADANGAN.length)])
+    } finally {
+      setLineBusy(false)
+    }
+  }
+
+  const terapkan = (state: GameState, mode: 'start' | 'move' | 'result') => {
+    setGame(state)
+    onMood?.(WAJAH[state.status] || 'tenang')
+    if (state.status === 'playing') mintaKomentar(mode, undefined, state.moves)
+    else mintaKomentar('result', state.status, state.moves)
   }
 
   useEffect(() => {
@@ -74,13 +100,13 @@ export default function TicTacToe({ token, onClose, onMood }: Props) {
         if (data.game) {
           setGame(data.game)
           setStats(data.stats || { wins: 0, losses: 0, draws: 0 })
-          pilihKomentar(data.game.status)
+          onMood?.(WAJAH[data.game.status] || 'tenang')
+          mintaKomentar(data.game.status === 'playing' ? 'start' : 'result', data.game.status, data.game.moves)
         } else {
           const baru = await call('/api/game/ttt/new', {})
           if (!hidup) return
-          setGame(baru.game)
           setStats(baru.stats || { wins: 0, losses: 0, draws: 0 })
-          pilihKomentar('playing')
+          terapkan(baru.game, 'start')
         }
       } catch (e) { if (hidup) setError(e instanceof Error ? e.message : 'Gagal memuat.') }
       finally { if (hidup) setLoading(false) }
@@ -91,16 +117,15 @@ export default function TicTacToe({ token, onClose, onMood }: Props) {
   const langkah = async (cell: number) => {
     if (!game || game.status !== 'playing' || game.turn !== 'X' || game.board[cell]) return
     setError('')
-    // tampilkan langkah pemain segera (optimistis), server tetap penentu akhir
-    const optimis = { ...game, board: game.board.map((v, i) => (i === cell ? 'X' : v)), turn: 'O' as const }
-    setGame(optimis)
+    const sebelum = game
+    // tampilkan langkah pemain segera; server tetap penentu akhir
+    setGame({ ...game, board: game.board.map((v, i) => (i === cell ? 'X' : v)), turn: 'O' })
     try {
       const data = await call('/api/game/ttt/move', { cell })
-      setGame(data.game)
       setStats(data.stats || stats)
-      pilihKomentar(data.game.status)
+      terapkan(data.game, 'move')
     } catch (e) {
-      setGame(game) // kembalikan kalau server menolak
+      setGame(sebelum)
       setError(e instanceof Error ? e.message : 'Langkah gagal.')
     }
   }
@@ -109,12 +134,13 @@ export default function TicTacToe({ token, onClose, onMood }: Props) {
     setLoading(true); setError('')
     try {
       const data = await call('/api/game/ttt/new', {})
-      setGame(data.game); setStats(data.stats || stats); pilihKomentar('playing')
+      setStats(data.stats || stats)
+      terapkan(data.game, 'start')
     } catch (e) { setError(e instanceof Error ? e.message : 'Gagal memulai.') }
     finally { setLoading(false) }
   }
 
-  const selesai = game && game.status !== 'playing'
+  const selesai = Boolean(game && game.status !== 'playing')
 
   return (
     <section className="ttt-dock" aria-label="Tic-Tac-Toe melawan Yuki">
@@ -123,16 +149,15 @@ export default function TicTacToe({ token, onClose, onMood }: Props) {
           <img className="ttt-face" src={`/expressions/${WAJAH[game?.status || 'playing'] || 'tenang'}.webp`} alt="" aria-hidden="true" />
           <div className="ttt-title">
             <small>Beta v4 · main bareng Yuki</small>
-            <h2>Tic-Tac-Toe</h2>
+            <h2>Tic-Tac-Toe <span className={`ttt-status ${game?.status || ''}`}>
+              {game?.status === 'user_win' ? 'kamu menang'
+                : game?.status === 'yuki_win' ? 'Yuki menang'
+                : game?.status === 'draw' ? 'seri'
+                : game?.turn === 'X' ? 'giliranmu' : 'Yuki jalan'}
+            </span></h2>
           </div>
-          <button type="button" onClick={onClose} aria-label="Tutup"><XIcon size={17} /></button>
+          <button type="button" onClick={onClose} aria-label="Tutup"><XIcon size={16} /></button>
         </header>
-
-        <div className="ttt-score">
-          <span><b>{stats.wins}</b> menang</span>
-          <span><b>{stats.draws}</b> seri</span>
-          <span><b>{stats.losses}</b> kalah</span>
-        </div>
 
         <div className="ttt-board" aria-live="polite">
           {(game?.board || Array(9).fill('')).map((isi, i) => {
@@ -152,24 +177,23 @@ export default function TicTacToe({ token, onClose, onMood }: Props) {
           })}
         </div>
 
-        <p className="ttt-say">{loading ? 'Menyiapkan papan…' : error || komentar}</p>
+        {/* Balasan Yuki ditampilkan seperti gelembung chat, bukan teks statis:
+            supaya jelas ini Yuki yang bicara, dan kalimatnya berubah tiap langkah. */}
+        <div className={`ttt-bubble${lineBusy ? ' ngetik' : ''}`} aria-live="polite">
+          <img src={`/expressions/${WAJAH[game?.status || 'playing'] || 'tenang'}.webp`} alt="" aria-hidden="true" />
+          <p>
+            {error ? error
+              : lineBusy && !line ? <span className="ttt-dots"><i /><i /><i /></span>
+              : line || 'Yuki memperhatikan papannya…'}
+          </p>
+        </div>
 
         <div className="ttt-actions">
-          {selesai ? (
-            <button type="button" className="ttt-primary" onClick={mulaiUlang} disabled={loading}>
-              {loading ? <LoaderCircle className="spin" size={15} /> : <RotateCcw size={15} />} Main lagi
-            </button>
-          ) : (
-            <button type="button" className="ttt-ghost" onClick={mulaiUlang} disabled={loading}>
-              <RotateCcw size={15} /> Papan baru
-            </button>
-          )}
-          <span className={`ttt-status ${game?.status || ''}`}>
-            {game?.status === 'user_win' ? 'Kamu menang'
-              : game?.status === 'yuki_win' ? 'Yuki menang'
-              : game?.status === 'draw' ? 'Seri'
-              : game?.turn === 'X' ? 'Giliranmu' : 'Yuki berpikir'}
-          </span>
+          <span className="ttt-score">{stats.wins} menang · {stats.draws} seri · {stats.losses} kalah</span>
+          <button type="button" className={selesai ? 'ttt-primary' : 'ttt-ghost'} onClick={mulaiUlang} disabled={loading}>
+            {loading ? <LoaderCircle className="spin" size={13} /> : <RotateCcw size={13} />}
+            {selesai ? 'Main lagi' : 'Ulang'}
+          </button>
         </div>
       </div>
     </section>

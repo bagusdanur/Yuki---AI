@@ -3,7 +3,7 @@ import express from 'express'
 import path from 'path'
 import crypto from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
-import { chat, chatStream, extractFacts } from './lib/llm.js'
+import { chat, chatStream, extractFacts, callLLM } from './lib/llm.js'
 import { synthesize } from './lib/tts.js'
 import { Emotion } from './lib/emotion.js'
 import {
@@ -465,6 +465,50 @@ if (process.env.GAMES_ENABLED === 'true') {
   // Dipakai UI untuk memutuskan apakah tombol game perlu ditampilkan.
   app.get('/api/game/status', requireSession, (req, res) => {
     res.json({ eligible: gameEligible(req.authUserId) })
+  })
+
+  // Komentar Yuki saat main dibuat MODEL, bukan kalimat template — template
+  // terasa seperti bot karena selalu sama. Batas 4,5 detik: kalau model lambat,
+  // UI memakai cadangan lokal supaya papan tidak pernah menunggu.
+  app.post('/api/game/ttt/line', requireSession, batasGame, khususBeta, async (req, res) => {
+    try {
+      const { event, result, moveCount, avoid } = req.body || {}
+      const emo = await getEmotion(req.authUserId).catch(() => null)
+      const bond = Math.round(emo?.bond || 0)
+      const hindari = Array.isArray(avoid) ? avoid.filter((x) => typeof x === 'string' && x.trim()).slice(-4) : []
+      const aturan = [
+        'Kamu Yuki, perempuan 19 tahun, tsundere, bicara santai bahasa Indonesia sehari-hari (aku/kamu).',
+        `Kedekatanmu dengan pemain: bond ${bond}/100 (makin tinggi makin luluh, tapi tetap tidak mau terlihat kalah).`,
+        'Kalian sedang main Tic-Tac-Toe; kamu memegang O.',
+        'Balas HANYA satu kalimat pendek, maksimal 12 kata, tanpa tanda kutip dan tanpa emoji.',
+        'Jangan pernah menyebut dirimu AI, bot, asisten, atau model. Jangan menjelaskan aturan permainan.',
+        'Variasikan pembuka kalimat — jangan mengulang kata pembuka dari komentar sebelumnya.',
+        hindari.length ? `Jangan ulangi kalimat ini: ${hindari.map((x) => `"${x}"`).join('; ')}` : ''
+      ].filter(Boolean).join('\n')
+
+      const konteks = event === 'start'
+        ? 'Permainan baru dimulai. Ledek dia dengan santai, jangan panjang.'
+        : event === 'result'
+          ? (result === 'user_win' ? 'Dia menang dan kamu kalah. Jengkel sedikit, jangan berlebihan.'
+            : result === 'yuki_win' ? 'Kamu menang. Cukup puas, jangan sombong berlebihan.'
+              : 'Permainan seri. Komentari singkat.')
+          : `Dia baru menaruh X untuk langkah ke-${Number(moveCount) || 1}. Komentari langkahnya, singkat.`
+
+      const hasil = await Promise.race([
+        callLLM([{ role: 'system', content: aturan }, { role: 'user', content: konteks }], { max_tokens: 64, temperature: 0.95 }),
+        new Promise((resolve) => setTimeout(() => resolve(null), 4500))
+      ])
+      const baris = String(hasil?.content || '')
+        .replace(/<think[\s\S]*?<\/think>/gi, '')
+        .replace(/\[[^\]]*\]/g, '')
+        .trim().split('\n').filter(Boolean)[0] || ''
+      const bersih = baris.replace(/^["'“”]+|["'“”]+$/g, '').trim().slice(0, 140)
+      if (!bersih) return res.status(204).end()
+      return res.json({ line: bersih })
+    } catch (err) {
+      console.error('[game] komentar gagal:', err.message)
+      return res.status(204).end()
+    }
   })
 
   app.get('/api/game/ttt', requireSession, batasGame, khususBeta, (req, res) => {
