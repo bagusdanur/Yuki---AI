@@ -6,7 +6,7 @@ import {
   Bell, Bookmark, BookOpen, Bot, Brain, Check, ChevronDown, ChevronUp, Clock3, Code2, Copy, Download,
   Gamepad2, Globe, Heart, History as HistoryIcon, KeyRound, ListTodo, LoaderCircle, Maximize2, MessageSquare,
   Minimize2, Pause, Play, Radio, RefreshCw, RotateCcw, Save, Send, Settings, Sparkles, Star,
-  Terminal, ThumbsDown, ThumbsUp, Volume2, WifiOff, Wrench, X, Zap
+  Terminal, ThumbsDown, ThumbsUp, Volume2, WifiOff, Wrench, X, Zap, Eye, EyeOff,
 } from 'lucide-react'
 import {
   addBookmark, cancelAgentRun, createDynamicSkill, decideAgentApproval, deleteAccount, deleteMemory, deletePlainMemory, dynamicSkillAction, getActiveAgentRun, getAgenda, getBookmarks, getChatHistoryPage, getDynamicSkills, getMemories, getPushConfig, getRelationship,
@@ -1252,6 +1252,30 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [showAccessCode, setShowAccessCode] = useState(false)
   const [avatarCompact, setAvatarCompact] = useState(false)
+  // Sembunyikan avatar (hemat kuota / fokus baca). Diingat di perangkat.
+  const [avatarOff, setAvatarOff] = useState(() => localStorage.getItem('yuki_avatar_off') === '1')
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
+  const [showJump, setShowJump] = useState(false)
+  const composerRef = useRef<HTMLTextAreaElement | null>(null)
+  const messagesRef = useRef<HTMLDivElement | null>(null)
+
+  // Composer tumbuh mengikuti isi (maks 140px) supaya pesan panjang tetap terbaca.
+  useEffect(() => {
+    const el = composerRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, 140)}px`
+  }, [input])
+
+  // Tombol "pesan terbaru" muncul hanya kalau user sudah menggulir jauh ke atas.
+  useEffect(() => {
+    const el = messagesRef.current
+    if (!el) return
+    const onScroll = () => setShowJump(el.scrollHeight - el.scrollTop - el.clientHeight > 260)
+    onScroll()
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [session?.userId])
   const [blinking, setBlinking] = useState(false)
   const [connection, setConnection] = useState<ConnectionState>(() => navigator.onLine ? 'idle' : 'offline')
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null)
@@ -1691,7 +1715,7 @@ export default function App() {
     { icon: ListTodo, label: 'Agenda To-Do', text: 'Catat agenda to-do list belajarku besok' }
   ]
 
-  return <main className={`app-shell${avatarCompact ? ' avatar-compact' : ''} mode-${chatMode}`}>
+  return <main className={`app-shell${avatarCompact ? ' avatar-compact' : ''}${avatarOff ? ' avatar-off' : ''} mode-${chatMode}`}>
     {updateReady && <div className="pwa-update"><RefreshCw size={14} /><span>Versi baru Yuki sudah siap.</span><button onClick={() => window.location.reload()}>Muat ulang</button></div>}
     {!session && <Onboarding onReady={ready} />}
     <section className="chat-panel">
@@ -1703,6 +1727,16 @@ export default function App() {
         </div>
         <div className="header-actions">
           <a href="/docs" target="_blank" aria-label="Dokumentasi"><BookOpen size={17} /></a>
+          <button
+            type="button"
+            onClick={() => setAvatarOff(value => {
+              const next = !value
+              localStorage.setItem('yuki_avatar_off', next ? '1' : '0')
+              return next
+            })}
+            aria-label={avatarOff ? 'Tampilkan avatar Yuki' : 'Sembunyikan avatar Yuki'}
+            title={avatarOff ? 'Tampilkan avatar' : 'Sembunyikan avatar (hemat kuota)'}
+          >{avatarOff ? <Eye size={17} /> : <EyeOff size={17} />}</button>
           <button onClick={() => setSettingsOpen(!settingsOpen)} aria-label="Pengaturan"><Settings size={17} /></button>
         </div>
         {settingsOpen && <div className="settings-card">
@@ -1800,7 +1834,7 @@ export default function App() {
         </div>
       </section></div>}
 
-      <div className="messages" aria-live="polite">
+      <div className="messages" aria-live="polite" ref={messagesRef}>
         {messages.length === 0 && <div className="empty-state">
           <span>01</span>
           <h2>{chatMode === 'agent' ? 'Yuki Agent siap mengeksekusi.' : 'Yuki menunggumu bicara.'}</h2>
@@ -1825,6 +1859,19 @@ export default function App() {
           </div>
           {message.role === 'assistant' && (
             <div className="message-tools">
+              <button
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(message.content)
+                    setCopiedIndex(index)
+                    window.setTimeout(() => setCopiedIndex(current => (current === index ? null : current)), 1600)
+                  } catch { /* clipboard ditolak browser */ }
+                }}
+                aria-label="Salin balasan"
+                title={copiedIndex === index ? 'Tersalin' : 'Salin teks balasan'}
+              >
+                {copiedIndex === index ? <Check size={12}/> : <Copy size={12}/>}
+              </button>
               <button
                 className={speakingIndex === index ? 'selected' : ''}
                 onClick={() => play(message.content, index)}
@@ -1884,12 +1931,24 @@ export default function App() {
         <div ref={endRef} />
       </div>
 
+      {showJump && (
+        <button
+          type="button"
+          className="jump-latest"
+          onClick={() => messagesRef.current?.scrollTo({ top: messagesRef.current.scrollHeight, behavior: 'smooth' })}
+          aria-label="Ke pesan terbaru"
+        >
+          <ChevronDown size={15} /> <span>Pesan terbaru</span>
+        </button>
+      )}
+
       <form className="composer" onSubmit={submit}>
         <span className="composer-index">
-          {chatMode === 'agent' ? <Zap size={12} /> : '01'}
+          {chatMode === 'agent' ? <Zap size={12} /> : <MessageSquare size={12} />}
         </span>
         <textarea
           rows={1}
+          ref={composerRef}
           value={input}
           onChange={e => setInput(e.target.value)}
           onFocus={() => setAvatarCompact(true)}

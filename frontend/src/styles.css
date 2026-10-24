@@ -1566,3 +1566,133 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   font-size: 11px;
   word-break: break-word;
 }
+
+
+/* ============================================================================
+   v3.3 — UI/UX karakter & chat
+   Fokus: tampilan lebih hidup, bobot lebih ringan, chat lebih nyaman dibaca.
+   ============================================================================ */
+
+/* 1. Animasi masuk tanpa blur — filter blur memicu repaint mahal di HP kelas bawah. */
+@keyframes character-enter { from { opacity: 0; } to { opacity: 1; } }
+
+/* 2. Placeholder buram (LQIP): tampil seketika, jadi pergantian emosi tidak berkedip. */
+.avatar-lqip {
+  position: absolute; inset: 0; z-index: 0;
+  background-position: center bottom; background-size: contain; background-repeat: no-repeat;
+  filter: blur(9px); transform: scale(1.04); opacity: .5; pointer-events: none;
+}
+.character-layer { z-index: 1; }
+
+/* 3. Fokus wajah berbeda per emosi — nol byte tambahan, emosi lebih terbaca. */
+.character-layer { transition: opacity .38s ease, transform .5s cubic-bezier(.22,.61,.36,1); }
+.character.mood-malu .character-layer { transform: scale(1.07); transform-origin: 50% 30%; }
+.character.mood-senang .character-layer { transform: scale(1.03); transform-origin: 50% 34%; }
+.character.mood-kesal .character-layer { transform: scale(.98); transform-origin: 50% 42%; }
+.character.mood-sedih .character-layer, .character.mood-lesu .character-layer { transform: scale(.99); transform-origin: 50% 38%; }
+
+/* 4. Vignette panggung + bayangan lantai supaya terasa punya kedalaman. */
+.character-frame::after {
+  content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  background: radial-gradient(115% 85% at 50% 16%, transparent 55%, rgba(4,6,11,.5) 100%);
+}
+.avatar-aura::after {
+  content: ""; position: absolute; left: 20%; right: 20%; bottom: -1%; height: 14%;
+  border-radius: 50%; background: rgba(0,0,0,.5); filter: blur(13px);
+}
+
+/* 5. Mode hemat data (saveData / 2G): semua gerak dimatikan, hanya potret diam. */
+.character.is-static, .character-parallax.is-static .avatar-aura { animation: none !important; }
+.character.is-static .character-layer { transition: none; }
+
+/* 6. Sembunyikan avatar: chat memakai lebar penuh, pilihan diingat per perangkat. */
+.app-shell.avatar-off { grid-template-columns: minmax(0, 1fr); }
+.app-shell.avatar-off .character-panel { display: none; }
+@media (max-width: 980px) {
+  .app-shell.avatar-off { grid-template-rows: minmax(0, 1fr); }
+}
+
+/* 7. Chat: pesan berurutan dari pengirim sama dirapatkan (mudah dipindai). */
+.messages { scroll-behavior: smooth; scroll-padding-bottom: 16px; }
+.message.assistant + .message.assistant,
+.message.user + .message.user { margin-top: -9px; }
+
+/* 8. Tombol "pesan terbaru" saat menggulir ke atas. */
+.jump-latest {
+  position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%);
+  z-index: 5; display: flex; align-items: center; gap: 6px;
+  padding: 7px 11px; border: 1px solid #3b3f52; border-radius: 999px;
+  color: #d6d4e8; background: rgba(20,23,31,.94);
+  font: 600 11px/1 ui-sans-serif, system-ui, sans-serif;
+  box-shadow: 0 10px 28px rgba(0,0,0,.5); cursor: pointer;
+  animation: jump-in .22s ease-out both;
+}
+.jump-latest:hover { border-color: #6d6aa8; color: #ece9ff; }
+@keyframes jump-in { from { opacity: 0; transform: translate(-50%, 6px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+/* 9. Composer: tumbuh mengikuti isi, tidak melampaui 140px. */
+.composer textarea { max-height: 140px; overflow-y: auto; line-height: 1.55; }
+
+/* 10. Balasan Yuki sedikit lebih lega dibaca di layar lebar. */
+@media (min-width: 900px) {
+  .message-content { font-size: 14.5px; line-height: 1.7; }
+  .message { max-width: min(78%, 660px); }
+}
+
+/* 11. HP: bubble lebih lebar, tombol avatar tidak pakai backdrop-filter (mahal), */
+/*     dan avatar yang diperkecil tidak menutupi pesan. */
+@media (max-width: 760px) {
+  .messages { padding: 18px 14px 24px; gap: 16px; }
+  .message { max-width: 92%; }
+  .message-content { font-size: 14px; }
+  .avatar-toggle { backdrop-filter: none; background: rgba(10,13,20,.9); }
+  .character-layer { filter: none; }
+  .jump-latest { bottom: 88px; }
+}
+
+
+/* 12. Keterbacaan teks sekunder (sebelumnya terlalu samar di layar redup). */
+.message-content .action { color: #b3b5c1; }
+.message-content .action::before { color: #9a95f0; }
+.feeling { color: #9a9eaa; }
+.status-strip { color: #8b8f9b; }
+.status-strip b { color: #b9bbc6; }
+.mood-pill { color: #d3d4de; }
+.activities button { color: #b9bbc6; }
+.activities button svg { color: #9f9bd8; }
+
+/* 13. Tombol aksi balasan: lebih besar, jelas saat disentuh kursor, dan
+       hanya muncul saat dibutuhkan (mengurangi noise pada percakapan panjang). */
+.message-tools { opacity: 0; transition: opacity .16s ease; }
+.message:hover .message-tools,
+.message:focus-within .message-tools,
+.message-tools:focus-within { opacity: 1; }
+.message-tools button {
+  width: 28px; height: 28px; color: #c2c5d1;
+  border-color: rgba(255,255,255,.10); border-radius: 7px;
+  background: rgba(255,255,255,.045);
+}
+.message-tools button:hover { color: #e6e3ff; border-color: #6d6aa8; background: #202432; }
+@media (hover: none) { .message-tools { opacity: 1; } } /* layar sentuh: selalu tampil */
+
+/* 14. Framing avatar: kurangi ruang kosong di atas kepala (desktop saja —
+       aturan HP punya inset/height sendiri dan tidak boleh tertimpa). */
+@media (min-width: 761px) {
+  /* Gambar sudah dipotong ke area karakter (tanpa padding transparan),
+     jadi framing cukup netral. */
+  .character { inset: 0 0 0; height: 100%; }
+}
+
+/* 15. Cahaya tepi lembut supaya siluet karakter tidak menyatu dengan latar gelap. */
+.character-frame::before {
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background:
+    radial-gradient(60% 42% at 50% 8%, rgba(170,196,255,.16), transparent 70%),
+    radial-gradient(90% 60% at 50% 100%, rgba(0,0,0,.35), transparent 72%);
+}
+
+/* 16. Bar Bond lebih terbaca (sebelumnya 3px dan nyaris tak terlihat). */
+.status-strip > div { height: 6px; border-radius: 3px; background: #343847; }
+.status-strip i { border-radius: 3px; background: linear-gradient(90deg, #8f8bea, #cfcaff); }
+.status-strip i { box-shadow: 0 0 10px rgba(170,167,255,.35); }
+.mobile-bond > i { height: 4px; }

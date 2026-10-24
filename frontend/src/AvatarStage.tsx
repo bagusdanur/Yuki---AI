@@ -1,19 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
+import { AVATAR_LQIP } from './avatarLqip'
 
 /**
  * Panggung avatar PNG Yuki.
  *
- * Dulu avatar cuma satu <img> yang di-remount tiap ekspresi berganti, jadi:
- *  - ganti ekspresi terlihat "patah" (masuk animasi blur lalu muncul lagi),
- *  - tiap ganti memuat ulang PNG 620-750 KB (paling terasa di HP),
- *  - tidak ada gerakan bicara, dan gerak idle-nya sama untuk semua emosi.
- *
- * Sekarang:
- *  - dua lapis gambar di-crossfade (ganti ekspresi terasa menyambung),
- *  - format WebP (~40-55 KB, 93% lebih ringan) dengan fallback PNG otomatis,
- *  - semua ekspresi dipanaskan di latar belakang saat browser senggang,
- *  - gerak idle dibedakan per emosi, plus gerak "bicara" saat balasan mengalir,
- *  - sedikit parallax mengikuti kursor (dimatikan bila user minta gerak minimal).
+ * Riwayat desain:
+ *  - dulu satu <img> yang di-remount tiap ganti ekspresi → terasa "patah",
+ *  - lalu diberi crossfade + gerak per emosi + gerak bicara (v3.2),
+ *  - v3.3: placeholder buram (LQIP) supaya tidak ada kedip putih, pemuatan
+ *    gambar dibuat hemat (hanya yang perlu di awal), dan mode hemat data.
  */
 
 const EXPRESSIONS = ['tenang', 'senang', 'malu', 'sedih', 'kesal', 'lesu']
@@ -21,16 +16,22 @@ const BLINKABLE = new Set(['tenang', 'senang'])
 const CROSSFADE_MS = 380
 
 const webp = (name: string) => `/expressions/${name}.webp`
-const png = (name: string) => `/expressions/${name}.png`
+
+// Hormati mode hemat data / koneksi lambat: jangan memanaskan semua gambar.
+const koneksi = (typeof navigator !== 'undefined'
+  ? (navigator as unknown as { connection?: { saveData?: boolean; effectiveType?: string } }).connection
+  : undefined)
+const hematData = Boolean(koneksi?.saveData) || /(^|-)2g$/.test(koneksi?.effectiveType || '')
 
 let prewarmed = false
 
-/** Panaskan semua ekspresi saat browser senggang supaya ganti emosi tidak berkedip. */
-function prewarmAll() {
-  if (prewarmed || typeof window === 'undefined') return
+/** Panaskan ekspresi lain saat browser senggang (bukan di awal, bukan semua sekaligus). */
+function prewarmRest(currentExpr: string) {
+  if (prewarmed || hematData || typeof window === 'undefined') return
   prewarmed = true
   const run = () => {
     for (const expr of EXPRESSIONS) {
+      if (expr === currentExpr) continue
       const img = new Image()
       img.src = webp(expr)
       if (BLINKABLE.has(expr)) {
@@ -40,8 +41,8 @@ function prewarmAll() {
     }
   }
   const idle = (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => void }).requestIdleCallback
-  if (typeof idle === 'function') idle(run, { timeout: 2_500 })
-  else window.setTimeout(run, 1_200)
+  if (typeof idle === 'function') idle(run, { timeout: 3_000 })
+  else window.setTimeout(run, 1_500)
 }
 
 interface AvatarStageProps {
@@ -59,8 +60,7 @@ export default function AvatarStage({ expression, blinking, talking }: AvatarSta
   const wasTalking = useRef(false)
   const stageRef = useRef<HTMLDivElement | null>(null)
 
-  // "Reaksi" singkat saat balasan selesai mengalir: Yuki seperti baru selesai
-  // bicara lalu mengangguk — memberi penutup gerak, bukan berhenti mendadak.
+  // Reaksi singkat ketika balasan selesai mengalir: seperti mengangguk sekali.
   useEffect(() => {
     if (talking) {
       wasTalking.current = true
@@ -86,7 +86,11 @@ export default function AvatarStage({ expression, blinking, talking }: AvatarSta
   }, [expression, current])
 
   useEffect(() => {
-    prewarmAll()
+    // Yang dipanaskan lebih dulu hanya ekspresi aktif + satu emosi paling sering
+    // muncul berikutnya; sisanya menyusul saat browser senggang.
+    const pertama = new Image()
+    pertama.src = webp(expression)
+    prewarmRest(expression)
     return () => {
       window.clearTimeout(fadeTimer.current)
       window.clearTimeout(reactTimer.current)
@@ -97,7 +101,7 @@ export default function AvatarStage({ expression, blinking, talking }: AvatarSta
   // pembungkus, supaya tidak bertabrakan dengan animasi transform di dalamnya.
   useEffect(() => {
     const stage = stageRef.current
-    if (!stage) return
+    if (!stage || hematData) return
     const kurangiGerak = window.matchMedia?.('(prefers-reduced-motion: reduce)')
     const kursorHalus = window.matchMedia?.('(pointer: fine)')
     if (kurangiGerak?.matches || !kursorHalus?.matches) return
@@ -132,11 +136,11 @@ export default function AvatarStage({ expression, blinking, talking }: AvatarSta
       draggable={false}
       decoding="async"
       onError={(event) => {
-        // WebP gagal (browser sangat lama) → pakai PNG yang lama.
         const target = event.currentTarget
-        if (!target.dataset.fallback) {
+        // Jangan biarkan gambar kosong: jatuh ke ekspresi netral sekali saja.
+        if (!target.dataset.fallback && !target.src.endsWith('/tenang.webp')) {
           target.dataset.fallback = '1'
-          target.src = sourceFor(expr, isBlinking).replace(/\.webp$/, '.png')
+          target.src = webp('tenang')
         }
       }}
     />
@@ -147,14 +151,19 @@ export default function AvatarStage({ expression, blinking, talking }: AvatarSta
     `mood-${current}`,
     talking ? 'is-talking' : '',
     reacting ? 'is-react' : '',
-    blinking && BLINKABLE.has(current) ? 'is-blinking' : ''
+    blinking && BLINKABLE.has(current) ? 'is-blinking' : '',
+    hematData ? 'is-static' : ''
   ].filter(Boolean).join(' ')
 
   return (
-    <div className={`character-parallax tint-${current}`} ref={stageRef}>
+    <div className={`character-parallax tint-${current}${hematData ? ' is-static' : ''}`} ref={stageRef}>
       {/* Aura di belakang karakter: warnanya mengikuti emosi aktif. */}
       <div className="avatar-aura" aria-hidden="true" />
       <div className={className} aria-hidden="true">
+        {/* Placeholder buram: muncul seketika, jadi tidak ada kedip putih. */}
+        {AVATAR_LQIP[current] ? (
+          <div className="avatar-lqip" style={{ backgroundImage: `url(${AVATAR_LQIP[current]})` }} />
+        ) : null}
         {previous && previous !== current ? layer(previous, false, false) : null}
         {layer(current, blinking, true)}
       </div>
