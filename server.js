@@ -218,6 +218,9 @@ app.use(express.static('public', { dotfiles: 'ignore' }))
 
 
 // Rute Dokumentasi Yuki AI
+app.get('/changelog', (req, res) => {
+  res.sendFile(path.resolve('public/changelog.html'))
+})
 app.get('/docs', (req, res) => {
   res.sendFile(path.resolve('public/docs.html'))
 })
