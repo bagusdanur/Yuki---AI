@@ -507,10 +507,22 @@ async function loadSummary() {
     const daftar = $('sh-games-list')
     if (daftar) {
       const nama = { 'tic-tac-toe': 'Tic-Tac-Toe', 'batu-kertas-gunting': 'Batu-Kertas-Gunting' }
-      daftar.innerHTML = (g.byGame || []).map(item => {
-        const judul = nama[item.game] || item.game
-        return `<span>${judul}<b>${fmt(item.starts || 0)} sesi · ${fmt(item.rounds || 0)} ronde · ${fmt(item.players || 0)} pemain</b></span>`
-      }).join('')
+      const baris = g.byGame || []
+      if (!baris.length) {
+        daftar.innerHTML = '<div class="sg-row sg-empty">Belum ada yang main.</div>'
+      } else {
+        const kepala = '<div class="sg-row sg-th"><span class="sg-name">Game</span><span>Sesi</span><span>Ronde</span><span>Pemain</span></div>'
+        const isi = baris.map(item => {
+          const judul = String(nama[item.game] || item.game).replace(/[<>&]/g, '')
+          return `<div class="sg-row">
+            <span class="sg-name">${judul}</span>
+            <span class="sg-col"><b>${fmt(item.starts || 0)}</b></span>
+            <span class="sg-col"><b>${fmt(item.rounds || 0)}</b></span>
+            <span class="sg-col"><b>${fmt(item.players || 0)}</b></span>
+          </div>`
+        }).join('')
+        daftar.innerHTML = kepala + isi
+      }
     }
   } catch (e) { console.warn('[Summary]', e.message) }
 }
