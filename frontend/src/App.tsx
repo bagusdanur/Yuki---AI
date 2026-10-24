@@ -8,6 +8,7 @@ import {
   Gamepad2, Globe, Heart, History as HistoryIcon, KeyRound, ListTodo, LoaderCircle, Maximize2, MessageSquare,
   Minimize2, Pause, Play, Radio, RefreshCw, RotateCcw, Save, Send, Settings, Sparkles, Star,
   Terminal, ThumbsDown, ThumbsUp, Volume2, WifiOff, Wrench, X, Zap, Eye, EyeOff,
+  Grid3x3, HandFist, ChevronRight,
 } from 'lucide-react'
 import {
   addBookmark, cancelAgentRun, createDynamicSkill, decideAgentApproval, deleteAccount, deleteMemory, deletePlainMemory, dynamicSkillAction, getActiveAgentRun, getAgenda, getBookmarks, getChatHistoryPage, getDynamicSkills, getMemories, getPushConfig, getRelationship,
@@ -1270,10 +1271,6 @@ export default function App() {
   const [gameOpen, setGameOpen] = useState(false)
   const [rpsOpen, setRpsOpen] = useState(false)
   const [gamesOpen, setGamesOpen] = useState(false)
-  // Dropdown game diposisikan manual: kalau pakai absolute+right:0, di layar
-  // sempit ia melewati tepi kanan dan terpotong.
-  const gameBtnRef = useRef<HTMLButtonElement | null>(null)
-  const [gamePos, setGamePos] = useState({ top: 64, left: 8, width: 238 })
   const [showJump, setShowJump] = useState(false)
   const composerRef = useRef<HTMLTextAreaElement | null>(null)
   const messagesRef = useRef<HTMLDivElement | null>(null)
@@ -1517,25 +1514,13 @@ export default function App() {
       .catch(() => setGameEligible(false))
   }, [session?.userId, session?.sessionToken])
 
-  // Ikut menyesuaikan saat layar diputar / diubah ukurannya.
+  // Esc menutup panel mini game (kebiasaan dialog).
   useEffect(() => {
     if (!gamesOpen) return
-    const ubah = () => hitungPosisiGame()
-    window.addEventListener('resize', ubah)
-    window.addEventListener('orientationchange', ubah)
-    return () => {
-      window.removeEventListener('resize', ubah)
-      window.removeEventListener('orientationchange', ubah)
-    }
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setGamesOpen(false) }
+    window.addEventListener('keydown', esc)
+    return () => window.removeEventListener('keydown', esc)
   }, [gamesOpen])
-
-  const hitungPosisiGame = () => {
-    const r = gameBtnRef.current?.getBoundingClientRect()
-    const width = Math.min(238, window.innerWidth - 16)
-    const left = r ? Math.min(Math.max(8, r.right - width), window.innerWidth - width - 8) : 8
-    const top = r ? Math.min(r.bottom + 8, Math.max(8, window.innerHeight - 240)) : 64
-    setGamePos({ top, left, width })
-  }
 
   const avatarExpression = useMemo(() => moodImage[mood] || 'tenang', [mood])
   const canBlink = blinkExpressions.has(avatarExpression)
@@ -1777,13 +1762,9 @@ export default function App() {
           {gameEligible && (
             <div className="games-menu">
               <button
-                ref={gameBtnRef}
                 type="button"
                 className="games-trigger"
-                onClick={() => {
-                  if (!gamesOpen) hitungPosisiGame()
-                  setGamesOpen(v => !v)
-                }}
+                onClick={() => setGamesOpen(true)}
                 aria-label="Mini game"
                 aria-expanded={gamesOpen}
                 title="Mini game"
@@ -2014,34 +1995,50 @@ export default function App() {
       </div>
 
       {gamesOpen && createPortal(
-        <>
+        <div className="games-layer" role="presentation">
           <div className="games-scrim" onClick={() => setGamesOpen(false)} />
-          <div
-            className="games-pop"
-            role="menu"
-            aria-label="Daftar mini game"
-            style={{ position: 'fixed', top: gamePos.top, left: gamePos.left, width: gamePos.width, right: 'auto' }}
-          >
-            <header>Mini game <span className="beta-tag">beta</span></header>
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => { setGameOpen(true); setRpsOpen(false); setGamesOpen(false) }}
-            >
-              <b>Tic-Tac-Toe</b>
-              <small>papan 3×3, dia ikut berpikir</small>
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => { setRpsOpen(true); setGameOpen(false); setGamesOpen(false) }}
-            >
-              <b>Batu-Kertas-Gunting</b>
-              <small>cepat, satu ronde sekali main</small>
-            </button>
+          <div className="games-pop" role="dialog" aria-modal="true" aria-label="Mini game">
+            <header>
+              <div>
+                <small>Beta v4</small>
+                <h3>Mini game</h3>
+              </div>
+              <button type="button" className="games-close" onClick={() => setGamesOpen(false)} aria-label="Tutup">
+                <X size={17} />
+              </button>
+            </header>
+
+            <div className="games-list">
+              <button
+                type="button"
+                className="games-item"
+                onClick={() => { setGameOpen(true); setRpsOpen(false); setGamesOpen(false) }}
+              >
+                <span className="games-ikon"><Grid3x3 size={19} strokeWidth={1.7} /></span>
+                <span className="games-teks">
+                  <b>Tic-Tac-Toe</b>
+                  <small>Papan 3×3 — dia ikut berpikir tiap langkah</small>
+                </span>
+                <ChevronRight size={16} className="games-panah" />
+              </button>
+
+              <button
+                type="button"
+                className="games-item"
+                onClick={() => { setRpsOpen(true); setGameOpen(false); setGamesOpen(false) }}
+              >
+                <span className="games-ikon"><HandFist size={19} strokeWidth={1.7} /></span>
+                <span className="games-teks">
+                  <b>Batu-Kertas-Gunting</b>
+                  <small>Cepat — satu ronde sekali main</small>
+                </span>
+                <ChevronRight size={16} className="games-panah" />
+              </button>
+            </div>
+
             <footer>Segera: tebak kata, sambung cerita.</footer>
           </div>
-        </>,
+        </div>,
         document.body
       )}
 

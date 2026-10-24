@@ -2048,3 +2048,81 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   -webkit-overflow-scrolling: touch;
 }
 .games-menu { position: static; }
+
+
+/* ===== Panel mini game: dialog di tengah layar ===== */
+.games-layer {
+  position: fixed; inset: 0; z-index: 40;
+  display: grid; place-items: center; padding: 20px;
+}
+.games-layer .games-scrim {
+  position: absolute; inset: 0; z-index: 0;
+  background: rgba(4, 5, 8, .74); backdrop-filter: blur(6px);
+}
+.games-layer .games-pop {
+  position: relative; z-index: 1;
+  top: auto; right: auto; bottom: auto; left: auto;
+  width: min(400px, calc(100vw - 32px));
+  padding: 16px 16px 13px;
+  border: 1px solid #2d3140; border-radius: 14px;
+  background: #12141b;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, .6);
+  max-height: min(82vh, 520px); overflow-y: auto;
+  animation: gamesIn .16s ease-out;
+}
+@keyframes gamesIn {
+  from { opacity: 0; transform: translateY(8px) scale(.98); }
+  to { opacity: 1; transform: none; }
+}
+.games-layer .games-pop header {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+  padding: 0 0 12px;
+}
+.games-pop header small {
+  display: block; color: #8b8f9d;
+  font: 700 9px/1 ui-monospace, monospace; letter-spacing: .12em; text-transform: uppercase;
+}
+.games-pop h3 { margin: 5px 0 0; font-size: 16px; font-weight: 650; color: #f0eefc; }
+.header-actions .games-close {
+  width: 30px; height: 30px; padding: 0; display: grid; place-items: center;
+  border: 1px solid #2c3039; border-radius: 8px; background: #14171d; color: #9296a2; cursor: pointer;
+}
+.header-actions .games-close:hover { color: #f1f0ec; border-color: #555967; }
+
+.games-list { display: flex; flex-direction: column; gap: 8px; }
+.header-actions .games-item {
+  width: 100%; height: auto; padding: 11px 12px;
+  display: flex; align-items: center; gap: 11px;
+  border: 1px solid #262a35; border-radius: 10px;
+  background: #0f1218; color: #e6e3ff; text-align: left; cursor: pointer;
+  transition: border-color .14s, background .14s;
+}
+.header-actions .games-item:hover { border-color: #4b4a7a; background: #151926; }
+.games-ikon {
+  width: 36px; height: 36px; flex: 0 0 auto; display: grid; place-items: center;
+  border-radius: 9px; border: 1px solid #2b3040; background: #1a1d29; color: #cfcaff;
+}
+.games-item:nth-child(1) .games-ikon { color: #bdb6ff; }
+.games-item:nth-child(2) .games-ikon { color: #f0a6bf; }
+.games-teks { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.games-teks b { font-size: 13px; font-weight: 650; }
+.games-teks small { font-size: 11px; color: #8f93a1; line-height: 1.35; }
+.games-panah { margin-left: auto; flex: 0 0 auto; color: #6b6f7d; }
+.games-pop footer {
+  margin-top: 12px; padding-top: 10px;
+  border-top: 1px solid #22262f; font-size: 10.5px; color: #7b7f8d;
+}
+@media (max-width: 420px) {
+  .games-layer { padding: 14px; }
+  .games-layer .games-pop { width: 100%; padding: 14px 13px 12px; }
+  .games-teks small { font-size: 10.5px; }
+}
+
+/* polesan: kartu lebih tegas, ikon sedikit lebih besar */
+.header-actions .games-item { background: #12161f; border-color: #313647; padding: 12px; gap: 12px; }
+.header-actions .games-item:hover { background: #171c28; border-color: #565a92; }
+.games-ikon { width: 40px; height: 40px; background: #1b1f2c; border-color: #343a4c; }
+.games-ikon svg { width: 22px; height: 22px; }
+.games-teks b { font-size: 13.5px; }
+.games-teks small { font-size: 11.5px; color: #9aa0ae; }
+.games-pop footer { color: #8a8f9d; }
