@@ -46,6 +46,9 @@ export default function TicTacToe({ token, onClose, onMood }: Props) {
   const [error, setError] = useState('')
   const [line, setLine] = useState('')
   const [lineBusy, setLineBusy] = useState(false)
+  // Papan dikunci setelah pemain melangkah sampai Yuki menjawab: setiap langkah
+  // harus menunggu reaksinya dulu, tidak boleh lanjut sendiri.
+  const [menunggu, setMenunggu] = useState(false)
   const riwayat = useRef<string[]>([])
   const terakhir = useRef<string>('')
 
@@ -115,18 +118,24 @@ export default function TicTacToe({ token, onClose, onMood }: Props) {
   }, [])
 
   const langkah = async (cell: number) => {
-    if (!game || game.status !== 'playing' || game.turn !== 'X' || game.board[cell]) return
+    if (!game || game.status !== 'playing' || game.turn !== 'X' || game.board[cell] || menunggu) return
     setError('')
+    setMenunggu(true)
     const sebelum = game
     // tampilkan langkah pemain segera; server tetap penentu akhir
     setGame({ ...game, board: game.board.map((v, i) => (i === cell ? 'X' : v)), turn: 'O' })
     try {
       const data = await call('/api/game/ttt/move', { cell })
       setStats(data.stats || stats)
-      terapkan(data.game, 'move')
+      setGame(data.game)
+      onMood?.(WAJAH[data.game.status] || 'tenang')
+      // Tunggu kalimat Yuki selesai dulu, baru papan dibuka kembali.
+      await mintaKomentar(data.game.status === 'playing' ? 'move' : 'result', data.game.status, data.game.moves)
     } catch (e) {
       setGame(sebelum)
       setError(e instanceof Error ? e.message : 'Langkah gagal.')
+    } finally {
+      setMenunggu(false)
     }
   }
 
@@ -146,13 +155,13 @@ export default function TicTacToe({ token, onClose, onMood }: Props) {
     <section className="ttt-dock" aria-label="Tic-Tac-Toe melawan Yuki">
       <div className="ttt-card">
         <header>
-          <img className="ttt-face" src={`/expressions/${WAJAH[game?.status || 'playing'] || 'tenang'}.webp`} alt="" aria-hidden="true" />
           <div className="ttt-title">
             <small>Beta v4 · main bareng Yuki</small>
             <h2>Tic-Tac-Toe <span className={`ttt-status ${game?.status || ''}`}>
               {game?.status === 'user_win' ? 'kamu menang'
                 : game?.status === 'yuki_win' ? 'Yuki menang'
                 : game?.status === 'draw' ? 'seri'
+                : menunggu ? 'Yuki menjawab…'
                 : game?.turn === 'X' ? 'giliranmu' : 'Yuki jalan'}
             </span></h2>
           </div>
@@ -168,7 +177,7 @@ export default function TicTacToe({ token, onClose, onMood }: Props) {
                 type="button"
                 className={`ttt-cell${isi ? ' terisi' : ''}${menang ? ' menang' : ''}${isi === 'O' ? ' yuki' : ''}`}
                 onClick={() => langkah(i)}
-                disabled={!game || game.status !== 'playing' || game.turn !== 'X' || Boolean(isi)}
+                disabled={!game || game.status !== 'playing' || game.turn !== 'X' || Boolean(isi) || menunggu}
                 aria-label={`Kotak ${i + 1}${isi ? `, ${isi === 'O' ? 'Yuki' : 'kamu'}` : ', kosong'}`}
               >
                 {isi || ''}
@@ -180,7 +189,6 @@ export default function TicTacToe({ token, onClose, onMood }: Props) {
         {/* Balasan Yuki ditampilkan seperti gelembung chat, bukan teks statis:
             supaya jelas ini Yuki yang bicara, dan kalimatnya berubah tiap langkah. */}
         <div className={`ttt-bubble${lineBusy ? ' ngetik' : ''}`} aria-live="polite">
-          <img src={`/expressions/${WAJAH[game?.status || 'playing'] || 'tenang'}.webp`} alt="" aria-hidden="true" />
           <p>
             {error ? error
               : lineBusy && !line ? <span className="ttt-dots"><i /><i /><i /></span>
