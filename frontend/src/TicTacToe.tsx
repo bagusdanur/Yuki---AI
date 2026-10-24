@@ -121,16 +121,25 @@ export default function TicTacToe({ token, onClose, onMood }: Props) {
     if (!game || game.status !== 'playing' || game.turn !== 'X' || game.board[cell] || menunggu) return
     setError('')
     setMenunggu(true)
+    const mulai = Date.now()
     const sebelum = game
     // tampilkan langkah pemain segera; server tetap penentu akhir
     setGame({ ...game, board: game.board.map((v, i) => (i === cell ? 'X' : v)), turn: 'O' })
     try {
+      // Satu permintaan: Yuki memilih kotak SEKALIGUS menyusun kalimatnya.
       const data = await call('/api/game/ttt/move', { cell })
       setStats(data.stats || stats)
+      // Jeda minimum supaya tidak terasa "patah": jawaban instan terasa robotik.
+      const sisa = 650 - (Date.now() - mulai)
+      if (sisa > 0) await new Promise((r) => setTimeout(r, sisa))
       setGame(data.game)
       onMood?.(WAJAH[data.game.status] || 'tenang')
-      // Tunggu kalimat Yuki selesai dulu, baru papan dibuka kembali.
-      await mintaKomentar(data.game.status === 'playing' ? 'move' : 'result', data.game.status, data.game.moves)
+      if (data.line) {
+        riwayat.current = [...riwayat.current, String(data.line)].slice(-6)
+        setLine(String(data.line))
+      } else {
+        await mintaKomentar(data.game.status === 'playing' ? 'move' : 'result', data.game.status, data.game.moves)
+      }
     } catch (e) {
       setGame(sebelum)
       setError(e instanceof Error ? e.message : 'Langkah gagal.')
@@ -153,7 +162,7 @@ export default function TicTacToe({ token, onClose, onMood }: Props) {
 
   return (
     <section className="ttt-dock" aria-label="Tic-Tac-Toe melawan Yuki">
-      <div className="ttt-card">
+      <div className={`ttt-card${menunggu ? ' menunggu' : ''}`}>
         <header>
           <div className="ttt-title">
             <small>Beta v4 · main bareng Yuki</small>
@@ -161,7 +170,7 @@ export default function TicTacToe({ token, onClose, onMood }: Props) {
               {game?.status === 'user_win' ? 'kamu menang'
                 : game?.status === 'yuki_win' ? 'Yuki menang'
                 : game?.status === 'draw' ? 'seri'
-                : menunggu ? 'Yuki menjawab…'
+                : menunggu ? 'Yuki berpikir…'
                 : game?.turn === 'X' ? 'giliranmu' : 'Yuki jalan'}
             </span></h2>
           </div>
@@ -191,7 +200,7 @@ export default function TicTacToe({ token, onClose, onMood }: Props) {
         <div className={`ttt-bubble${lineBusy ? ' ngetik' : ''}`} aria-live="polite">
           <p>
             {error ? error
-              : lineBusy && !line ? <span className="ttt-dots"><i /><i /><i /></span>
+              : menunggu || lineBusy ? <span className="ttt-dots"><i /><i /><i /></span>
               : line || 'Yuki memperhatikan papannya…'}
           </p>
         </div>

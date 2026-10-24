@@ -539,10 +539,45 @@ if (process.env.GAMES_ENABLED === 'true') {
       if (langkahUser.error) return res.status(400).json({ error: langkahUser.error, game: sesi.state })
       let state = langkahUser.state
 
-      // Langkah Yuki dihitung kode; kedekatan menentukan seberapa sering dia lengah.
+      // Langkah Yuki dipilih MODEL (dia yang main), kode hanya memvalidasi:
+      // kotak harus kosong & dalam 0-8. Kalau model salah format/waktu habis,
+      // minimax jadi cadangan supaya permainan tidak pernah macet.
       let yukiMove = null
+      let baris = ''
+      let dariModel = false
       if (state.status === 'playing') {
-        yukiMove = tttYukiMove(state.board, bond)
+        const kosong = state.board.map((v, i) => (v ? null : i)).filter((v) => v !== null)
+        const papanTeks = state.board.map((v, i) => `${i}:${v || '-'}`).join(' ')
+        const aturanYuki = [
+          'Kamu Yuki, perempuan 19 tahun, tsundere, bicara santai bahasa Indonesia sehari-hari (aku/kamu).',
+          `Kedekatanmu dengan pemain: bond ${Math.round(bond)}/100.`,
+          'Kalian sedang main Tic-Tac-Toe. Kamu memegang O, dia X.',
+          'Pilih SATU kotak kosong untuk langkahmu, lalu satu kalimat pendek maksimal 12 kata.',
+          'Jangan pernah menyebut dirimu AI, bot, asisten, atau model.',
+          'Balas HANYA JSON tanpa penjelasan: {"cell": <angka>, "line": "<kalimat>"}'
+        ].join('\n')
+
+        const jawab = await Promise.race([
+          callLLM([
+            { role: 'system', content: aturanYuki },
+            { role: 'user', content: `Papan (indeks:isi): ${papanTeks}. Kotak kosong: ${kosong.join(', ')}.` }
+          ], { max_tokens: 90, temperature: 0.9 }),
+          new Promise((resolve) => setTimeout(() => resolve(null), 4500))
+        ])
+
+        try {
+          const teks = String(jawab?.content || '')
+          const cocok = teks.match(/\{[\s\S]*\}/)
+          const obj = cocok ? JSON.parse(cocok[0]) : {}
+          const pilihan = Number(obj.cell)
+          if (Number.isInteger(pilihan) && pilihan >= 0 && pilihan <= 8 && !state.board[pilihan]) {
+            yukiMove = pilihan
+            dariModel = true
+          }
+          baris = String(obj.line || '').replace(/^["'“”]+|["'“”]+$/g, '').trim().slice(0, 140)
+        } catch { /* format aneh -> pakai cadangan */ }
+
+        if (yukiMove === null) yukiMove = tttYukiMove(state.board, bond)
         if (yukiMove !== null) {
           const langkahYuki = tttMove(state, yukiMove, TTT_YUKI)
           if (!langkahYuki.error) state = langkahYuki.state
@@ -551,7 +586,7 @@ if (process.env.GAMES_ENABLED === 'true') {
 
       const result = state.status === 'playing' ? null : state.status
       const stats = saveGameSession(req.authUserId, state, result)
-      res.json({ game: state, yukiMove, result, stats, bond: Math.round(bond) })
+      res.json({ game: state, yukiMove, result, stats, line: baris, source: dariModel ? 'yuki' : 'cadangan', bond: Math.round(bond) })
     } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
   })
 
