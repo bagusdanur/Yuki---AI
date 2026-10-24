@@ -16,6 +16,7 @@ import type {
   AgendaResponse, AgentMemory, AgentStep, ArtifactItem, BookmarkedComic, ChatMode, ComicRecommendation, DynamicSkill,
   Message, Milestone, PlainMemory, Session, SkillInfo
 } from './types'
+import AvatarStage from './AvatarStage'
 
 const SESSION_KEYS = {
   userId: 'yuki_uid_v3', username: 'yuki_username_v3', accessCode: 'yuki_access_code_v3',
@@ -1466,13 +1467,9 @@ export default function App() {
 
   const avatarExpression = useMemo(() => moodImage[mood] || 'tenang', [mood])
   const canBlink = blinkExpressions.has(avatarExpression)
-  const avatar = `/expressions/${avatarExpression}${blinking && canBlink ? '_blink' : ''}.png`
 
-  useEffect(() => {
-    const paths = [`/expressions/${avatarExpression}.png`]
-    if (canBlink) paths.push(`/expressions/${avatarExpression}_blink.png`)
-    paths.forEach(src => { const image = new Image(); image.src = src })
-  }, [avatarExpression, canBlink])
+  // Pemanasan gambar dipindah ke AvatarStage (semua ekspresi di-prewarm sekali),
+  // jadi tidak perlu preload per-ekspresi di sini.
 
   useEffect(() => {
     setBlinking(false)
@@ -1933,7 +1930,7 @@ export default function App() {
         </button>
         <div className="grid" />
         <div className="character-glow" />
-        <img key={avatarExpression} className="character" src={avatar} alt={`Yuki sedang ${mood}`} onError={event => { if (!event.currentTarget.src.endsWith('/tenang.png')) event.currentTarget.src = '/expressions/tenang.png' }} />
+        <AvatarStage expression={avatarExpression} blinking={blinking} talking={busy} />
         <div className="character-footer">
           <div><strong>Yuki</strong><span className="online-dot" /></div>
           <div className="mood-pill"><span>{mood}</span><i /> <span>{bond}</span></div>
