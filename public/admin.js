@@ -509,19 +509,19 @@ async function loadSummary() {
       const nama = { 'tic-tac-toe': 'Tic-Tac-Toe', 'batu-kertas-gunting': 'Batu-Kertas-Gunting' }
       const baris = g.byGame || []
       if (!baris.length) {
-        daftar.innerHTML = '<div class="sg-row sg-empty">Belum ada yang main.</div>'
+        daftar.innerHTML = '<div class="sg-card sg-empty">Belum ada yang main.</div>'
       } else {
-        const kepala = '<div class="sg-row sg-th"><span class="sg-name">Game</span><span>Sesi</span><span>Ronde</span><span>Pemain</span></div>'
-        const isi = baris.map(item => {
+        daftar.innerHTML = baris.map(item => {
           const judul = String(nama[item.game] || item.game).replace(/[<>&]/g, '')
-          return `<div class="sg-row">
+          return `<div class="sg-card sg-game">
             <span class="sg-name">${judul}</span>
-            <span class="sg-col"><b>${fmt(item.starts || 0)}</b></span>
-            <span class="sg-col"><b>${fmt(item.rounds || 0)}</b></span>
-            <span class="sg-col"><b>${fmt(item.players || 0)}</b></span>
+            <span class="sg-nums">
+              <span><b>${fmt(item.starts || 0)}</b><small>sesi</small></span>
+              <span><b>${fmt(item.rounds || 0)}</b><small>ronde</small></span>
+              <span><b>${fmt(item.players || 0)}</b><small>pemain</small></span>
+            </span>
           </div>`
         }).join('')
-        daftar.innerHTML = kepala + isi
       }
     }
   } catch (e) { console.warn('[Summary]', e.message) }
