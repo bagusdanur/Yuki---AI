@@ -1271,6 +1271,10 @@ export default function App() {
   const [gameOpen, setGameOpen] = useState(false)
   const [rpsOpen, setRpsOpen] = useState(false)
   const [gamesOpen, setGamesOpen] = useState(false)
+  // Dropdown muncul DI BAWAH tombol; posisinya dihitung lalu dijepit ke tepi
+  // layar supaya tidak terpotong di HP (tanpa lapisan abu-abu penuh).
+  const gameBtnRef = useRef<HTMLButtonElement | null>(null)
+  const [gamePos, setGamePos] = useState({ top: 64, left: 8, width: 288 })
   const [showJump, setShowJump] = useState(false)
   const composerRef = useRef<HTMLTextAreaElement | null>(null)
   const messagesRef = useRef<HTMLDivElement | null>(null)
@@ -1513,6 +1517,25 @@ export default function App() {
       .then(data => setGameEligible(Boolean(data?.eligible)))
       .catch(() => setGameEligible(false))
   }, [session?.userId, session?.sessionToken])
+
+  const hitungPosisiGame = () => {
+    const r = gameBtnRef.current?.getBoundingClientRect()
+    const width = Math.min(288, window.innerWidth - 16)
+    const left = r ? Math.min(Math.max(8, r.right - width), window.innerWidth - width - 8) : 8
+    const top = r ? Math.min(r.bottom + 8, Math.max(8, window.innerHeight - 260)) : 64
+    setGamePos({ top, left, width })
+  }
+
+  useEffect(() => {
+    if (!gamesOpen) return
+    const ubah = () => hitungPosisiGame()
+    window.addEventListener('resize', ubah)
+    window.addEventListener('orientationchange', ubah)
+    return () => {
+      window.removeEventListener('resize', ubah)
+      window.removeEventListener('orientationchange', ubah)
+    }
+  }, [gamesOpen])
 
   // Esc menutup panel mini game (kebiasaan dialog).
   useEffect(() => {
@@ -1762,9 +1785,13 @@ export default function App() {
           {gameEligible && (
             <div className="games-menu">
               <button
+                ref={gameBtnRef}
                 type="button"
                 className="games-trigger"
-                onClick={() => setGamesOpen(true)}
+                onClick={() => {
+                  if (!gamesOpen) hitungPosisiGame()
+                  setGamesOpen(v => !v)
+                }}
                 aria-label="Mini game"
                 aria-expanded={gamesOpen}
                 title="Mini game"
@@ -1997,15 +2024,15 @@ export default function App() {
       {gamesOpen && createPortal(
         <div className="games-layer" role="presentation">
           <div className="games-scrim" onClick={() => setGamesOpen(false)} />
-          <div className="games-pop" role="dialog" aria-modal="true" aria-label="Mini game">
+          <div
+            className="games-pop"
+            role="menu"
+            aria-label="Mini game"
+            style={{ top: gamePos.top, left: gamePos.left, width: gamePos.width }}
+          >
             <header>
-              <div>
-                <small>Beta v4</small>
-                <h3>Mini game</h3>
-              </div>
-              <button type="button" className="games-close" onClick={() => setGamesOpen(false)} aria-label="Tutup">
-                <X size={17} />
-              </button>
+              <small>Mini game</small>
+              <span className="beta-tag">beta</span>
             </header>
 
             <div className="games-list">

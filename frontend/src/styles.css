@@ -2126,3 +2126,44 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 .games-teks b { font-size: 13.5px; }
 .games-teks small { font-size: 11.5px; color: #9aa0ae; }
 .games-pop footer { color: #8a8f9d; }
+
+
+/* ===== Dropdown mini game (revisi): muncul ke bawah, tanpa lapisan abu-abu ===== */
+.games-layer {
+  position: fixed; inset: 0; z-index: 40;
+  display: block; padding: 0; pointer-events: none;
+}
+.games-layer .games-scrim {
+  position: absolute; inset: 0; z-index: 0;
+  background: transparent; backdrop-filter: none;
+  pointer-events: auto;
+}
+.games-layer .games-pop {
+  position: fixed; z-index: 1; pointer-events: auto;
+  top: auto; right: auto; bottom: auto; left: auto;
+  padding: 6px; border-radius: 10px;
+  border: 1px solid #2c3039; background: #12141b;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, .55);
+  max-height: min(70vh, 420px); overflow-y: auto;
+  animation: gamesDrop .13s ease-out;
+}
+@keyframes gamesDrop {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+.games-layer .games-pop header {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 8px 7px;
+}
+.games-pop header small {
+  color: #8b8f9d; font: 700 9px/1 ui-monospace, monospace;
+  letter-spacing: .1em; text-transform: uppercase;
+}
+.header-actions .games-item { padding: 8px; gap: 9px; border-radius: 8px; border-color: #232733; background: #0f1218; }
+.header-actions .games-item:hover { background: #161a23; border-color: #3a3f55; }
+.games-ikon { width: 30px; height: 30px; border-radius: 7px; background: #171b25; border-color: #2a2f3d; }
+.games-ikon svg { width: 17px; height: 17px; }
+.games-teks b { font-size: 12.5px; }
+.games-teks small { font-size: 10.5px; color: #8f93a1; }
+.games-panah { width: 14px; height: 14px; color: #5f636f; }
+.games-pop footer { margin-top: 5px; padding: 7px 8px 3px; font-size: 10px; color: #7b7f8d; }
