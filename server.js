@@ -23,6 +23,9 @@ import { warmupEmbedder } from './lib/semantic.js'
 import { searchComics, latestComics, wantsComic, wantsLatestComics, detectRequestedGenre, extractQuery, buildComicContext } from './lib/ryukomik.js'
 import { executeTool, initSkills, listSkills } from './lib/agent/skills-engine.js'
 import { getProviderOperations, flushProviderOperations, resetProviderOperations } from './lib/provider-router.js'
+// Mesin game (persiapan v4). Modul ini murni — tidak menyentuh model bahasa.
+import { createBoard as tttBoard, applyMove as tttMove, chooseYukiMove as tttYukiMove, MARK_USER as TTT_USER, MARK_YUKI as TTT_YUKI } from './lib/games/tic-tac-toe.js'
+import { loadSession as loadGameSession, saveSession as saveGameSession, clearSession as clearGameSession, getStats as gameStats } from './lib/games/store.js'
 import { listTables, readTable, listDirectory, readTextFile, workspaceSummary, listUsers, listUserTables, readUserTable, findMemoryKeys } from './lib/admin-browser.js'
 import { getPublicProviderSettings, saveProviderSettings, testProviderConnection } from './lib/provider-settings.js'
 import {
@@ -441,6 +444,69 @@ async function getEmotion(userId) {
   return emo
 }
 
+
+// ═══════════════ GAME (persiapan v4) — GELAP SECARA DEFAULT ═══════════════
+// Route hanya dipasang bila GAMES_ENABLED=true. Belum ada tombol/menu yang
+// menautkannya, jadi walau kode ini ada di repo, pemain tidak bisa memakainya
+// sampai v4 dirilis.
+if (process.env.GAMES_ENABLED === 'true') {
+  const batasGame = rateLimit({ max: 120 })
+
+  app.get('/api/game/ttt', requireSession, batasGame, (req, res) => {
+    const sesi = loadGameSession(req.authUserId)
+    res.json({ game: sesi?.state || null, result: sesi?.result || null, stats: gameStats(req.authUserId) })
+  })
+
+  app.post('/api/game/ttt/new', requireSession, batasGame, (req, res) => {
+    try {
+      const state = tttBoard()
+      saveGameSession(req.authUserId, state, null)
+      res.json({ game: state, stats: gameStats(req.authUserId) })
+    } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
+  })
+
+  app.post('/api/game/ttt/move', requireSession, batasGame, async (req, res) => {
+    try {
+      const cell = Number(req.body?.cell)
+      if (!Number.isInteger(cell)) return res.status(400).json({ error: 'Kotak tidak valid.' })
+
+      const sesi = loadGameSession(req.authUserId)
+      if (!sesi?.state) return res.status(400).json({ error: 'Belum ada permainan. Mulai dulu.' })
+
+      const emo = await getEmotion(req.authUserId)
+      const bond = Number(emo.bond) || 0
+
+      const langkahUser = tttMove(sesi.state, cell, TTT_USER)
+      if (langkahUser.error) return res.status(400).json({ error: langkahUser.error, game: sesi.state })
+      let state = langkahUser.state
+
+      // Langkah Yuki dihitung kode; kedekatan menentukan seberapa sering dia lengah.
+      let yukiMove = null
+      if (state.status === 'playing') {
+        yukiMove = tttYukiMove(state.board, bond)
+        if (yukiMove !== null) {
+          const langkahYuki = tttMove(state, yukiMove, TTT_YUKI)
+          if (!langkahYuki.error) state = langkahYuki.state
+        }
+      }
+
+      const result = state.status === 'playing' ? null : state.status
+      const stats = saveGameSession(req.authUserId, state, result)
+      res.json({ game: state, yukiMove, result, stats, bond: Math.round(bond) })
+    } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
+  })
+
+  // Reset = papan baru, TAPI rekor menang/kalah/seri tetap disimpan.
+  app.post('/api/game/ttt/reset', requireSession, batasGame, (req, res) => {
+    try {
+      const state = tttBoard()
+      saveGameSession(req.authUserId, state, null)
+      res.json({ ok: true, game: state, stats: gameStats(req.authUserId) })
+    } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
+  })
+
+  console.log('[game] route Tic-Tac-Toe aktif (GAMES_ENABLED=true)')
+}
 
 // Endpoint untuk mendaftar user baru (Onboarding)
 app.post('/api/register', rateLimit({ max: 10 }), async (req, res) => {
