@@ -2167,3 +2167,17 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 .games-teks small { font-size: 10.5px; color: #8f93a1; }
 .games-panah { width: 14px; height: 14px; color: #5f636f; }
 .games-pop footer { margin-top: 5px; padding: 7px 8px 3px; font-size: 10px; color: #7b7f8d; }
+
+/* ===== Item game polos (versi awal): tanpa kotak/latar abu-abu ===== */
+.header-actions .games-item,
+.games-pop .games-item {
+  width: 100%; height: auto;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+  padding: 7px 9px; border: 0; border-radius: 6px;
+  background: transparent; box-shadow: none;
+  color: #e6e3ff; text-align: left; cursor: pointer;
+}
+.header-actions .games-item:hover,
+.games-pop .games-item:hover { background: #1a1e28; }
+.games-pop .games-item b { font-size: 12.5px; font-weight: 650; color: #ece9ff; }
+.games-pop .games-item small { font-size: 10.5px; color: #85899a; line-height: 1.4; }

@@ -2041,12 +2041,8 @@ export default function App() {
                 className="games-item"
                 onClick={() => { setGameOpen(true); setRpsOpen(false); setGamesOpen(false) }}
               >
-                <span className="games-ikon"><Grid3x3 size={19} strokeWidth={1.7} /></span>
-                <span className="games-teks">
-                  <b>Tic-Tac-Toe</b>
-                  <small>Papan 3×3 — dia ikut berpikir tiap langkah</small>
-                </span>
-                <ChevronRight size={16} className="games-panah" />
+                <b>Tic-Tac-Toe</b>
+                <small>papan 3×3, dia ikut berpikir</small>
               </button>
 
               <button
@@ -2054,12 +2050,8 @@ export default function App() {
                 className="games-item"
                 onClick={() => { setRpsOpen(true); setGameOpen(false); setGamesOpen(false) }}
               >
-                <span className="games-ikon"><HandFist size={19} strokeWidth={1.7} /></span>
-                <span className="games-teks">
-                  <b>Batu-Kertas-Gunting</b>
-                  <small>Cepat — satu ronde sekali main</small>
-                </span>
-                <ChevronRight size={16} className="games-panah" />
+                <b>Batu-Kertas-Gunting</b>
+                <small>cepat, satu ronde sekali main</small>
               </button>
             </div>
 
