@@ -25,7 +25,7 @@ import { executeTool, initSkills, listSkills } from './lib/agent/skills-engine.j
 import { getProviderOperations, flushProviderOperations, resetProviderOperations } from './lib/provider-router.js'
 // Mesin game (persiapan v4). Modul ini murni — tidak menyentuh model bahasa.
 import { createBoard as tttBoard, applyMove as tttMove, chooseYukiMove as tttYukiMove, MARK_USER as TTT_USER, MARK_YUKI as TTT_YUKI } from './lib/games/tic-tac-toe.js'
-import { loadSession as loadGameSession, saveSession as saveGameSession, clearSession as clearGameSession, getStats as gameStats } from './lib/games/store.js'
+import { loadSession as loadGameSession, saveSession as saveGameSession, clearSession as clearGameSession, getStats as gameStats, gameMemoryText } from './lib/games/store.js'
 import { listTables, readTable, listDirectory, readTextFile, workspaceSummary, listUsers, listUserTables, readUserTable, findMemoryKeys } from './lib/admin-browser.js'
 import { getPublicProviderSettings, saveProviderSettings, testProviderConnection } from './lib/provider-settings.js'
 import {
@@ -906,6 +906,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
     const chatContext = {
       emotionDirective: emotion.directive(),
       memoryContext,
+      gameContext: gameMemoryText(req.authUserId),
       comicContext,
       reminderContext,
       isIdle,
