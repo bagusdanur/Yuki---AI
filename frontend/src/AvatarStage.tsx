@@ -53,8 +53,28 @@ interface AvatarStageProps {
 export default function AvatarStage({ expression, blinking, talking }: AvatarStageProps) {
   const [current, setCurrent] = useState(expression)
   const [previous, setPrevious] = useState<string | null>(null)
+  const [reacting, setReacting] = useState(false)
   const fadeTimer = useRef<number | undefined>(undefined)
+  const reactTimer = useRef<number | undefined>(undefined)
+  const wasTalking = useRef(false)
   const stageRef = useRef<HTMLDivElement | null>(null)
+
+  // "Reaksi" singkat saat balasan selesai mengalir: Yuki seperti baru selesai
+  // bicara lalu mengangguk — memberi penutup gerak, bukan berhenti mendadak.
+  useEffect(() => {
+    if (talking) {
+      wasTalking.current = true
+      setReacting(false)
+      window.clearTimeout(reactTimer.current)
+      return
+    }
+    if (!wasTalking.current) return // jangan bereaksi saat mount pertama
+    wasTalking.current = false
+    setReacting(true)
+    window.clearTimeout(reactTimer.current)
+    reactTimer.current = window.setTimeout(() => setReacting(false), 560)
+    return () => window.clearTimeout(reactTimer.current)
+  }, [talking])
 
   // Crossfade: ekspresi lama tetap tampil di lapis bawah sampai lapis baru siap.
   useEffect(() => {
@@ -67,7 +87,10 @@ export default function AvatarStage({ expression, blinking, talking }: AvatarSta
 
   useEffect(() => {
     prewarmAll()
-    return () => window.clearTimeout(fadeTimer.current)
+    return () => {
+      window.clearTimeout(fadeTimer.current)
+      window.clearTimeout(reactTimer.current)
+    }
   }, [])
 
   // Parallax halus mengikuti kursor (desktop saja). Ditulis ke CSS variable pada
@@ -123,11 +146,14 @@ export default function AvatarStage({ expression, blinking, talking }: AvatarSta
     'character',
     `mood-${current}`,
     talking ? 'is-talking' : '',
+    reacting ? 'is-react' : '',
     blinking && BLINKABLE.has(current) ? 'is-blinking' : ''
   ].filter(Boolean).join(' ')
 
   return (
-    <div className="character-parallax" ref={stageRef}>
+    <div className={`character-parallax tint-${current}`} ref={stageRef}>
+      {/* Aura di belakang karakter: warnanya mengikuti emosi aktif. */}
+      <div className="avatar-aura" aria-hidden="true" />
       <div className={className} aria-hidden="true">
         {previous && previous !== current ? layer(previous, false, false) : null}
         {layer(current, blinking, true)}
