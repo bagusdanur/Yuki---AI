@@ -1696,3 +1696,67 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 .status-strip i { border-radius: 3px; background: linear-gradient(90deg, #8f8bea, #cfcaff); }
 .status-strip i { box-shadow: 0 0 10px rgba(170,167,255,.35); }
 .mobile-bond > i { height: 4px; }
+
+
+/* ============================================================================
+   v3.3.1 — Karakter tampil sebagai POTRET TETAP (permintaan pemilik).
+   Tidak ada naik-turun, anggukan, membesar-mengecil, atau kedip. Yang berubah
+   hanya gambar ekspresi (crossfade halus) dan warna cahaya di belakangnya.
+   ============================================================================ */
+.character,
+.character.is-static,
+.character.is-talking,
+.character.is-react,
+.character.mood-tenang,
+.character.mood-senang,
+.character.mood-malu,
+.character.mood-kesal,
+.character.mood-sedih,
+.character.mood-lesu {
+  /* hanya memudar saat pertama muncul — tanpa transform sama sekali */
+  animation: character-enter .3s ease-out both !important;
+}
+
+/* Efek fokus-wajah per emosi dibatalkan: ukuran karakter harus SELALU sama,
+   supaya pergantian ekspresi tidak terlihat seperti gambar yang meloncat. */
+.character-layer { transform: none !important; }
+
+/* Parallax kursor dimatikan — jangan sampai karakternya terasa bergeser. */
+.character-parallax { transform: none !important; }
+
+/* Aura tetap ada sebagai warna suasana, tapi tidak berdenyut. */
+.avatar-aura { animation: none !important; }
+
+
+/* ============================================================================
+   v3.3.2 — Gerak HALUS (revisi permintaan pemilik).
+   Sebelumnya "senang" melompat 5px + membesar 1,2% → terlihat over.
+   Sekarang amplitudo diturunkan drastis (±1-2px), tanpa rotasi besar dan tanpa
+   squash, jadi tubuh tetap terasa hidup tapi tidak "meloncat".
+   Kedip tetap dimatikan: gambar _blink tidak sejajar dengan gambar dasarnya.
+   ============================================================================ */
+@keyframes idle-soft   { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-1.2px) scale(1.002); } }
+@keyframes happy-soft  { 0%, 100% { transform: translateY(0) scale(1); } 45% { transform: translateY(-2px) scale(1.004); } }
+@keyframes shy-soft    { 0%, 100% { transform: translateY(0) rotate(-.18deg); } 50% { transform: translateY(-.8px) rotate(.22deg); } }
+@keyframes annoyed-soft{ 0%, 72%, 100% { transform: translateX(0); } 76% { transform: translateX(-1px); } 80% { transform: translateX(1px); } 84% { transform: translateX(0); } }
+@keyframes sad-soft    { 0%, 100% { transform: translateY(.5px) scale(.999); } 50% { transform: translateY(1.2px) scale(.9985); } }
+@keyframes talk-soft   { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-1px) scale(1.0015); } }
+@keyframes react-soft  { 0%, 100% { transform: translateY(0) scale(1); } 40% { transform: translateY(-1.6px) scale(1.002); } }
+
+.character { animation: character-enter .3s ease-out both, idle-soft 10s ease-in-out infinite !important; transform: none; }
+.character.mood-senang { animation: character-enter .3s ease-out both, happy-soft 5s ease-in-out infinite !important; }
+.character.mood-malu { animation: character-enter .3s ease-out both, shy-soft 7s ease-in-out infinite !important; }
+.character.mood-kesal { animation: character-enter .3s ease-out both, annoyed-soft 6s ease-in-out infinite !important; }
+.character.mood-sedih, .character.mood-lesu { animation: character-enter .3s ease-out both, sad-soft 9s ease-in-out infinite !important; }
+.character.is-talking { animation: character-enter .3s ease-out both, talk-soft 1.1s ease-in-out infinite !important; }
+.character.is-react { animation: character-enter .3s ease-out both, react-soft .6s cubic-bezier(.25,.9,.3,1) both !important; }
+
+/* Mode hemat data tetap benar-benar diam. */
+.character.is-static { animation: none !important; }
+
+/* v3.3.2b — blok sebelumnya mendefinisikan .character.mood-tenang secara eksplisit
+   (spesifisitas lebih tinggi dari .character), jadi gerak halus netral perlu
+   aturan sendiri. Tanpa ini, emosi "tenang" diam total. */
+.character.mood-tenang {
+  animation: character-enter .3s ease-out both, idle-soft 10s ease-in-out infinite !important;
+}

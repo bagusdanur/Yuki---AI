@@ -124,8 +124,10 @@ export default function AvatarStage({ expression, blinking, talking }: AvatarSta
     }
   }, [])
 
-  const sourceFor = (expr: string, isBlinking: boolean) =>
-    isBlinking && BLINKABLE.has(expr) ? webp(`${expr}_blink`) : webp(expr)
+  // Kedip DIMATIKAN (v3.3.1). Gambar "_blink" punya posisi wajah sedikit berbeda
+  // dari gambar dasarnya, sehingga saat ditukar terlihat seperti karakternya meloncat.
+  // Selama belum ada gambar kedip yang benar-benar sejajar, lebih baik tanpa kedip.
+  const sourceFor = (expr: string, _isBlinking: boolean) => webp(expr)
 
   const layer = (expr: string, isBlinking: boolean, front: boolean) => (
     <img
@@ -146,12 +148,17 @@ export default function AvatarStage({ expression, blinking, talking }: AvatarSta
     />
   )
 
+  // Karakter tampil sebagai potret TETAP: tidak ada naik-turun, tidak ada
+  // mengangguk, tidak ada membesar-mengecil. Yang berubah hanya gambarnya
+  // (crossfade) dan warna cahaya di belakangnya.
+  void talking
+  void reacting
+  void blinking
   const className = [
     'character',
     `mood-${current}`,
     talking ? 'is-talking' : '',
     reacting ? 'is-react' : '',
-    blinking && BLINKABLE.has(current) ? 'is-blinking' : '',
     hematData ? 'is-static' : ''
   ].filter(Boolean).join(' ')
 

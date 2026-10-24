@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Yuki AI 3.2 — Dokumentasi Karakter & Sistem</title>
+  <title>Yuki AI 3.3 — Dokumentasi Karakter & Sistem</title>
 
   <!-- Google Fonts: Outfit (Header) & Plus Jakarta Sans (Body) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -869,14 +869,20 @@
         </svg>
         Yuki Agent (16 Kemampuan)
       </a>
+      <a href="#tampilan-karakter" class="nav-item" data-sec="tampilan-karakter">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 3a4 4 0 100 8 4 4 0 000-8zM4 21a8 8 0 0116 0" />
+        </svg>
+        Wajah Yuki di Layar
+      </a>
       <a href="#versi-3" class="nav-item" data-sec="versi-3">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18m9-9H3" /></svg>
-        Sistem Versi 3.2
+        Sistem Versi 3.3
       </a>
     </nav>
 
     <div class="sidebar-footer">
-      <div>Yuki AI v3.2.0</div>
+      <div>Yuki AI v3.3.0</div>
       <div style="margin-top: 4px; opacity: 0.7;">Panduan Pendamping Resmi</div>
     </div>
   </aside>
@@ -886,7 +892,7 @@
 
     <!-- ==================== PENGENALAN ==================== -->
     <section id="pengenalan">
-      <div class="version-chip">VERSION 3.2 / LIVE</div>
+      <div class="version-chip">VERSION 3.3 / LIVE</div>
       <h1>Yuki, lebih konsisten dan lebih manusiawi.</h1>
       <div class="subtitle">Mengenal Lebih Dekat Pendamping mu</div>
 
@@ -953,7 +959,7 @@
 
       <p>
         Sikap Yuki padamu bergantung sepenuhnya pada nilai <strong>Kedekatan (Bond Level)</strong> yang berkisar antara
-        <code>0</code> hingga <code>100</code>. Nilai ini tersimpan permanen bersama Kunci Ingatan. Pada versi 3.2, kedekatan dipengaruhi konsistensi, perhatian, konflik, permintaan maaf, dan perlindungan anti-spam.
+        <code>0</code> hingga <code>100</code>. Nilai ini tersimpan permanen bersama Kunci Ingatan. Pada versi 3.3, kedekatan dipengaruhi konsistensi, perhatian, konflik, permintaan maaf, dan perlindungan anti-spam.
       </p>
 
       <div class="table-responsive">
@@ -1250,7 +1256,7 @@
       <div class="subtitle">Mencegah Hilangnya Kenangan dengan Yuki</div>
 
       <p>
-        Di <strong>YUKI 3.2</strong>, Kunci Ingatan memulihkan percakapan, tingkat hubungan, suasana hati, dan hal-hal penting yang Yuki kenal tentangmu. Ingatannya mencakup preferensi, orang penting, momen emosional, serta cerita yang belum selesai.
+        Di <strong>YUKI 3.3</strong>, Kunci Ingatan memulihkan percakapan, tingkat hubungan, suasana hati, dan hal-hal penting yang Yuki kenal tentangmu. Ingatannya mencakup preferensi, orang penting, momen emosional, serta cerita yang belum selesai.
       </p>
 
       <div class="card accent">
@@ -1272,14 +1278,14 @@
       
       <div class="info-box">
         <p>
-          <strong>Percakapan YUKI 3.2:</strong> balasan dibuat lebih utuh, tidak mudah terpotong, tidak berulang-ulang, dan tetap sesuai dengan hal yang benar-benar Yuki ingat tentangmu.
+          <strong>Percakapan YUKI 3.3:</strong> balasan dibuat lebih utuh, tidak mudah terpotong, tidak berulang-ulang, dan tetap sesuai dengan hal yang benar-benar Yuki ingat tentangmu.
         </p>
       </div>
     </section>
 
     <!-- ==================== MENU & RIWAYAT ==================== -->
     <section id="menu-yuki">
-      <div class="version-chip">PANDUAN MENU / YUKI 3.2</div>
+      <div class="version-chip">PANDUAN MENU / YUKI 3.3</div>
       <h2>Menu Yuki & Riwayat Obrolan</h2>
       <div class="subtitle">Semua yang bisa kamu buka dari ikon gerigi di kanan atas</div>
 
@@ -1415,20 +1421,43 @@
       </div>
     </section>
 
-    <section id="versi-3">
-      <div class="version-chip">SYSTEM NOTES / YUKI 3.2</div>
-      <h2>Apa yang Baru di Yuki 3.2?</h2>
-      <div class="subtitle">Fokus ke pengalaman ngobrol: balasan mengalir realtime, lebih cepat & stabil, kartu komik rapi, obrolan tetap obrolan</div>
+        <!-- ==================== TAMPILAN KARAKTER ==================== -->
+    <section id="tampilan-karakter">
+      <div class="version-chip">TAMPILAN / YUKI 3.3</div>
+      <h2>Wajah Yuki di Layar</h2>
+      <div class="subtitle">Ekspresinya ikut berubah mengikuti perasaannya — bukan gambar diam yang sama terus</div>
+
       <div class="persona-grid v3-grid">
-        <div class="p-item"><div class="p-label"><i data-lucide="pen-line"></i>BALASAN MENGALIR REALTIME</div><div class="p-val">Yuki kini mengetik di depan matamu. Teks muncul kata demi kata begitu ia mulai menjawab, jadi kamu tidak lagi menatap layar diam menunggu balasan utuh. Balasan tetap melalui pemeriksaan kualitas yang sama sebelum dikunci.</div></div>
-        <div class="p-item"><div class="p-label"><i data-lucide="zap"></i>BALASAN LEBIH CEPAT</div><div class="p-val">Koreksi kecil (gestur ganda atau balasan kepanjangan) kini dirapikan langsung tanpa meminta Yuki menulis ulang dari awal. Penulisan ulang hanya dipakai untuk masalah serius — waktu balas jadi jauh lebih stabil, tanpa lonjakan mendadak.</div></div>
-        <div class="p-item"><div class="p-label"><i data-lucide="images"></i>KARTU KOMIK RAPI</div><div class="p-val">Kartu rekomendasi komik tampil dengan cover asli, judul utuh, dan tombol baca — termasuk saat tautan dari riwayat lama terpotong. Tidak ada lagi kartu yang hilang atau tampil setengah.</div></div>
-        <div class="p-item"><div class="p-label"><i data-lucide="message-circle"></i>OBROLAN TETAP OBROLAN</div><div class="p-val">Yuki tidak lagi menyelipkan rekomendasi komik yang tidak kamu minta ke tengah obrolan biasa. Kartu komik hanya muncul saat kamu memang memintanya.</div></div>
-        <div class="p-item"><div class="p-label"><i data-lucide="sparkles"></i>BALASAN BERSIH</div><div class="p-val">Penanda suasana hati internal tidak lagi bocor ke teks balasan. Sisa penanda dari riwayat lama pun dibersihkan, jadi yang kamu baca murni ucapan dan gestur Yuki.</div></div>
-        <div class="p-item"><div class="p-label"><i data-lucide="history"></i>RIWAYAT & INGATAN TERBUKA</div><div class="p-val">Dua menu baru: <strong>Riwayat obrolan</strong> untuk membaca semua percakapanmu (termasuk yang lama — kini dengan kotak <strong>cari</strong>), dan <strong>Ingatan Yuki tentangmu</strong> untuk melihat, mengoreksi, atau menghapus hal yang ia ingat — kini lengkap mencakup kesukaan, kebiasaan, dan janji/rencana. Keduanya tersedia juga di versi tempel.</div></div>
-        <div class="p-item"><div class="p-label"><i data-lucide="bell-ring"></i>PENGINGAT NYATA DARI CHAT</div><div class="p-val">Minta Yuki mengingatkanmu cukup lewat chat biasa — <em>"ingatkan aku besok jam 7"</em> — dan jadwalnya benar-benar dibuat, bukan sekadar janji di obrolan. Pengingat bisa dilihat, dijeda, ditunda, atau dihapus lewat menu <strong>Pengingat</strong>, di aplikasi penuh maupun versi tempel.</div></div>
-        <div class="p-item"><div class="p-label"><i data-lucide="heart-handshake"></i>HUBUNGAN BERTAHAP</div><div class="p-val">Kenaikan kedekatan diperlambat agar terasa lebih wajar — setiap tahap benar-benar perlu diperjuangkan, sementara kesalahan tetap berbobot seperti sebelumnya.</div></div>
-        <div class="p-item"><div class="p-label"><i data-lucide="shield-check"></i>SUARA OPSIONAL</div><div class="p-val">Fitur suara tersedia dan bisa dinyalakan/dimatikan dari dashboard. Saat dimatikan, tombol suara tidak melakukan apa-apa dan tidak menampilkan error.</div></div>
+        <div class="p-item"><div class="p-label"><i data-lucide="smile"></i>ENAM WAJAH, BUKAN SATU</div><div class="p-val">Yuki punya wajah untuk tenang, senang, malu, sedih, kesal, dan lesu. Saat nada balasannya berubah, wajahnya ikut berganti dengan halus — tidak ada kedipan atau gambar kosong di antaranya.</div></div>
+
+        <div class="p-item"><div class="p-label"><i data-lucide="images"></i>EKSPRESI BERGANTI HALUS</div><div class="p-val">Saat perasaannya berubah, wajah Yuki berganti perlahan — gambar lama memudar dan gambar baru muncul, tanpa kedipan atau lompatan. Kamu tidak akan melihat gambar kosong di tengah pergantian.</div></div>
+
+        <div class="p-item"><div class="p-label"><i data-lucide="sun-medium"></i>CAHAYA SUASANA</div><div class="p-val">Cahaya di belakang Yuki ikut berubah warna mengikuti perasaannya: hangat saat senang, kemerah-mudaan saat malu, memerah saat kesal, dan dingin saat sedih atau lelah.</div></div>
+
+        <div class="p-item"><div class="p-label"><i data-lucide="scan-face"></i>UKURAN SELALU SAMA</div><div class="p-val">Semua ekspresi memakai ukuran dan posisi yang persis sama. Jadi ketika wajahnya berganti, karakternya tidak terlihat bergeser, meloncat, atau berubah besar.</div></div>
+
+        <div class="p-item"><div class="p-label"><i data-lucide="wind"></i>GERAKAN HALUS</div><div class="p-val">Tubuhnya bergerak sedikit — seperti orang yang berdiri santai, bukan gambar yang melompat-lompat. Saat senang gerakannya sedikit lebih ringan, saat sedih lebih pelan. Ukurannya tetap sama sepanjang waktu.</div></div>
+
+        <div class="p-item"><div class="p-label"><i data-lucide="battery-charging"></i>RINGAN & HEMAT KUOTA</div><div class="p-val">Gambar wajahnya dibuat jauh lebih ringan dari sebelumnya, jadi pergantian ekspresi tidak memakan kuota. Kalau ponselmu sedang dalam mode hemat data, gerakan berhenti otomatis dan Yuki tampil sebagai potret tenang.</div></div>
+
+        <div class="p-item"><div class="p-label"><i data-lucide="eye-off"></i>BISA DISEMBUNYIKAN</div><div class="p-val">Tidak sedang ingin melihat panel karakter? Tekan ikon mata di kanan atas untuk menyembunyikannya — obrolan jadi selebar layar. Pilihan ini diingat di perangkatmu, jadi tidak perlu diatur ulang setiap kali membuka.</div></div>
+      </div>
+    </section>
+
+<section id="versi-3">
+      <div class="version-chip">SYSTEM NOTES / YUKI 3.3</div>
+      <h2>Apa yang Baru di Yuki 3.3?</h2>
+      <div class="subtitle">Fokus ke tampilan karakter dan kenyamanan mengobrol — lebih hidup, lebih ringan, lebih enak dibaca</div>
+      <div class="persona-grid v3-grid">
+        <div class="p-item"><div class="p-label"><i data-lucide="smile"></i>ENAM EKSPRESI, SATU UKURAN</div><div class="p-val">Wajah Yuki berganti mengikuti perasaannya — tenang, senang, malu, sedih, kesal, dan lesu — dengan ukuran dan posisi yang selalu sama. Pergantiannya halus, dan gerakan tubuhnya dibuat kecil supaya tidak terasa berlebihan.</div></div>
+        <div class="p-item"><div class="p-label"><i data-lucide="feather"></i>JAUH LEBIH RINGAN</div><div class="p-val">Gambar karakter dipangkas dan dimampatkan tanpa mengorbankan ketajaman. Halaman jadi lebih cepat dibuka dan pergantian ekspresi tidak lagi memuat gambar besar di belakang layar.</div></div>
+        <div class="p-item"><div class="p-label"><i data-lucide="eye-off"></i>SEMBUNYIKAN KARAKTER</div><div class="p-val">Ikon mata di kanan atas menyembunyikan panel karakter sehingga obrolan memakai lebar penuh. Cocok saat membaca percakapan panjang atau menghemat kuota. Pilihanmu diingat.</div></div>
+        <div class="p-item"><div class="p-label"><i data-lucide="copy"></i>SALIN BALASAN</div><div class="p-val">Setiap balasan Yuki kini punya tombol salin. Berguna untuk menyimpan kalimat yang kamu suka, mengirimkannya ke teman, atau mencatat pengingat di luar aplikasi.</div></div>
+        <div class="p-item"><div class="p-label"><i data-lucide="arrow-down-to-line"></i>KEMBALI KE PESAN TERBARU</div><div class="p-val">Saat kamu menggulir jauh ke atas untuk membaca percakapan lama, tombol <strong>Pesan terbaru</strong> muncul di bawah. Sekali tekan, kamu kembali ke pesan paling akhir.</div></div>
+        <div class="p-item"><div class="p-label"><i data-lucide="text-cursor-input"></i>KOLOM TULIS MEMANJANG</div><div class="p-val">Kolom pesan sekarang tumbuh mengikuti panjang tulisanmu, jadi pesan panjang tetap terlihat utuh sebelum dikirim. Enter tetap mengirim, Shift+Enter membuat baris baru.</div></div>
+        <div class="p-item"><div class="p-label"><i data-lucide="heart"></i>BAR KEDEKATAN LEBIH JELAS</div><div class="p-val">Bar kedekatan dibuat lebih tebal dan terang, sehingga kamu bisa melihat perkembangan hubungan tanpa harus mendekatkan mata ke layar.</div></div>
+        <div class="p-item"><div class="p-label"><i data-lucide="battery-charging"></i>MODE HEMAT DATA</div><div class="p-val">Kalau ponselmu mengaktifkan mode hemat data, gambar karakter tidak dimuat di awal sehingga kuotamu tidak terpakai untuk hal yang belum tentu kamu lihat. Yuki tetap bisa diajak mengobrol seperti biasa.</div></div>
+        <div class="p-item"><div class="p-label"><i data-lucide="messages-square"></i>OBROLAN LEBIH RAPI</div><div class="p-val">Pesan berurutan dari pengirim yang sama dirapatkan, teks kecil dinaikkan kontrasnya, dan tombol bantuan di samping balasan hanya muncul saat dibutuhkan — percakapan panjang tidak lagi terasa penuh.</div></div>
       </div>
     </section>
   </main>
