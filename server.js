@@ -390,6 +390,7 @@ app.post('/api/agent/approvals/:approvalId', requireSession, rateLimit({ windowM
     messages: resume.messages || [],
     memoryContext: resume.memoryContext || '',
     bondName: resume.bondName || 'mulai terbiasa',
+    bondValue: resume.bondValue ?? 0,
     onProgress: step => updateAgentProgress(workflow.requestId, req.authUserId, step),
     shouldCancel: () => isAgentRunCancellationRequested(workflow.requestId, req.authUserId),
     onApproval: ({ toolName, args, reason, stepId }) => createApprovalCheckpoint({
@@ -629,14 +630,14 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
         username: currentUsername,
         messages: messagesToSend,
         memoryContext,
-        bondName: bond.name,
+        bondName: bond.name, bondValue: emotion.bond,
         onProgress: (step) => updateAgentProgress(requestId, userId, step),
         shouldCancel: () => isAgentRunCancellationRequested(requestId, userId),
         onApproval: ({ toolName, args, reason, stepId }) => {
           const approval = createApprovalCheckpoint({
             requestId: requestId || `agent_${crypto.randomUUID().replaceAll('-', '')}`,
             userId: String(userId), toolName, args, reason,
-            resume: { messages: messagesToSend, memoryContext, bondName: bond.name, username: currentUsername, stepId }
+            resume: { messages: messagesToSend, memoryContext, bondName: bond.name, bondValue: emotion.bond, username: currentUsername, stepId }
           })
           traceEvent('approval_requested', { workflowId: approval.workflowId, requestId, toolName })
           return approval
@@ -745,7 +746,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
       comicContext,
       reminderContext,
       isIdle,
-      bondName: bond.name,
+      bondName: bond.name, bondValue: emotion.bond,
       isSerious,
       userMsgLength: userText.length,
       shouldAskQuestion,
@@ -769,7 +770,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
       console.log(`[Quality Guard] Retrying: ${quality.fatal.join(', ')}`)
       const retryResult = await chat(messagesToSend, {
         emotionDirective: emotion.directive(), memoryContext, comicContext, reminderContext, isIdle,
-        bondName: bond.name, isSerious, userMsgLength: userText.length,
+        bondName: bond.name, bondValue: emotion.bond, isSerious, userMsgLength: userText.length,
         shouldAskQuestion, sessionTurns: _turns, responseStyle: target.style, recentAssistant, gestureCue,
         retryReason: `Balasan sebelumnya bermasalah: ${quality.fatal.join(', ')}. Tulis ulang secara utuh, natural, tidak repetitif, dan sesuai panjang yang diminta.`
       })
@@ -827,7 +828,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
         comicContext,
         reminderContext,
         isIdle,
-        bondName: bond.name,
+        bondName: bond.name, bondValue: emotion.bond,
         isSerious,
         userMsgLength: userText.length,
         shouldAskQuestion,
@@ -858,7 +859,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
         comicContext,
         reminderContext,
         isIdle,
-        bondName: bond.name,
+        bondName: bond.name, bondValue: emotion.bond,
         isSerious,
         userMsgLength: userText.length,
         shouldAskQuestion: false,
