@@ -771,10 +771,15 @@ app.patch('/api/agenda/:taskId', requireSession, rateLimit({ windowMs: 60_000, m
   res.json(result)
 })
 
-app.get('/api/push/config', requireSession, rateLimit({ max: 30 }), (_req, res) => res.json(getPushConfig()))
-app.post('/api/push/subscriptions', requireSession, rateLimit({ windowMs: 60_000, max: 10 }), (req, res) => {
+app.get('/api/push/config', requireSession, rateLimit({ windowMs: 60_000, max: 10 }), (_req, res) => res.json(getPushConfig()))
+app.post('/api/push/subscriptions', requireSession, rateLimit({ windowMs: 60_000, max: 5 }), (req, res) => {
   try { res.json(savePushSubscription(req.authUserId, req.body?.subscription)) }
-  catch { res.status(400).json({ error: 'Subscription notifikasi tidak valid.' }) }
+  catch (error) {
+    // Endpoint milik user lain -> 409, bukan 400 generik (biar client & audit jelas)
+    if (error?.code === 'SUBSCRIPTION_OWNED_BY_OTHER_USER') return res.status(409).json({ error: 'Perangkat ini sudah terdaftar ke akun lain.' })
+    if (error?.message === 'SUBSCRIPTION_HOST_NOT_ALLOWED') return res.status(400).json({ error: 'Endpoint push tidak dikenal.' })
+    res.status(400).json({ error: 'Subscription notifikasi tidak valid.' })
+  }
 })
 app.delete('/api/push/subscriptions', requireSession, rateLimit({ windowMs: 60_000, max: 10 }), (req, res) => {
   res.json(removePushSubscription(req.authUserId, req.body?.endpoint))
