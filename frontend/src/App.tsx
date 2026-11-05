@@ -8,11 +8,11 @@ import {
   Gamepad2, Globe, Heart, History as HistoryIcon, KeyRound, ListTodo, LoaderCircle, Maximize2, MessageSquare,
   Minimize2, Pause, Play, Radio, RefreshCw, RotateCcw, Save, Send, Settings, Sparkles, Star,
   Terminal, ThumbsDown, ThumbsUp, Volume2, WifiOff, Wrench, X, Zap, Eye, EyeOff,
-  Grid3x3, HandFist, ChevronRight,
+  Grid3x3, HandFist, ChevronRight, ShieldAlert,
 } from 'lucide-react'
 import {
   addBookmark, cancelAgentRun, createDynamicSkill, decideAgentApproval, deleteAccount, deleteMemory, deletePlainMemory, dynamicSkillAction, getActiveAgentRun, getAgenda, getBookmarks, getChatHistoryPage, getDynamicSkills, getMemories, getPushConfig, getRelationship,
-  getAgentProgress, getPendingAgentWorkflows, getScheduledReminders, getSkills, register, removeBookmark, restore, savePushSubscription, searchChatHistory, sendChat, sendChatStream, sendFeedback, setMemoryAutoCapture, speak, updateAgendaTask, updateMemory
+  getAgentProgress, getPendingAgentWorkflows, getScheduledReminders, getSkills, refreshSession, register, removeBookmark, resetSession, restore, savePushSubscription, searchChatHistory, sendChat, sendChatStream, sendFeedback, setMemoryAutoCapture, speak, updateAgendaTask, updateMemory
 } from './api'
 import type {
   AgendaResponse, AgentMemory, AgentStep, ArtifactItem, BookmarkedComic, ChatMode, ComicRecommendation, DynamicSkill,
@@ -1445,6 +1445,21 @@ export default function App() {
       })
   }, [session?.userId, session?.sessionToken])
 
+  // Rotasi sesi sekali tiap buka aplikasi: minta JWT baru (token lama mati).
+  // User tidak sadar; bot yang mencuri token wajib relogin pakai kunci ingatan.
+  useEffect(() => {
+    if (!session?.sessionToken || EMBED_COMPANION_ONLY) return
+    refreshSession()
+      .then(data => {
+        if (data.sessionToken) {
+          saveSession({ ...session, sessionToken: data.sessionToken })
+          setSession({ ...session, sessionToken: data.sessionToken })
+        }
+      })
+      .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   useEffect(() => { busyRef.current = busy }, [busy])
   // ===== Sinkronisasi riwayat lintas-perangkat =====
   // Riwayat chat tersimpan di SERVER (terikat kunci ingatan), tapi tampilan
@@ -1751,6 +1766,16 @@ export default function App() {
     setSession(null); setMessages([]); setBookmarks([]); setSettingsOpen(false)
   }
 
+  async function resetAllSessions() {
+    if (!window.confirm('Matikan sesi di SEMUA perangkat? Kamu wajib login ulang pakai kunci ingatan.')) return
+    try {
+      await resetSession()
+      reset()
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Reset sesi gagal')
+    }
+  }
+
   async function removeAccount() {
     if (!window.confirm('Hapus seluruh chat, memori, dan hubungan dengan Yuki secara permanen?')) return
     if (window.prompt('Tindakan ini tidak dapat dipulihkan. Ketik HAPUS untuk konfirmasi terakhir.') !== 'HAPUS') return
@@ -1843,6 +1868,7 @@ export default function App() {
           <button onClick={() => window.open('/privacy', '_blank', 'noopener')}><BookOpen size={15} /><span><b>Privasi pengguna</b><small>Data yang disimpan dan kontrolmu</small></span></button>
           <button onClick={() => setShowAccessCode(value => !value)}><KeyRound size={15} /><span><b>{showAccessCode ? 'Sembunyikan' : 'Tampilkan'} kunci ingatan</b><small>{showAccessCode ? (session?.accessCode || 'Belum tersedia') : 'YUKI-••••-••••'}</small></span></button>
           <button onClick={() => navigator.clipboard.writeText(session?.accessCode || '')}><Copy size={15} /><span><b>Salin kunci ingatan</b><small>Disalin tanpa menampilkannya</small></span></button>
+          <button className="danger" onClick={resetAllSessions}><ShieldAlert size={15} /><span><b>Reset sesi semua perangkat</b><small>Token lama langsung mati, wajib login ulang</small></span></button>
           <button className="danger" onClick={reset}><RotateCcw size={15} /><span><b>Mulai hubungan baru</b><small>Hapus sesi dari perangkat ini</small></span></button>
           <button className="danger" onClick={removeAccount}><X size={15} /><span><b>Hapus seluruh data</b><small>Permanen dari server Yuki</small></span></button>
         </div>}

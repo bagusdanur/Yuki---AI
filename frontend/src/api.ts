@@ -7,7 +7,19 @@ async function parse<T>(response: Response): Promise<T> {
     data = rawText ? JSON.parse(rawText) : {}
   } catch {
     if (!response.ok) {
+      if (response.status === 403) {
+        throw new Error('Akses dari jaringan ini diblokir sementara.')
+      }
       if (response.status === 401) {
+        // Token mati (rotasi/reset/expired) -> bersihkan & muat ulang sekali,
+        // biar alur restore via kunci ingatan yang mengambil alih.
+        try {
+          if (!sessionStorage.getItem('yuki_401_reloaded')) {
+            sessionStorage.setItem('yuki_401_reloaded', '1')
+            localStorage.removeItem('yuki_session_token_v3')
+            window.location.reload()
+          }
+        } catch {}
         throw new Error('Sesi tidak valid atau telah berakhir. Muat ulang halaman untuk masuk kembali.')
       }
       if (response.status === 502 || response.status === 504) {
@@ -60,6 +72,17 @@ export async function restore(accessCode: string) {
   return request<{ userId: string; username: string; sessionToken: string; history: Message[]; bondValue?: number; milestones?: Milestone[] }>('/api/login-code', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessCode }),
   })
+}
+
+// Rotasi sesi: minta JWT baru (token lama mati). Dipanggil sekali tiap buka
+// aplikasi — user tidak sadar, token curian langsung tidak berguna.
+export async function refreshSession() {
+  return request<{ sessionToken: string }>('/api/session/refresh', { method: 'POST' }, 10_000, 0)
+}
+
+// Reset sesi: matikan SEMUA token di semua perangkat (wajib relogin).
+export async function resetSession() {
+  return request<{ success: true }>('/api/session/reset', { method: 'POST' }, 10_000, 0)
 }
 
 export async function sendChat(userId: string, messages: Message[], isIdle = false, mode: ChatMode = 'companion', requestId = '') {

@@ -13,6 +13,7 @@ import {
   countChatMessages, summarizeAndTrimHistory, captureStructuredMemory,
   recordConversationEvent, syncBondMilestones, saveResponseFeedback,
   consumeRateLimit, pruneRateLimits, deleteUserData, getAdminStats, userExists,
+  getSessionState, setSessionJti, bumpSessionVersion,
   saveComicBookmark, getComicBookmarks, deleteComicBookmark
   , getScheduledReminderMessages, dbHandle, APP_DATA_LABELS
   , regenerateAccessCode
@@ -47,6 +48,7 @@ import { approveDynamicSkill, createDynamicSkill, deleteDynamicSkillData, disabl
 import { deleteScheduledTasks, getAgenda, restoreScheduledJobs, setScheduledTaskStatus, setTaskTriggerCallback, shutdownScheduler, snoozeScheduledTask, updateScheduledTask } from './lib/scheduler.js'
 import { handleCompanionReminder } from './lib/companion-reminder.js'
 import { deletePushSubscriptions, getPushConfig, removePushSubscription, savePushSubscription, sendPushToUser } from './lib/push.js'
+import { isIpBlocked, blockIp, unblockIp, listBlockedIps } from './lib/ip-block.js'
 import { closeBrowser } from './lib/browser.js'
 import { deleteWorkspaceData, importWorkspaceFiles } from './skills/computing/workspace-files/handler.js'
 
@@ -63,6 +65,35 @@ function worthRemembering(text = '') {
 
 const app = express()
 app.set('trust proxy', 1)
+
+// 🛡️ Blocklist IP — dicek paling awal, sebelum semua route.
+// IP di belakang Cloudflare/nginx: req.ip sudah client asli (trust proxy 1).
+app.use((req, res, next) => {
+  try {
+    if (isIpBlocked(req.ip)) return res.status(403).json({ error: 'Akses dari jaringan ini diblokir sementara.' })
+  } catch {}
+  next()
+})
+
+// Auto-block: kumpulkan "strike" dari pelanggaran rate-limit & login gagal.
+// 10 strike dalam 10 menit -> blokir 1 jam. Strike berikutnya -> 24 jam.
+const ipStrikes = new Map() // ip -> { count, windowStart, level }
+function recordStrike(ip, reason = 'abuse') {
+  if (!ip) return
+  const now = Date.now()
+  const entry = ipStrikes.get(ip)
+  if (!entry || now - entry.windowStart > 10 * 60_000) {
+    ipStrikes.set(ip, { count: 1, windowStart: now, level: entry?.level || 0 })
+    return
+  }
+  entry.count += 1
+  if (entry.count >= 10) {
+    entry.level += 1
+    blockIp(ip, entry.level > 1 ? 24 : 1, `${reason} x${entry.count}`)
+    ipStrikes.delete(ip)
+  }
+}
+
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ limit: '10mb', extended: true }))
 
@@ -76,8 +107,17 @@ if (IS_PRODUCTION && !process.env.AUTH_SECRET) console.warn('[security] AUTH_SEC
 if (IS_PRODUCTION && !ADMIN_TOKEN) console.warn('[security] ADMIN_TOKEN belum disetel; dashboard admin dinonaktifkan.')
 
 function signSession(userId) {
-  const payload = Buffer.from(JSON.stringify({ sub: String(userId), exp: Date.now() + 30 * 86400_000 })).toString('base64url')
+  // Token membawa jti (id sesi aktif) + sv (session version). Setiap tanda
+  // tangan menerbitkan jti baru dan menyimpannya -> token lama mati seketika
+  // (rotasi). Browser me-refresh transparan, bot yang nyolong token ikut mati.
+  const state = getSessionState(userId)
+  const jti = crypto.randomUUID()
+  const payload = Buffer.from(JSON.stringify({
+    sub: String(userId), sv: state?.version || 1, jti, iat: Date.now(),
+    exp: Date.now() + 30 * 86400_000
+  })).toString('base64url')
   const signature = crypto.createHmac('sha256', AUTH_SECRET).update(payload).digest('base64url')
+  try { setSessionJti(userId, jti) } catch {}
   return `${payload}.${signature}`
 }
 
@@ -86,7 +126,16 @@ function verifySession(token = '') {
   if (!payload || !signature) return null
   const expected = crypto.createHmac('sha256', AUTH_SECRET).update(payload).digest('base64url')
   if (signature.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null
-  try { const data = JSON.parse(Buffer.from(payload, 'base64url')); return data.exp > Date.now() && userExists(data.sub) ? data.sub : null } catch { return null }
+  try {
+    const data = JSON.parse(Buffer.from(payload, 'base64url'))
+    if (!(data.exp > Date.now()) || !userExists(data.sub)) return null
+    // Token lama (tanpa sv/jti) tetap diterima selama transisi; token baru
+    // wajib cocok dengan state server (sv + jti). Reset/rotasi membatalkannya.
+    const state = getSessionState(data.sub)
+    if (data.sv != null && state && Number(data.sv) !== state.version) return null
+    if (data.jti != null && state?.jti && data.jti !== state.jti) return null
+    return data.sub
+  } catch { return null }
 }
 
 function requireSession(req, res, next) {
@@ -160,6 +209,7 @@ function rateLimit({ windowMs = 60_000, max = 30 } = {}) {
     res.set('X-RateLimit-Remaining', String(bucket.remaining))
     if (!bucket.allowed) {
       res.set('Retry-After', String(Math.ceil((bucket.resetAt - Date.now()) / 1000)))
+      recordStrike(req.ip, 'rate-limit')
       return res.status(429).json({ error: 'Terlalu banyak permintaan. Tunggu sebentar lalu coba lagi.' })
     }
     next()
@@ -713,6 +763,7 @@ app.post('/api/login-code', rateLimit({ max: 15 }), async (req, res) => {
     }
     const user = getUserByAccessCode(accessCode)
     if (!user) {
+      recordStrike(req.ip, 'login-gagal')
       return res.status(404).json({ error: 'Kode akses tidak ditemukan atau salah.' })
     }
     const history = getChatHistory(user.userId)
@@ -730,6 +781,21 @@ app.post('/api/login-code', rateLimit({ max: 15 }), async (req, res) => {
     console.error(e)
     res.status(500).json({ error: String(e.message || e) })
   }
+})
+
+// Rotasi sesi: menerbitkan JWT baru (jti baru) — token lama langsung mati.
+// Frontend memanggil ini sekali tiap buka aplikasi, jadi user tidak sadar.
+// Bot/script yang mencuri token wajib relogin pakai kode akses begitu token
+// aslinya ter-refresh.
+app.post('/api/session/refresh', requireSession, rateLimit({ windowMs: 60_000, max: 10 }), (req, res) => {
+  res.json({ sessionToken: signSession(req.authUserId) })
+})
+
+// Reset token: menaikkan session_version -> SEMUA token user ini mati di
+// semua perangkat. User wajib relogin pakai kunci ingatan.
+app.post('/api/session/reset', requireSession, rateLimit({ windowMs: 60_000, max: 5 }), (req, res) => {
+  bumpSessionVersion(req.authUserId)
+  res.json({ success: true })
 })
 
 // Sinkronisasi pesan scheduler untuk sesi yang tetap login. Client melakukan
@@ -1316,6 +1382,19 @@ app.delete('/api/account', requireSession, rateLimit({ max: 3, windowMs: 3600_00
 })
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', uptime: Math.round((Date.now() - metrics.startedAt) / 1000) }))
+
+// 🛡️ Blocklist IP (admin): lihat, blokir manual, dan buka blokir.
+app.get('/api/admin/blocked-ips', rateLimit({ max: 30 }), requireAdmin, (_req, res) => res.json({ blocked: listBlockedIps() }))
+app.post('/api/admin/block-ip', rateLimit({ max: 20 }), requireAdmin, (req, res) => {
+  const ip = String(req.body?.ip || '').trim()
+  if (!ip) return res.status(400).json({ error: 'IP wajib diisi.' })
+  const hours = Math.min(24 * 30, Math.max(0.1, Number(req.body?.hours) || 1))
+  res.json({ ok: true, ...blockIp(ip, hours, String(req.body?.reason || 'manual-admin')) })
+})
+app.delete('/api/admin/blocked-ips/:ip', rateLimit({ max: 20 }), requireAdmin, (req, res) => {
+  res.json({ ok: true, ...unblockIp(req.params.ip) })
+})
+
 app.post('/api/admin/login', rateLimit({ max: 5, windowMs: 15 * 60_000 }), (req, res) => {
   if (!verifyAdminPassword(String(req.body?.password || ''))) return res.status(401).json({ error: 'Password admin salah.' })
   res.json({ sessionToken: signAdminSession(), expiresIn: 12 * 3600 })
