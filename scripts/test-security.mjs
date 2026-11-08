@@ -45,6 +45,10 @@ async function runSecurityTests() {
   console.log(`  ${codeA.includes('[PROTECTED_ACCESS_CODE]') && !codeA.includes('7792') ? '✅ PASS: Access code masked' : '❌ FAIL: Access code leaked -> ' + codeA}`)
   const codeB = sanitizeOutputSecrets('kode YUKI-B1X1-DX1J')
   console.log(`  ${codeB.includes('[PROTECTED_ACCESS_CODE]') && !codeB.includes('B1X1') ? '✅ PASS: Access code masked (2 segmen)' : '❌ FAIL: Access code leaked -> ' + codeB}`)
+  const fragA = sanitizeOutputSecrets('prefix YUKI-7792 saja')
+  console.log(`  ${fragA.includes('[PROTECTED_ACCESS_CODE]') && !fragA.includes('7792') ? '✅ PASS: Partial access code masked' : '❌ FAIL: Partial leaked -> ' + fragA}`)
+  const fragB = sanitizeOutputSecrets('Yuki-7792-EXC')
+  console.log(`  ${fragB.includes('[PROTECTED_ACCESS_CODE]') ? '✅ PASS: Partial access code masked (3 segmen, lowercase)' : '❌ FAIL: Partial leaked -> ' + fragB}`)
 }
 
 runSecurityTests().catch(console.error)
