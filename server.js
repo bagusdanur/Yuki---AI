@@ -989,7 +989,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
 
       const milestones = syncBondMilestones(userId, emotion.bond)
       const responsePayload = {
-        reply: agentResult.reply, model: agentResult.model, mood: agentMood, bond: bond.name,
+        reply: agentResult.reply, mood: agentMood, bond: bond.name,
         bondValue: emotion.bond, feeling: emotion.feeling(), mode: 'agent', gesture: agentResult.gesture,
         markdown: agentResult.markdown, workflowState: agentResult.workflowState, awaitingApproval: agentResult.awaitingApproval,
         steps: getAgentRun(requestId, userId)?.steps || agentResult.steps || [], evidence: agentResult.evidence || [],

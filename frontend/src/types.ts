@@ -68,7 +68,7 @@ export interface Milestone {
 
 export interface ChatResponse {
   reply: string
-  model: string
+  model?: string
   mood: string
   bond: string
   bondValue: number

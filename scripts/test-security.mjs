@@ -35,12 +35,16 @@ async function runSecurityTests() {
     console.log(`  ${passed ? '✅ PASS' : '❌ FAIL'}: "${t.code.slice(0, 35)}" -> ${res.safe ? 'ALLOWED' : 'BLOCKED (' + res.reason + ')'}`)
   }
 
-  console.log('\n--- 3. Testing Data Leak Prevention ---')
+  console.log('\\n--- 3. Testing Data Leak Prevention ---')
   const leakText = 'Server path: /home/ryukomik/Yuki---AI/server.js dan /etc/shadow'
   const sanitized = sanitizeOutputSecrets(leakText)
   console.log('  Original: ', leakText)
   console.log('  Sanitized:', sanitized)
   console.log(`  ${sanitized.includes('ryukomik') ? '❌ FAIL' : '✅ PASS: No VPS user/path leaked'}`)
+  const codeA = sanitizeOutputSecrets('kunci kamu YUKI-7792-EXC-9901 ya')
+  console.log(`  ${codeA.includes('[PROTECTED_ACCESS_CODE]') && !codeA.includes('7792') ? '✅ PASS: Access code masked' : '❌ FAIL: Access code leaked -> ' + codeA}`)
+  const codeB = sanitizeOutputSecrets('kode YUKI-B1X1-DX1J')
+  console.log(`  ${codeB.includes('[PROTECTED_ACCESS_CODE]') && !codeB.includes('B1X1') ? '✅ PASS: Access code masked (2 segmen)' : '❌ FAIL: Access code leaked -> ' + codeB}`)
 }
 
 runSecurityTests().catch(console.error)
