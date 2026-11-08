@@ -737,13 +737,24 @@ if (process.env.GAMES_ENABLED === 'true') {
 }
 
 // Endpoint untuk mendaftar user baru (Onboarding)
+// Anti-massal (audit Nov 2026: 29 akun router_* dalam 45 menit):
+// maksimal 3 akun/jam/IP + cooldown username identik 24 jam.
 app.post('/api/register', rateLimit({ max: 10 }), async (req, res) => {
   try {
+    const ipBucket = consumeRateLimit(`register-ip:${req.ip}`, 60 * 60 * 1000, 3)
+    if (!ipBucket.allowed) {
+      recordStrike(req.ip, 'register-abuse')
+      return res.status(429).json({ error: 'Terlalu banyak pendaftaran dari jaringan ini. Coba lagi nanti.' })
+    }
     const { username } = req.body || {}
     if (!username || !username.trim() || username.trim().length > 50) {
       return res.status(400).json({ error: 'Nama harus berisi 1-50 karakter.' })
     }
     const cleanName = username.trim()
+    const recentSameName = dbHandle.prepare("SELECT COUNT(*) AS c FROM users WHERE username = ? AND datetime(created_at) > datetime('now', '-1 day')").get(cleanName)
+    if (recentSameName && recentSameName.c > 0) {
+      return res.status(409).json({ error: 'Nama ini baru saja dipakai. Tunggu 24 jam atau pilih nama lain.' })
+    }
     const result = await registerUser(cleanName)
     const welcome = `*menatapmu sebentar, masih agak menjaga jarak*\n\nJadi namamu ${cleanName}? Aku Yuki. Salam kenal. Untuk sekarang kita kenalan dulu saja—jangan langsung merasa sudah dekat.\n\nKalau nanti kita cocok, mungkin aku bisa jadi teman dekatmu... atau sesuatu yang lebih. Itu tergantung bagaimana kamu memperlakukanku.\n\nKamu datang karena butuh teman ngobrol, atau cuma penasaran?`
     saveChatMessage(result.userId, 'assistant', welcome)
