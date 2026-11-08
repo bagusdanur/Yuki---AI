@@ -6,6 +6,7 @@
     "dev": "vite --config vite.config.ts",
     "build": "vite build --config vite.config.ts",
     "eval:character": "node scripts/eval-character.mjs",
+    "test:redteam": "node scripts/test-redteam-v4.mjs",
     "test:workspace": "node scripts/test-workspace-security.mjs",
     "test:agent-progress": "node scripts/test-agent-progress.mjs",
     "test:agent-runs": "node scripts/test-agent-runs.mjs",
