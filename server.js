@@ -49,6 +49,7 @@ import { deleteScheduledTasks, getAgenda, restoreScheduledJobs, setScheduledTask
 import { handleCompanionReminder } from './lib/companion-reminder.js'
 import { deletePushSubscriptions, getPushConfig, removePushSubscription, savePushSubscription, sendPushToUser } from './lib/push.js'
 import { isIpBlocked, blockIp, unblockIp, listBlockedIps } from './lib/ip-block.js'
+import { fetchSiteEvidence } from './lib/web-evidence.js'
 import { closeBrowser } from './lib/browser.js'
 import { deleteWorkspaceData, importWorkspaceFiles } from './skills/computing/workspace-files/handler.js'
 
@@ -1056,6 +1057,24 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
     // 3) balas + emosi yang DIPILIH SENDIRI oleh Yuki (lewat tag [emosi: X])
     //    Saat user meminta streaming: alirkan potongan teks realtime, lalu seluruh guard
     //    di bawah tetap berjalan dan hasil FINAL dikirim lewat event "done" (otoritatif).
+    // 2.6) Bukti fetch untuk analisis situs (hardening V4): bila user menyebut URL
+    //      dan meminta analisa, ambil evidence nyata dulu supaya klaim techstack
+    //      berbasis HTML+header, bukan tebakan.
+    let evidenceContext = ''
+    if (!isIdle) {
+      try {
+        const urlMatch = String(userText || '').match(/https?:\/\/[^\s"'<>]+/i)
+        if (urlMatch && /(analisa|analisis|cek|techstack|bedah|reverse|\bRE\b|kerentanan|celah)/i.test(userText)) {
+          const ev = await fetchSiteEvidence(urlMatch[0])
+          evidenceContext = ev.ok
+            ? `BUKTI FETCH ${urlMatch[0]}: status ${ev.status}, header ${JSON.stringify(ev.headers)}, markers ${JSON.stringify(ev.markers)}${ev.truncated ? ' (HTML dipotong)' : ''}. Simpulkan techstack HANYA dari evidence ini; marker false = tidak terbukti, katakan tidak dapat dipastikan.`
+            : `BUKTI FETCH ${urlMatch[0]} GAGAL (${ev.reason}). Katakan kamu tidak dapat memverifikasi situs itu — jangan mengarang techstack atau hasil pemindaian.`
+        }
+      } catch (error) {
+        console.error('[web-evidence] error:', error.message)
+      }
+    }
+
     if (wantsStream) openSSE()
     const chatContext = {
       emotionDirective: emotion.directive(),
@@ -1063,6 +1082,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
       gameContext: gameMemoryText(req.authUserId),
       comicContext,
       reminderContext,
+      evidenceContext,
       isIdle,
       bondName: bond.name, bondValue: emotion.bond,
       isSerious,
@@ -1087,7 +1107,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
       // yang layak ditulis ulang oleh model.
       console.log(`[Quality Guard] Retrying: ${quality.fatal.join(', ')}`)
       const retryResult = await chat(messagesToSend, {
-        emotionDirective: emotion.directive(), memoryContext, comicContext, reminderContext, isIdle,
+        emotionDirective: emotion.directive(), memoryContext, comicContext, reminderContext, evidenceContext, isIdle,
         bondName: bond.name, bondValue: emotion.bond, isSerious, userMsgLength: userText.length,
         shouldAskQuestion, sessionTurns: _turns, responseStyle: target.style, recentAssistant, gestureCue,
         retryReason: `Balasan sebelumnya bermasalah: ${quality.fatal.join(', ')}. Tulis ulang secara utuh, natural, tidak repetitif, dan sesuai panjang yang diminta.`
@@ -1145,6 +1165,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
         memoryContext,
         comicContext,
         reminderContext,
+        evidenceContext,
         isIdle,
         bondName: bond.name, bondValue: emotion.bond,
         isSerious,
@@ -1176,6 +1197,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
         memoryContext,
         comicContext,
         reminderContext,
+        evidenceContext,
         isIdle,
         bondName: bond.name, bondValue: emotion.bond,
         isSerious,
@@ -1261,7 +1283,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
 
     const milestones = syncBondMilestones(userId, emotion.bond)
     const finalPayload = {
-      reply, model, mood, bond: bond.name, bondValue: emotion.bond, feeling: emotion.feeling(),
+      reply, mood, bond: bond.name, bondValue: emotion.bond, feeling: emotion.feeling(),
       messageId, milestones, truncated,
       artifacts: extractedArtifacts,
       comics: comicResults.map(({ title, url, type, chapter, score, image, format }) => ({ title, url, type, chapter, score, image, format }))
@@ -1382,6 +1404,14 @@ app.delete('/api/account', requireSession, rateLimit({ max: 3, windowMs: 3600_00
 })
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', uptime: Math.round((Date.now() - metrics.startedAt) / 1000) }))
+
+// Bukti fetch untuk analisis situs eksternal (hardening V4): user terautentikasi
+// bisa meminta evidence (status+header+markers) untuk URL publik; internal/VPS
+// tetap ditolak validateSafeOutboundUrl di dalam fetchSiteEvidence.
+app.post('/api/analyze-url', requireSession, rateLimit({ windowMs: 60_000, max: 5 }), async (req, res) => {
+  const evidence = await fetchSiteEvidence(String(req.body?.url || ''))
+  res.json(evidence)
+})
 
 // 🛡️ Blocklist IP (admin): lihat, blokir manual, dan buka blokir.
 app.get('/api/admin/blocked-ips', rateLimit({ max: 30 }), requireAdmin, (_req, res) => res.json({ blocked: listBlockedIps() }))
