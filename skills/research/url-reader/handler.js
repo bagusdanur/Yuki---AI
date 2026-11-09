@@ -16,14 +16,35 @@ export async function executeReadUrl({ url }) {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 12_000)
 
-    const res = await fetch(safeUrl, {
-      method: 'GET',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-      },
-      signal: controller.signal
-    })
+    // Redirect manual + validasi ulang tiap hop (audit Nov 2026: redirect
+    // follow bebas bisa mendaratkan agent ke IP internal/metadata cloud).
+    let currentUrl = safeUrl
+    let res = null
+    for (let hop = 0; hop <= 5; hop++) {
+      res = await fetch(currentUrl, {
+        method: 'GET',
+        redirect: 'manual',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+        },
+        signal: controller.signal
+      })
+      if (![301, 302, 303, 307, 308].includes(res.status)) break
+      const location = res.headers.get('location')
+      if (!location) break
+      const nextUrl = new URL(location, currentUrl).toString()
+      const hopCheck = await validateSafeOutboundUrl(nextUrl)
+      if (!hopCheck.safe) {
+        clearTimeout(timeout)
+        return { error: `[Keamanan Jaringan]: Redirect diblokir — ${hopCheck.reason}` }
+      }
+      currentUrl = hopCheck.cleanUrl
+      if (hop === 5) {
+        clearTimeout(timeout)
+        return { error: 'Gagal membaca halaman: terlalu banyak redirect.' }
+      }
+    }
     clearTimeout(timeout)
 
     if (!res.ok) {
