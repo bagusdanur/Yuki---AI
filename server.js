@@ -142,11 +142,13 @@ function verifySession(token = '') {
   try {
     const data = JSON.parse(Buffer.from(payload, 'base64url'))
     if (!(data.exp > Date.now()) || !userExists(data.sub)) return null
-    // Token lama (tanpa sv/jti) tetap diterima selama transisi; token baru
-    // wajib cocok dengan state server (sv + jti). Reset/rotasi membatalkannya.
+    // Audit Nov 2026: token legacy tanpa sv/jti TIDAK diterima lagi — dulunya
+    // lolos masa transisi sehingga selamat dari reset sesi. User cukup login
+    // ulang dengan Kunci Ingatan sekali.
+    if (data.sv == null || data.jti == null) return null
     const state = getSessionState(data.sub)
-    if (data.sv != null && state && Number(data.sv) !== state.version) return null
-    if (data.jti != null && state?.jti && data.jti !== state.jti) return null
+    if (!state || Number(data.sv) !== state.version) return null
+    if (!state.jti || data.jti !== state.jti) return null
     return data.sub
   } catch { return null }
 }
