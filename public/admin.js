@@ -3,11 +3,11 @@
    ═══════════════════════════════════════════════════════════════ */
 
 const $ = (id) => document.getElementById(id)
-const token = () => sessionStorage.getItem('yuki_admin_session') || ''
-const headers = (json = false) => ({
-  Authorization: `Bearer ${token()}`,
-  ...(json ? { 'Content-Type': 'application/json' } : {}),
-})
+// Audit Nov 2026 (P2): token sesi admin kini di cookie httpOnly server —
+// tidak ada lagi token di sessionStorage yang bisa dicuri XSS.
+// Bersihkan sisa token admin lama dari sessionStorage (era sebelum cookie).
+sessionStorage.removeItem('yuki_admin_session')
+const headers = (json = false) => (json ? { 'Content-Type': 'application/json' } : {})
 const field = (name) => document.querySelector(`[name="${name}"]`)
 
 /* ─────────── Format angka ─────────── */
@@ -56,7 +56,7 @@ const esc = (v) => {
 
 /* ─────────── HTTP ─────────── */
 async function request(url, options = {}) {
-  const res = await fetch(url, options)
+  const res = await fetch(url, { credentials: 'same-origin', ...options })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
   return data
@@ -926,7 +926,7 @@ async function doLogin() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: pw }),
     })
-    sessionStorage.setItem('yuki_admin_session', data.sessionToken)
+    void data
     $('admin-key').value = ''
     $('login-error').textContent = ''
     showApp()
@@ -938,7 +938,10 @@ async function doLogin() {
 
 if ($('btn-login')) $('btn-login').onclick = doLogin
 if ($('admin-key')) $('admin-key').onkeydown = (e) => { if (e.key === 'Enter') doLogin() }
-if ($('btn-logout')) $('btn-logout').onclick = () => { sessionStorage.removeItem('yuki_admin_session'); location.reload() }
+if ($('btn-logout')) $('btn-logout').onclick = async () => {
+  try { await request('/api/admin/logout', { method: 'POST' }) } catch { /* tetap reload */ }
+  location.reload()
+}
 if ($('btn-refresh')) $('btn-refresh').onclick = () => loadOverview()
 if ($('btn-password')) $('btn-password').onclick = () => $('password-panel').classList.toggle('hidden')
 if ($('pw-close')) $('pw-close').onclick = () => $('password-panel').classList.add('hidden')
@@ -949,7 +952,7 @@ if ($('pw-save')) {
         method: 'POST', headers: headers(true),
         body: JSON.stringify({ password: $('new-password').value }),
       })
-      sessionStorage.setItem('yuki_admin_session', d.sessionToken)
+      void d
       $('pw-status').textContent = 'Password diganti.'
       $('pw-status').className = 'status-line ok'
     } catch (e) {
@@ -998,11 +1001,7 @@ async function boot() {
   setInterval(loadOverview, 45000)
 }
 
-/* Cek sesi tersimpan */
-if (token()) {
-  request('/api/admin/stats', { headers: headers() })
-    .then(() => { showApp(); boot() })
-    .catch(() => { sessionStorage.removeItem('yuki_admin_session'); showLogin() })
-} else {
-  showLogin()
-}
+/* Cek sesi tersimpan (cookie httpOnly — server yang menentukan) */
+request('/api/admin/stats', { headers: headers() })
+  .then(() => { showApp(); boot() })
+  .catch(() => showLogin())

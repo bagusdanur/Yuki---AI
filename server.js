@@ -155,11 +155,11 @@ function getSessionTokenFromRequest(req) {
   return parseCookies(req)[SESSION_COOKIE_NAME] || ''
 }
 
-function sessionCookieValue(req, token, maxAge) {
+function sessionCookieValue(req, token, maxAge, name = SESSION_COOKIE_NAME) {
   const host = req.get('host') || ''
   const isLocal = /^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/.test(host)
   const parts = [
-    `${SESSION_COOKIE_NAME}=${encodeURIComponent(token)}`,
+    `${name}=${encodeURIComponent(token)}`,
     'Path=/',
     'HttpOnly',
     'SameSite=Lax',
@@ -175,6 +175,26 @@ function setSessionCookie(req, res, token) {
 
 function clearSessionCookie(req, res) {
   res.set('Set-Cookie', `${sessionCookieValue(req, '', 0)}; Expires=Thu, 01 Jan 1970 00:00:00 GMT`)
+}
+
+// Audit Nov 2026 (P2): token SESI ADMIN juga ke cookie httpOnly terpisah —
+// sebelumnya disimpan di sessionStorage admin.js (dicuri XSS sama mudahnya).
+// Header Bearer tetap diterima selama transisi untuk script/klien lama.
+const ADMIN_COOKIE_NAME = 'yuki_admin_session'
+const ADMIN_COOKIE_MAX_AGE = 12 * 3600
+
+function getAdminTokenFromRequest(req) {
+  const bearer = req.get('Authorization')?.replace(/^Bearer\s+/i, '') || ''
+  if (bearer && bearer !== 'cookie') return bearer
+  return parseCookies(req)[ADMIN_COOKIE_NAME] || ''
+}
+
+function setAdminCookie(req, res, token) {
+  res.set('Set-Cookie', sessionCookieValue(req, token, ADMIN_COOKIE_MAX_AGE, ADMIN_COOKIE_NAME))
+}
+
+function clearAdminCookie(req, res) {
+  res.set('Set-Cookie', `${sessionCookieValue(req, '', 0, ADMIN_COOKIE_NAME)}; Expires=Thu, 01 Jan 1970 00:00:00 GMT`)
 }
 
 function verifySession(token = '') {
@@ -240,8 +260,7 @@ function storeAdminPassword(password) {
 }
 
 function requireAdmin(req, res, next) {
-  const token = req.get('Authorization')?.replace(/^Bearer\s+/i, '') || ''
-  if (!verifyAdminSession(token)) return res.status(401).json({ error: 'Sesi admin tidak valid atau berakhir.' })
+  if (!verifyAdminSession(getAdminTokenFromRequest(req))) return res.status(401).json({ error: 'Sesi admin tidak valid atau berakhir.' })
   next()
 }
 
@@ -1536,7 +1555,12 @@ app.delete('/api/admin/blocked-ips/:ip', rateLimit({ max: 20 }), requireAdmin, (
 
 app.post('/api/admin/login', rateLimit({ max: 5, windowMs: 15 * 60_000 }), (req, res) => {
   if (!verifyAdminPassword(String(req.body?.password || ''))) return res.status(401).json({ error: 'Password admin salah.' })
-  res.json({ sessionToken: signAdminSession(), expiresIn: 12 * 3600 })
+  setAdminCookie(req, res, signAdminSession())
+  res.json({ expiresIn: ADMIN_COOKIE_MAX_AGE })
+})
+app.post('/api/admin/logout', requireAdmin, (req, res) => {
+  clearAdminCookie(req, res)
+  res.json({ ok: true })
 })
 app.get('/api/admin/stats', rateLimit({ max: 30 }), requireAdmin, (_req, res) => res.json({
   ...getAdminStats(),
@@ -1743,7 +1767,8 @@ app.post('/api/admin/password', rateLimit({ max: 5, windowMs: 15 * 60_000 }), re
   const password = String(req.body?.password || '')
   if (password.length < 8 || password.length > 128) return res.status(400).json({ error: 'Password harus 8-128 karakter.' })
   storeAdminPassword(password)
-  res.json({ ok: true, sessionToken: signAdminSession() })
+  setAdminCookie(req, res, signAdminSession())
+  res.json({ ok: true })
 })
 
 // 404 Handler untuk endpoint API yang tidak terdaftar
