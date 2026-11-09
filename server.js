@@ -258,9 +258,15 @@ app.use((req, res, next) => {
     'X-XSS-Protection': '1; mode=block',
     'Referrer-Policy': 'strict-origin-when-cross-origin'
   })
+  // Audit Nov 2026: CSP default untuk semua dokumen (sebelumnya hanya embed).
+  // Dilonggarkan secukupnya agar tidak merusak: style inline React, cover
+  // komik https, iframe artifact same-origin. /artifacts menimpa dengan
+  // CSP sandbox-nya sendiri di middleware berikutnya.
+  const baseCsp = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss:; media-src 'self' data: blob:; frame-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'"
   if (isEmbedDocument) {
-    res.set('Content-Security-Policy', "frame-ancestors 'self' https://ryukomik.my.id https://www.ryukomik.my.id https://ryukomik.web.id")
+    res.set('Content-Security-Policy', baseCsp + "; frame-ancestors 'self' https://ryukomik.my.id https://www.ryukomik.my.id https://ryukomik.web.id")
   } else {
+    res.set('Content-Security-Policy', baseCsp + "; frame-ancestors 'self'")
     res.set('X-Frame-Options', 'SAMEORIGIN')
   }
 
