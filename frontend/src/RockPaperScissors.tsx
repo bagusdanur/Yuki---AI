@@ -15,7 +15,6 @@ interface State {
 }
 
 interface Props {
-  token: string
   onClose: () => void
   onMood?: (mood: string) => void
 }
@@ -35,7 +34,7 @@ const WAJAH: Record<string, string> = { user_win: 'malu', yuki_win: 'senang', dr
 
 const CADANGAN = ['Hmph. Lagi.', 'Kamu kebaca, tahu.', 'Sekali lagi, biar adil.']
 
-export default function RockPaperScissors({ token, onClose, onMood }: Props) {
+export default function RockPaperScissors({ onClose, onMood }: Props) {
   const [state, setState] = useState<State | null>(null)
   const [stats, setStats] = useState({ wins: 0, losses: 0, draws: 0 })
   const [hasil, setHasil] = useState<{ you: string; yuki: string; hasil: string } | null>(null)
@@ -47,7 +46,8 @@ export default function RockPaperScissors({ token, onClose, onMood }: Props) {
   const call = async (path: string, body?: unknown) => {
     const res = await fetch(path, {
       method: body ? 'POST' : 'GET',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
       ...(body ? { body: JSON.stringify(body) } : {})
     })
     const data = await res.json().catch(() => ({}))

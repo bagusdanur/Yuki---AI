@@ -134,6 +134,49 @@ function signSession(userId) {
   return `${payload}.${signature}`
 }
 
+// Audit Nov 2026: token sesi dipindah ke cookie httpOnly supaya tidak bisa
+// dicuri lewat XSS di localStorage. Header Bearer tetap diterima selama masa
+// transisi untuk klien lama / script, tapi klien baru memakai cookie.
+const SESSION_COOKIE_NAME = 'yuki_session'
+const SESSION_COOKIE_MAX_AGE = 30 * 86400
+
+function parseCookies(req) {
+  const cookies = {}
+  for (const part of String(req.get('cookie') || '').split(';')) {
+    const [name, ...rest] = part.trim().split('=')
+    if (name) cookies[name] = decodeURIComponent(rest.join('='))
+  }
+  return cookies
+}
+
+function getSessionTokenFromRequest(req) {
+  const bearer = req.get('Authorization')?.replace(/^Bearer\s+/i, '') || ''
+  if (bearer && bearer !== 'cookie') return bearer
+  return parseCookies(req)[SESSION_COOKIE_NAME] || ''
+}
+
+function sessionCookieValue(req, token, maxAge) {
+  const host = req.get('host') || ''
+  const isLocal = /^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/.test(host)
+  const parts = [
+    `${SESSION_COOKIE_NAME}=${encodeURIComponent(token)}`,
+    'Path=/',
+    'HttpOnly',
+    'SameSite=Lax',
+    `Max-Age=${maxAge}`
+  ]
+  if (!isLocal) parts.push('Secure')
+  return parts.join('; ')
+}
+
+function setSessionCookie(req, res, token) {
+  res.set('Set-Cookie', sessionCookieValue(req, token, SESSION_COOKIE_MAX_AGE))
+}
+
+function clearSessionCookie(req, res) {
+  res.set('Set-Cookie', `${sessionCookieValue(req, '', 0)}; Expires=Thu, 01 Jan 1970 00:00:00 GMT`)
+}
+
 function verifySession(token = '') {
   const [payload, signature] = String(token).split('.')
   if (!payload || !signature) return null
@@ -154,7 +197,7 @@ function verifySession(token = '') {
 }
 
 function requireSession(req, res, next) {
-  const userId = verifySession(req.get('Authorization')?.replace(/^Bearer\s+/i, ''))
+  const userId = verifySession(getSessionTokenFromRequest(req))
   if (!userId) return res.status(401).json({ error: 'Sesi tidak valid atau sudah berakhir. Pulihkan dengan kunci ingatan.' })
   req.authUserId = userId
   next()
@@ -800,7 +843,9 @@ app.post('/api/register', rateLimit({ max: 10 }), async (req, res) => {
     const welcome = `*menatapmu sebentar, masih agak menjaga jarak*\n\nJadi namamu ${cleanName}? Aku Yuki. Salam kenal. Untuk sekarang kita kenalan dulu saja—jangan langsung merasa sudah dekat.\n\nKalau nanti kita cocok, mungkin aku bisa jadi teman dekatmu... atau sesuatu yang lebih. Itu tergantung bagaimana kamu memperlakukanku.\n\nKamu datang karena butuh teman ngobrol, atau cuma penasaran?`
     saveChatMessage(result.userId, 'assistant', welcome)
     const milestones = syncBondMilestones(result.userId, 0)
-    res.json({ ...result, sessionToken: signSession(result.userId), welcome, milestones })
+    const sessionToken = signSession(result.userId)
+    setSessionCookie(req, res, sessionToken)
+    res.json({ ...result, sessionToken, welcome, milestones })
   } catch (e) {
     console.error(e)
     res.status(500).json({ error: String(e.message || e) })
@@ -822,10 +867,12 @@ app.post('/api/login-code', rateLimit({ max: 15 }), async (req, res) => {
     const history = getChatHistory(user.userId)
     const emotion = await getEmotion(user.userId)
     
+    const sessionToken = signSession(user.userId)
+    setSessionCookie(req, res, sessionToken)
     res.json({
       userId: user.userId,
       username: user.username,
-      sessionToken: signSession(user.userId),
+      sessionToken,
       history,
       bondValue: emotion.bond,
       milestones: syncBondMilestones(user.userId, emotion.bond)
@@ -841,13 +888,16 @@ app.post('/api/login-code', rateLimit({ max: 15 }), async (req, res) => {
 // Bot/script yang mencuri token wajib relogin pakai kode akses begitu token
 // aslinya ter-refresh.
 app.post('/api/session/refresh', requireSession, rateLimit({ windowMs: 60_000, max: 10 }), (req, res) => {
-  res.json({ sessionToken: signSession(req.authUserId) })
+  const sessionToken = signSession(req.authUserId)
+  setSessionCookie(req, res, sessionToken)
+  res.json({ sessionToken })
 })
 
 // Reset token: menaikkan session_version -> SEMUA token user ini mati di
 // semua perangkat. User wajib relogin pakai kunci ingatan.
 app.post('/api/session/reset', requireSession, rateLimit({ windowMs: 60_000, max: 5 }), (req, res) => {
   bumpSessionVersion(req.authUserId)
+  clearSessionCookie(req, res)
   res.json({ success: true })
 })
 
@@ -1458,6 +1508,7 @@ app.post('/api/feedback', requireSession, rateLimit({ max: 40 }), (req, res) => 
 
 app.delete('/api/account', requireSession, rateLimit({ max: 3, windowMs: 3600_000 }), (req, res) => {
   deleteScheduledTasks(req.authUserId); deletePushSubscriptions(req.authUserId); deleteAgentMemoryData(req.authUserId); deleteDynamicSkillData(req.authUserId); deleteUserWorkflows(req.authUserId); deleteUserAgentRuns(req.authUserId); deleteUserData(req.authUserId); deleteWorkspaceData(req.authUserId); sessions.delete(req.authUserId); turnCounters.delete(req.authUserId)
+  clearSessionCookie(req, res)
   res.json({ ok: true })
 })
 

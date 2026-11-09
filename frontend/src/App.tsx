@@ -28,6 +28,10 @@ const SESSION_KEYS = {
   sessionToken: 'yuki_session_token_v3', mode: 'yuki_mode_v3'
 }
 
+// Token sesi sekarang disimpan server sebagai cookie httpOnly. Di sisi klien,
+// `sessionToken` hanya sentinel penanda "ada sesi" — tidak pernah berisi token.
+const COOKIE_SESSION = 'cookie'
+
 // Versi pembaruan terakhir yang tercatat di /changelog. Dipakai untuk menandai
 // tombol log dengan titik "ada yang baru" sampai user membukanya.
 const CHANGELOG_VERSION = '4.1.0'
@@ -67,11 +71,13 @@ function bondNameFromValue(value = 0) {
 function getSession(): Session | null {
   const userId = localStorage.getItem(SESSION_KEYS.userId)
   if (!userId) return null
+  // Bersihkan token lama yang pernah tersimpan di localStorage (migrasi cookie).
+  if (localStorage.getItem(SESSION_KEYS.sessionToken)) localStorage.removeItem(SESSION_KEYS.sessionToken)
   return {
     userId,
     username: localStorage.getItem(SESSION_KEYS.username) || 'Kamu',
     accessCode: localStorage.getItem(SESSION_KEYS.accessCode) || '',
-    sessionToken: localStorage.getItem(SESSION_KEYS.sessionToken) || '',
+    sessionToken: COOKIE_SESSION,
   }
 }
 
@@ -79,7 +85,7 @@ function saveSession(session: Session) {
   localStorage.setItem(SESSION_KEYS.userId, session.userId)
   localStorage.setItem(SESSION_KEYS.username, session.username)
   localStorage.setItem(SESSION_KEYS.accessCode, session.accessCode)
-  localStorage.setItem(SESSION_KEYS.sessionToken, session.sessionToken)
+  localStorage.removeItem(SESSION_KEYS.sessionToken)
 }
 
 function historyKey(userId: string) { return `yuki_hist_v3_${userId}` }
@@ -1214,11 +1220,11 @@ function Onboarding({ onReady }: { onReady: (session: Session, history?: Message
         const introduction: Message[] = data.welcome
           ? [{ role: 'assistant', content: data.welcome }]
           : []
-        onReady({ userId: data.userId, username: value.trim(), accessCode: data.accessCode, sessionToken: data.sessionToken }, introduction, 0, data.milestones)
+        onReady({ userId: data.userId, username: value.trim(), accessCode: data.accessCode, sessionToken: COOKIE_SESSION }, introduction, 0, data.milestones)
       } else {
         const code = value.trim().toUpperCase()
         const data = await restore(code)
-        onReady({ userId: data.userId, username: data.username, accessCode: code, sessionToken: data.sessionToken }, data.history || [], data.bondValue, data.milestones)
+        onReady({ userId: data.userId, username: data.username, accessCode: code, sessionToken: COOKIE_SESSION }, data.history || [], data.bondValue, data.milestones)
       }
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Terjadi kesalahan') }
     finally { setBusy(false) }
@@ -1434,29 +1440,21 @@ export default function App() {
   }, [])
 
   useEffect(() => () => requestTimers.current.forEach(window.clearTimeout), [])
+  // Bersihkan penanda pemulihan 401 lama supaya pemulihan bisa berjalan lagi
+  // kalau cookie mati di tengah sesi yang sama.
   useEffect(() => {
-    if (!session || session.sessionToken || !session.accessCode) return
-    restore(session.accessCode)
-      .then(data => ready({ ...session, sessionToken: data.sessionToken }, data.history || messages, data.bondValue, data.milestones))
-      .catch(err => {
-        console.warn('[Session] Gagal restore dari server, mempertahankan data lokal:', err.message)
-        const localHist = loadHistory(session.userId)
-        if (localHist.length && messages.length === 0) setMessages(localHist)
-      })
-  }, [session?.userId, session?.sessionToken])
+    try {
+      sessionStorage.removeItem('yuki_401_restored')
+      sessionStorage.removeItem('yuki_401_reloaded')
+    } catch {}
+  }, [])
 
-  // Rotasi sesi sekali tiap buka aplikasi: minta JWT baru (token lama mati).
-  // User tidak sadar; bot yang mencuri token wajib relogin pakai kunci ingatan.
+  // Rotasi sesi sekali tiap buka aplikasi: server menerbitkan cookie baru
+  // (token lama di cookie langsung mati). User tidak sadar; bot yang mencuri
+  // cookie wajib relogin pakai kunci ingatan begitu cookie berubah.
   useEffect(() => {
     if (!session?.sessionToken || EMBED_COMPANION_ONLY) return
-    refreshSession()
-      .then(data => {
-        if (data.sessionToken) {
-          saveSession({ ...session, sessionToken: data.sessionToken })
-          setSession({ ...session, sessionToken: data.sessionToken })
-        }
-      })
-      .catch(() => {})
+    refreshSession().catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -1529,7 +1527,7 @@ export default function App() {
     // Game tersedia di app penuh MAUPUN embed (3.5): embed tetap chat biasa,
     // hanya tanpa tab Agent — bukan tanpa mini game.
     if (!session?.sessionToken) { setGameEligible(false); return }
-    fetch('/api/game/status', { headers: { Authorization: `Bearer ${session.sessionToken}` } })
+    fetch('/api/game/status', { credentials: 'same-origin' })
       .then(res => (res.ok ? res.json() : { eligible: false }))
       .then(data => setGameEligible(Boolean(data?.eligible)))
       .catch(() => setGameEligible(false))
@@ -2091,7 +2089,6 @@ export default function App() {
 
       {gameOpen && session && (
         <TicTacToe
-          token={session.sessionToken}
           onClose={() => setGameOpen(false)}
           onMood={next => setMood(next)}
         />
@@ -2099,7 +2096,6 @@ export default function App() {
 
       {rpsOpen && session && (
         <RockPaperScissors
-          token={session.sessionToken}
           onClose={() => setRpsOpen(false)}
           onMood={next => setMood(next)}
         />

@@ -11,12 +11,29 @@ async function parse<T>(response: Response): Promise<T> {
         throw new Error('Akses dari jaringan ini diblokir sementara.')
       }
       if (response.status === 401) {
-        // Token mati (rotasi/reset/expired) -> bersihkan & muat ulang sekali,
-        // biar alur restore via kunci ingatan yang mengambil alih.
+        // Cookie sesi httpOnly mati (kedaluwarsa/dirotasi/reset). Coba pulihkan
+        // diam-diam pakai kunci ingatan, lalu muat ulang sekali.
         try {
-          if (!sessionStorage.getItem('yuki_401_reloaded')) {
+          const accessCode = localStorage.getItem('yuki_access_code_v3') || ''
+          if (accessCode && !sessionStorage.getItem('yuki_401_restored')) {
+            sessionStorage.setItem('yuki_401_restored', '1')
+            const restored = await fetch('/api/login-code', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'same-origin',
+              body: JSON.stringify({ accessCode })
+            })
+            if (restored.ok) {
+              window.location.reload()
+            } else {
+              // Kunci ingatan sudah tidak cocok -> kembali ke gerbang login.
+              for (const key of ['yuki_uid_v3', 'yuki_username_v3', 'yuki_access_code_v3', 'yuki_session_token_v3', 'yuki_mode_v3']) {
+                localStorage.removeItem(key)
+              }
+              window.location.reload()
+            }
+          } else if (!sessionStorage.getItem('yuki_401_reloaded')) {
             sessionStorage.setItem('yuki_401_reloaded', '1')
-            localStorage.removeItem('yuki_session_token_v3')
             window.location.reload()
           }
         } catch {}
@@ -40,10 +57,8 @@ async function request<T>(url: string, init: RequestInit, timeoutMs = 30_000, re
   const controller = new AbortController()
   const timeout = window.setTimeout(() => controller.abort(), timeoutMs)
   try {
-    const token = localStorage.getItem('yuki_session_token_v3')
-    const headers = new Headers(init.headers)
-    if (token) headers.set('Authorization', `Bearer ${token}`)
-    return await parse<T>(await fetch(url, { ...init, headers, signal: controller.signal }))
+    // Sesi dikirim sebagai cookie httpOnly oleh browser; tidak ada token di JS.
+    return await parse<T>(await fetch(url, { ...init, credentials: 'same-origin', signal: controller.signal }))
   } catch (cause) {
     if (cause instanceof DOMException && cause.name === 'AbortError') {
       throw new Error('Permintaan membutuhkan waktu lebih lama. Silakan coba kirim ulang.')
@@ -124,10 +139,10 @@ export async function sendChatStream(
   userId: string, messages: Message[], mode: ChatMode = 'companion',
   onDelta: (text: string) => void, signal?: AbortSignal
 ): Promise<ChatResponse> {
-  const token = localStorage.getItem('yuki_session_token_v3')
   const response = await fetch('/api/chat', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...buildChatBody(userId, messages, false, mode, ''), stream: true }),
     signal
   })
@@ -278,9 +293,8 @@ export async function speak(text: string) {
   const controller = new AbortController()
   const timeout = window.setTimeout(() => controller.abort(), 45_000)
   try {
-    const token = localStorage.getItem('yuki_session_token_v3') || ''
     const response = await fetch('/api/tts', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ text }), signal: controller.signal,
+      method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }), signal: controller.signal,
     })
     if (!response.ok) throw new Error('Suara Yuki sedang tidak tersedia')
     return URL.createObjectURL(await response.blob())

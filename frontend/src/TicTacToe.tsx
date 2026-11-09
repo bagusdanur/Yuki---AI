@@ -18,7 +18,6 @@ interface GameState {
 }
 
 interface Props {
-  token: string
   onClose: () => void
   onMood?: (mood: string) => void
 }
@@ -39,7 +38,7 @@ const CADANGAN = [
   'Kamu lumayan juga, ternyata.'
 ]
 
-export default function TicTacToe({ token, onClose, onMood }: Props) {
+export default function TicTacToe({ onClose, onMood }: Props) {
   const [game, setGame] = useState<GameState | null>(null)
   const [stats, setStats] = useState({ wins: 0, losses: 0, draws: 0 })
   const [loading, setLoading] = useState(true)
@@ -55,7 +54,8 @@ export default function TicTacToe({ token, onClose, onMood }: Props) {
   const call = async (path: string, body?: unknown) => {
     const res = await fetch(path, {
       method: body ? 'POST' : 'GET',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
       ...(body ? { body: JSON.stringify(body) } : {})
     })
     const data = await res.json().catch(() => ({}))
