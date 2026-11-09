@@ -107,6 +107,18 @@ const WORKSPACE_ROOT = path.resolve(process.env.AGENT_WORKSPACE_DIR || './agent-
 if (IS_PRODUCTION && !process.env.AUTH_SECRET) console.warn('[security] AUTH_SECRET belum disetel; sesi akan invalid setelah restart.')
 if (IS_PRODUCTION && !ADMIN_TOKEN) console.warn('[security] ADMIN_TOKEN belum disetel; dashboard admin dinonaktifkan.')
 
+function summarizeApprovalArgs(args = {}) {
+  const pick = {}
+  for (const key of ['path', 'url', 'method', 'title', 'id', 'term', 'query']) {
+    if (args?.[key]) pick[key] = String(args[key]).slice(0, 160)
+  }
+  if (Array.isArray(args?.patches)) pick.files = args.patches.map(p => p?.path).filter(Boolean).slice(0, 10)
+  if (args?.html_content) pick.htmlChars = String(args.html_content).length
+  if (args?.code) pick.codeChars = String(args.code).length
+  if (args?.schedule) pick.schedule = String(args.schedule).slice(0, 80)
+  return pick
+}
+
 function signSession(userId) {
   // Token membawa jti (id sesi aktif) + sv (session version). Setiap tanda
   // tangan menerbitkan jti baru dan menyimpannya -> token lama mati seketika
@@ -412,7 +424,10 @@ app.get('/api/agent/workflows/pending', requireSession, rateLimit({ max: 60 }), 
   const workflows = listPendingWorkflows(req.authUserId).map(item => ({
     id: item.id, requestId: item.requestId, state: item.state,
     toolName: item.checkpoint?.toolName, reason: item.checkpoint?.reason,
-    stepId: item.checkpoint?.stepId, createdAt: item.createdAt, expiresAt: item.expiresAt
+    stepId: item.checkpoint?.stepId, createdAt: item.createdAt, expiresAt: item.expiresAt,
+    // Audit Nov 2026: user menyetujui dalam keadaan buta — tampilkan argumen
+    // penting (path/URL/method/judul) supaya persetujuan itu terinformasi.
+    args: summarizeApprovalArgs(item.checkpoint?.args)
   }))
   res.json({ workflows })
 })
