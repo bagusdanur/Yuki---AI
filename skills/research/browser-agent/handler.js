@@ -1,7 +1,7 @@
 // skills/research/browser-agent/handler.js
 import { browsePage, screenshotUrl, browserExtract, fetchPageFallback, isBrowserAvailable } from '../../../lib/browser.js'
 
-export async function executeBrowsePage({ url, wait_for = 'networkidle2' }, _context = {}) {
+export async function executeBrowsePage({ url, wait_for = 'networkidle2' }, context = {}) {
   if (!url) return { error: 'URL wajib diisi.' }
 
   // Jika browser tidak tersedia, fallback ke fetch biasa
@@ -10,20 +10,20 @@ export async function executeBrowsePage({ url, wait_for = 'networkidle2' }, _con
     return fetchPageFallback(url)
   }
 
-  return browsePage({ url, waitFor: wait_for })
+  return browsePage({ url, waitFor: wait_for, userId: context.userId })
 }
 
-export async function executeScreenshotUrl({ url, full_page = false }, _context = {}) {
+export async function executeScreenshotUrl({ url, full_page = false }, context = {}) {
   if (!url) return { error: 'URL wajib diisi.' }
 
   if (!isBrowserAvailable()) {
     return { error: 'Browser tidak tersedia di sistem ini. Tidak bisa mengambil screenshot.' }
   }
 
-  return screenshotUrl({ url, fullPage: full_page })
+  return screenshotUrl({ url, fullPage: full_page, userId: context.userId })
 }
 
-export async function executeBrowserExtract({ url, selector, attribute = 'text' }, _context = {}) {
+export async function executeBrowserExtract({ url, selector, attribute = 'text' }, context = {}) {
   if (!url) return { error: 'URL wajib diisi.' }
   if (!selector) return { error: 'CSS selector wajib diisi.' }
 
@@ -31,7 +31,7 @@ export async function executeBrowserExtract({ url, selector, attribute = 'text' 
     return { error: 'Browser tidak tersedia di sistem ini.' }
   }
 
-  return browserExtract({ url, selector, attribute })
+  return browserExtract({ url, selector, attribute, userId: context.userId })
 }
 
 export default {
