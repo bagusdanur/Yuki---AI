@@ -95,8 +95,10 @@ function recordStrike(ip, reason = 'abuse') {
   }
 }
 
-app.use(express.json({ limit: '10mb' }))
-app.use(express.urlencoded({ limit: '10mb', extended: true }))
+// Audit Nov 2026 (P2): 10mb terlalu longgar — payload sah terbesar adalah
+// /api/chat (30 pesan x 4000 char = ~120KB). 512KB memberi headroom 4x.
+app.use(express.json({ limit: '512kb' }))
+app.use(express.urlencoded({ limit: '512kb', extended: true }))
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production' || process.env.ENVIRONMENT === 'production'
 const AUTH_SECRET = process.env.AUTH_SECRET || crypto.randomBytes(32).toString('hex')
@@ -1776,11 +1778,15 @@ app.all('/api/*', (req, res) => {
   res.status(404).json({ error: `Rute API "${req.path}" tidak ditemukan.` })
 })
 
-// Global Error Handler — Selalu kembalikan respon JSON rapi, bukan HTML
+// Global Error Handler — Selalu kembalikan respon JSON rapi, bukan HTML.
+// Audit Nov 2026 (P2): pesan error mentah (termasuk body-parser) jangan
+// dibocorkan ke klien; hanya status + pesan generik.
 app.use((err, req, res, next) => {
   console.error('[server error]', err.message || err)
   if (res.headersSent) return next(err)
+  if (err.type === 'entity.too.large') return res.status(413).json({ error: 'Payload terlalu besar. Batas 512KB per request.' })
+  if (err.type === 'entity.parse.failed' || err instanceof SyntaxError) return res.status(400).json({ error: 'Body JSON tidak valid.' })
   res.status(err.status || 500).json({
-    error: err.message || 'Terjadi kesalahan internal pada server.'
+    error: 'Terjadi kesalahan internal pada server.'
   })
 })
