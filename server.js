@@ -427,7 +427,7 @@ app.get('/api/agent/skills', rateLimit({ max: 60 }), async (_req, res) => {
     const skills = await listSkills()
     res.json({ skills })
   } catch (err) {
-    res.status(500).json({ error: String(err.message || err) })
+    console.error('[api 500]', err?.message || err); res.status(500).json({ error: 'Terjadi kesalahan internal pada server.' })
   }
 })
 
@@ -677,7 +677,7 @@ if (process.env.GAMES_ENABLED === 'true') {
       saveGameSession(req.authUserId, state, null)
       logGameEvent(req.authUserId, GAME_TTT, 'start')
       res.json({ game: state, stats: gameStats(req.authUserId) })
-    } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
+    } catch (e) { console.error('[api 500]', e?.message || e); res.status(500).json({ error: 'Terjadi kesalahan internal pada server.' }) }
   })
 
   app.post('/api/game/ttt/move', requireSession, batasGame, khususBeta, async (req, res) => {
@@ -745,7 +745,7 @@ if (process.env.GAMES_ENABLED === 'true') {
       logGameEvent(req.authUserId, GAME_TTT, 'move')
       if (result) logGameEvent(req.authUserId, GAME_TTT, 'finish', result)
       res.json({ game: state, yukiMove, result, stats, line: baris, source: dariModel ? 'yuki' : 'cadangan', bond: Math.round(bond) })
-    } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
+    } catch (e) { console.error('[api 500]', e?.message || e); res.status(500).json({ error: 'Terjadi kesalahan internal pada server.' }) }
   })
 
   // ===== Batu-Kertas-Gunting =====
@@ -759,7 +759,7 @@ if (process.env.GAMES_ENABLED === 'true') {
         stats: sesi?.stats || { wins: 0, losses: 0, draws: 0 },
         last: sesi?.result || null
       })
-    } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
+    } catch (e) { console.error('[api 500]', e?.message || e); res.status(500).json({ error: 'Terjadi kesalahan internal pada server.' }) }
   })
 
   app.post('/api/game/rps/play', requireSession, batasGame, khususBeta, async (req, res) => {
@@ -815,7 +815,7 @@ if (process.env.GAMES_ENABLED === 'true') {
       // Jeda buatan supaya tidak terasa instan seperti mesin.
       await new Promise((r) => setTimeout(r, 500))
       res.json({ you: pilihan, yuki: pick, hasil, line: baris, state: next, stats, source: dariModel ? 'yuki' : 'cadangan' })
-    } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
+    } catch (e) { console.error('[api 500]', e?.message || e); res.status(500).json({ error: 'Terjadi kesalahan internal pada server.' }) }
   })
 
   app.post('/api/game/rps/reset', requireSession, batasGame, khususBeta, (req, res) => {
@@ -823,7 +823,7 @@ if (process.env.GAMES_ENABLED === 'true') {
       const stats = saveGameSession(req.authUserId, rpsStateBaru(), null, GAME_RPS)
       logGameEvent(req.authUserId, GAME_RPS, 'start')
       res.json({ game: rpsStateBaru(), stats })
-    } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
+    } catch (e) { console.error('[api 500]', e?.message || e); res.status(500).json({ error: 'Terjadi kesalahan internal pada server.' }) }
   })
 
   // Reset = papan baru, TAPI rekor menang/kalah/seri tetap disimpan.
@@ -833,7 +833,7 @@ if (process.env.GAMES_ENABLED === 'true') {
       saveGameSession(req.authUserId, state, null)
       logGameEvent(req.authUserId, GAME_TTT, 'start')
       res.json({ ok: true, game: state, stats: gameStats(req.authUserId) })
-    } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
+    } catch (e) { console.error('[api 500]', e?.message || e); res.status(500).json({ error: 'Terjadi kesalahan internal pada server.' }) }
   })
 
   console.log('[game] route Tic-Tac-Toe aktif (GAMES_ENABLED=true)')
@@ -869,7 +869,7 @@ app.post('/api/register', rateLimit({ max: 10 }), async (req, res) => {
     res.json({ ...result, sessionToken, welcome, milestones })
   } catch (e) {
     console.error(e)
-    res.status(500).json({ error: String(e.message || e) })
+    console.error('[api 500]', e?.message || e); res.status(500).json({ error: 'Terjadi kesalahan internal pada server.' })
   }
 })
 
@@ -900,7 +900,7 @@ app.post('/api/login-code', rateLimit({ max: 15 }), async (req, res) => {
     })
   } catch (e) {
     console.error(e)
-    res.status(500).json({ error: String(e.message || e) })
+    console.error('[api 500]', e?.message || e); res.status(500).json({ error: 'Terjadi kesalahan internal pada server.' })
   }
 })
 
@@ -1420,8 +1420,8 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
     metrics.chatFailures += 1
     console.error(e)
     if (trackedAgentRequestId) setAgentRunState(trackedAgentRequestId, req.authUserId, 'failed', { errorCode: 'RUN_FAILED' })
-    if (sseOpen) { sseSend('error', { error: String(e.message || e) }); return res.end() }
-    res.status(500).json({ error: String(e.message || e) })
+    if (sseOpen) { sseSend('error', { error: 'Terjadi kesalahan internal pada server.' }); return res.end() }
+    console.error('[api 500]', e?.message || e); res.status(500).json({ error: 'Terjadi kesalahan internal pada server.' })
   }
 })
 
@@ -1470,7 +1470,7 @@ app.post('/api/tts', requireSession, rateLimit({ max: 15 }), async (req, res) =>
       return res.status(204).end()
     }
     console.error(e)
-    res.status(500).json({ error: String(e.message || e) })
+    console.error('[api 500]', e?.message || e); res.status(500).json({ error: 'Terjadi kesalahan internal pada server.' })
   }
 })
 
@@ -1490,14 +1490,14 @@ app.get('/api/relationship/:userId', requireSession, rateLimit({ max: 30 }), asy
     if (req.params.userId !== req.authUserId) return res.status(403).json({ error: 'Akses ditolak.' })
     const emotion = await getEmotion(req.authUserId)
     res.json({ bond: emotion.bondLevel().name, bondValue: emotion.bond, milestones: syncBondMilestones(req.authUserId, emotion.bond) })
-  } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
+  } catch (e) { console.error('[api 500]', e?.message || e); res.status(500).json({ error: 'Terjadi kesalahan internal pada server.' }) }
 })
 
 app.get('/api/comics/bookmarks', requireSession, rateLimit({ max: 40 }), (req, res) => {
   try {
     const bookmarks = getComicBookmarks(req.authUserId)
     res.json({ bookmarks })
-  } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
+  } catch (e) { console.error('[api 500]', e?.message || e); res.status(500).json({ error: 'Terjadi kesalahan internal pada server.' }) }
 })
 
 app.post('/api/comics/bookmarks', requireSession, rateLimit({ max: 40 }), (req, res) => {
@@ -1506,7 +1506,7 @@ app.post('/api/comics/bookmarks', requireSession, rateLimit({ max: 40 }), (req, 
     if (!comic?.title || !comic?.url) return res.status(400).json({ error: 'Data komik tidak valid.' })
     const bookmarks = saveComicBookmark(req.authUserId, comic)
     res.json({ ok: true, bookmarks })
-  } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
+  } catch (e) { console.error('[api 500]', e?.message || e); res.status(500).json({ error: 'Terjadi kesalahan internal pada server.' }) }
 })
 
 app.delete('/api/comics/bookmarks', requireSession, rateLimit({ max: 40 }), (req, res) => {
@@ -1515,7 +1515,7 @@ app.delete('/api/comics/bookmarks', requireSession, rateLimit({ max: 40 }), (req
     if (!url) return res.status(400).json({ error: 'URL komik tidak valid.' })
     const bookmarks = deleteComicBookmark(req.authUserId, url)
     res.json({ ok: true, bookmarks })
-  } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
+  } catch (e) { console.error('[api 500]', e?.message || e); res.status(500).json({ error: 'Terjadi kesalahan internal pada server.' }) }
 })
 
 app.post('/api/feedback', requireSession, rateLimit({ max: 40 }), (req, res) => {
@@ -1524,7 +1524,7 @@ app.post('/api/feedback', requireSession, rateLimit({ max: 40 }), (req, res) => 
     if (![-1, 1].includes(Number(rating))) return res.status(400).json({ error: 'Feedback tidak valid.' })
     saveResponseFeedback(req.authUserId, messageId, Number(rating), reason)
     res.json({ ok: true })
-  } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
+  } catch (e) { console.error('[api 500]', e?.message || e); res.status(500).json({ error: 'Terjadi kesalahan internal pada server.' }) }
 })
 
 app.delete('/api/account', requireSession, rateLimit({ max: 3, windowMs: 3600_000 }), (req, res) => {
@@ -1612,7 +1612,7 @@ app.get('/api/admin/overview', rateLimit({ max: 60 }), requireAdmin, (_req, res)
       alerts: providers.alerts
     })
   } catch (error) {
-    res.status(500).json({ error: String(error.message || error).slice(0, 240) })
+    console.error('[api 500]', error?.message || error); res.status(500).json({ error: 'Terjadi kesalahan internal pada server.' })
   }
 })
 
@@ -1623,7 +1623,7 @@ app.get('/api/admin/tts', rateLimit({ max: 60 }), requireAdmin, async (_req, res
     const [voicevox, process] = await Promise.all([probeVoicevox(settings), getVoicevoxProcessStatus()])
     res.json({ settings, engines: TTS_ENGINES, voicevox, process })
   } catch (error) {
-    res.status(500).json({ error: String(error.message || error).slice(0, 200) })
+    console.error('[api 500]', error?.message || error); res.status(500).json({ error: 'Terjadi kesalahan internal pada server.' })
   }
 })
 
