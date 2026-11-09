@@ -124,12 +124,33 @@
 
 <div class="page">
   <header class="lede">
-    <div class="ver-now">Versi terbaru 4.4.0</div>
+    <div class="ver-now">Versi terbaru 4.5.0</div>
     <h1>Apa yang berubah</h1>
     <p>Setiap rilis dicatat di sini — apa yang ditambah, diperbaiki, atau diubah. Versi lama bisa dibuka.</p>
   </header>
 
   <article class="rel latest">
+    <div class="meta">
+      <span class="v">4.5.0</span>
+      <span class="d">9 Nov 2026</span>
+      <span class="new">Baik</span>
+    </div>
+    <ul class="notes">
+      <li><strong>Mode Agent sekarang ditenagai model yang lebih kuat.</strong> Saat kamu mengaktifkan Mode Agent, Yuki memakai model cadangan utama (Sonnet) untuk merencanakan dan menjalankan tugas — lebih teliti untuk pekerjaan bertahap seperti riset, hitung-hitungan, dan delegasi ke sub-agent. Kalau model itu sedang bermasalah, sistem otomatis pindah ke model utama seperti biasa. Chat biasa tetap memakai model utama yang cepat.</li>
+    </ul>
+    <details class="history"><summary>Riwayat sebelumnya</summary>
+      <ul class="notes">
+      <li><strong>4.4.0:</strong> Mode Agent kini mengingat sesi situs yang kamu buka (cookie tersimpan terpisah per akun, aman dari akun lain), dan halaman embed dipangkas jadi redirect bersih.</li>
+      <li><strong>4.3.0:</strong> token sesi admin ikut ke cookie httpOnly, batas kiriman diperketat, pesan error disederhanakan jadi pesan umum yang aman, dan skill dinamis kini divalidasi ketat saat dibuat.</li>
+      <li><strong>4.2.0:</strong> token sesi pindah ke cookie httpOnly (tidak lagi disimpan di browser storage), server hanya terikat localhost, dan browser mode agent kini terisolasi per pengguna.</li>
+      <li><strong>4.1.0:</strong> hardening mode agent — sandbox kode tidak lagi bisa lolos ke server, artefak HTML dibuka dalam sandbox ketat, hasil tool ditandai sebagai data tak dipercaya, dan persetujuan tampil dengan rincian lengkap.</li>
+      <li><strong>4.0.0:</strong> prompt diperkuat melawan prompt-injection, kode akses tidak pernah tampil di balasan, dan analisis situs kini memakai bukti nyata, bukan tebakan.</li>
+      </ul>
+    </details>
+  </article>
+
+  <details class="history"><summary>Semua rilis</summary>
+  <article class="rel">
     <div class="meta">
       <span class="v">4.4.0</span>
       <span class="d">9 Nov 2026</span>
