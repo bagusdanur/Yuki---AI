@@ -288,6 +288,14 @@ app.use('/artifacts', (_req, res, next) => {
   next()
 })
 
+// File sensitif tidak boleh tersaji sebagai statis walau nyasar ke dist/public
+// (audit Nov 2026: ditemukan .bak yang ikut ter-serve).
+const BLOCKED_STATIC_EXT = /\.(bak|db|sqlite3?|env|log|pem|key|p12|pfx|sql|dump|tar|tgz|zip)$/i
+app.use((req, res, next) => {
+  if (req.method === 'GET' && BLOCKED_STATIC_EXT.test(req.path)) return res.status(404).end()
+  next()
+})
+
 app.use(express.static('dist', { dotfiles: 'ignore' }))
 app.use(express.static('public', { dotfiles: 'ignore' }))
 
@@ -1388,7 +1396,13 @@ app.post('/api/tts', requireSession, rateLimit({ max: 15 }), async (req, res) =>
 })
 
 const PORT = process.env.PORT || 3000
-app.listen(PORT, () => {
+// Audit Nov 2026 (H3): WAJIB bind localhost saja. Dulu listen di 0.0.0.0:3025
+// sehingga origin bisa diakses langsung dari internet (bypass Cloudflare +
+// nginx) dan header X-Forwarded-For palsu bisa memalsukan IP untuk
+// rate-limit/IP-block. nginx mem-proxy via localhost, jadi tidak ada yang
+// butuh akses non-lokal ke port ini.
+const HOST = process.env.HOST || '127.0.0.1'
+app.listen(PORT, HOST, () => {
   console.log(`✨ AI Anime Chat jalan di http://localhost:${PORT}`)
 })
 
