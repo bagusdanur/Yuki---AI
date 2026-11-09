@@ -34,7 +34,7 @@ const COOKIE_SESSION = 'cookie'
 
 // Versi pembaruan terakhir yang tercatat di /changelog. Dipakai untuk menandai
 // tombol log dengan titik "ada yang baru" sampai user membukanya.
-const CHANGELOG_VERSION = '4.5.0'
+const CHANGELOG_VERSION = '4.6.0'
 const EMBED_COMPANION_ONLY = new URLSearchParams(window.location.search).get('embed') === '1'
   || /\/embed(?:\.html)?$/i.test(window.location.pathname)
 
@@ -1214,6 +1214,18 @@ function Onboarding({ onReady }: { onReady: (session: Session, history?: Message
     event.preventDefault()
     if (!value.trim()) return
     setBusy(true); setError('')
+    // Embed lintas-situs (widget di ryukomik.my.id): Chrome mempartisi
+    // storage iframe, jadi cookie sesi + localStorage tidak terbaca sesi
+    // top-level. Minta akses storage via Storage Access API — butuh gesture
+    // user, dan submit ini memenuhinya. Setelah granted, sesi tersimpan di
+    // storage first-party dan persisten antar kunjungan (termasuk dari tab
+    // langsung yuki.ryukomik.web.id). Ditolak -> lanjut apa adanya.
+    if (EMBED_COMPANION_ONLY) {
+      try {
+        const doc = document as Document & { requestStorageAccess?: () => Promise<void> }
+        if (typeof doc.requestStorageAccess === 'function') await doc.requestStorageAccess()
+      } catch { /* akses ditolak: register tetap jalan di partisi iframe saja */ }
+    }
     try {
       if (mode === 'register') {
         const data = await register(value.trim())
