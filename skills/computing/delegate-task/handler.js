@@ -14,6 +14,7 @@ export async function executeDelegateTasks({ tasks, shared_context = '' }, conte
   const result = await delegateTasks({
     tasks, userId, sharedContext: shared_context,
     budget: context.budget || null,
+    providerOrder: context.providerOrder || null,
     shouldCancel: typeof context.shouldCancel === 'function' ? context.shouldCancel : () => false
   })
   return result
