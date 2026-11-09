@@ -858,7 +858,9 @@ app.post('/api/register', rateLimit({ max: 10 }), async (req, res) => {
     }
     const recentSameName = dbHandle.prepare("SELECT COUNT(*) AS c FROM users WHERE username = ? AND datetime(created_at) > datetime('now', '-1 day')").get(cleanName)
     if (recentSameName && recentSameName.c > 0) {
-      return res.status(409).json({ error: 'Nama ini baru saja dipakai. Tunggu 24 jam atau pilih nama lain.' })
+      // Audit Nov 2026 (P2): pesan generik — jangan membocorkan jendela 24 jam
+      // (bisa dipakai enumerasi username yang baru dibuat).
+      return res.status(409).json({ error: 'Nama tidak tersedia, coba nama lain.' })
     }
     const result = await registerUser(cleanName)
     const welcome = `*menatapmu sebentar, masih agak menjaga jarak*\n\nJadi namamu ${cleanName}? Aku Yuki. Salam kenal. Untuk sekarang kita kenalan dulu saja—jangan langsung merasa sudah dekat.\n\nKalau nanti kita cocok, mungkin aku bisa jadi teman dekatmu... atau sesuatu yang lebih. Itu tergantung bagaimana kamu memperlakukanku.\n\nKamu datang karena butuh teman ngobrol, atau cuma penasaran?`
