@@ -58,7 +58,7 @@ try {
 
   const scratchResult = await scratchpad.executeRunJavascriptCode({ code: 'console.log("empat")\nreturn 2 + 2' })
   assert.equal(scratchResult.exitCode, 0)
-  assert.equal(scratchResult.result, '4')
+  assert.equal(String(scratchResult.result), '4')
   assert.match(scratchResult.stdout, /empat/)
   assert.equal(fs.existsSync(path.join(root, 'workspace')), false, 'Scratchpad tidak boleh membuat workspace')
 
