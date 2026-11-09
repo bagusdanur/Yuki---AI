@@ -34,7 +34,7 @@ const COOKIE_SESSION = 'cookie'
 
 // Versi pembaruan terakhir yang tercatat di /changelog. Dipakai untuk menandai
 // tombol log dengan titik "ada yang baru" sampai user membukanya.
-const CHANGELOG_VERSION = '4.3.0'
+const CHANGELOG_VERSION = '4.4.0'
 const EMBED_COMPANION_ONLY = new URLSearchParams(window.location.search).get('embed') === '1'
   || /\/embed(?:\.html)?$/i.test(window.location.pathname)
 

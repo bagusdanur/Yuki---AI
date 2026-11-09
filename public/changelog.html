@@ -124,17 +124,29 @@
 
 <div class="page">
   <header class="lede">
-    <div class="ver-now">Versi terbaru 4.3.0</div>
+    <div class="ver-now">Versi terbaru 4.4.0</div>
     <h1>Apa yang berubah</h1>
     <p>Setiap rilis dicatat di sini — apa yang ditambah, diperbaiki, atau diubah. Versi lama bisa dibuka.</p>
   </header>
 
   <article class="rel latest">
     <div class="meta">
-      <span class="v">4.3.0</span>
+      <span class="v">4.4.0</span>
       <span class="d">9 Nov 2026</span>
       <span class="new">Baru</span>
     </div>
+    <ul class="notes">
+      <li><b>Mode Agent kini mengingat sesi situs yang kamu buka.</b> Kalau kamu membuka situs yang butuh masuk, Yuki tidak ulang dari nol setiap tugas — sesi login-nya tersimpan khusus untuk akunmu dan terpisah dari pengguna lain.</li>
+      <li><b>Sesi lama dibersihkan otomatis.</b> Penyimpanan sesi yang tidak dipakai lebih dari 90 hari dihapus sendiri, jadi tidak menumpuk.</li>
+    </ul>
+  </article>
+
+  <details class="rel">
+    <summary>
+      <div class="meta"><span class="v">4.3.0</span><span class="d">9 Nov 2026</span></div>
+      <div class="peek"><span>Gangguan lebih rapi & persetujuan terikat akun</span><i class="plus"></i></div>
+    </summary>
+    <div class="body">
     <ul class="notes">
       <li><b>Pesan gangguan lebih rapi.</b> Kalau ada gangguan di server, kamu sekarang hanya melihat pesan sederhana "ada gangguan" — details teknis tidak lagi muncul di layar.</li>
       <li><b>Kiriman raksasa ditolak.</b> Server kini menolak kiriman yang terlalu besar (di atas 512KB), jadi obrolan hidup tetap ringan dan tidak mudah disalahgunakan.</li>
@@ -142,7 +154,8 @@
       <li><b>Subagent memakai jatah yang sama.</b> Pekerjaan tambahan yang didelegasikan Yuki kini memakai jatah yang sama dengan tugas utamanya, jadi tidak ada pemakaian berlebih di belakang layar.</li>
       <li><b>Nama akun lebih aman.</b> Pesan penolakan daftar akun dibuat generik, jadi tidak membocorkan kapan sebuah nama baru saja dipakai.</li>
     </ul>
-  </article>
+    </div>
+  </details>
 
   <details class="rel">
     <summary>
