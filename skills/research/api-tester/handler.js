@@ -17,6 +17,15 @@ export async function http_api_request({ url, method = 'GET', headers = {}, body
   }
   targetUrl = securityCheck.cleanUrl
 
+  // Audit Nov 2026 (H3): API tester hanya untuk layanan web publik — batasi ke
+  // port standar supaya tidak bisa memindai port internal VPS lewat DNS publik.
+  try {
+    const portNum = new URL(targetUrl).port ? Number(new URL(targetUrl).port) : (targetUrl.startsWith('https:') ? 443 : 80)
+    if (![80, 443].includes(portNum)) {
+      return { error: `Port :${portNum} tidak diizinkan untuk uji API. Gunakan port standar 80/443.` }
+    }
+  } catch { return { error: 'URL target tidak valid.' } }
+
   const httpMethod = String(method || 'GET').toUpperCase()
   const allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD']
   if (!allowedMethods.includes(httpMethod)) {
@@ -28,12 +37,17 @@ export async function http_api_request({ url, method = 'GET', headers = {}, body
   const startTime = Date.now()
 
   try {
+    // Audit Nov 2026 (H3): header allowlist — cegah header injection /
+    // pemalsuan identitas jaringan (Host, X-Forwarded-*, Cookie tidak pernah
+    // boleh dikirim dari sisi server).
+    const ALLOWED_HEADERS = new Set(['accept', 'accept-language', 'content-type', 'authorization', 'x-api-key', 'api-key'])
+    const safeHeaders = { 'User-Agent': 'Yuki-Agent-API-Tester/1.0' }
+    for (const [k, v] of Object.entries(headers && typeof headers === 'object' ? headers : {})) {
+      if (ALLOWED_HEADERS.has(String(k).toLowerCase())) safeHeaders[k] = String(v).slice(0, 500)
+    }
     const fetchOptions = {
       method: httpMethod,
-      headers: {
-        'User-Agent': 'Yuki-Agent-API-Tester/1.0',
-        ...(headers && typeof headers === 'object' ? headers : {})
-      },
+      headers: safeHeaders,
       signal: controller.signal
     }
 
@@ -57,6 +71,14 @@ export async function http_api_request({ url, method = 'GET', headers = {}, body
       const nextUrl = new URL(location, currentUrl).toString()
       const redirectSafety = await validateSafeOutboundUrl(nextUrl)
       if (!redirectSafety.safe) return { success: false, error: `[Keamanan Redirect]: ${redirectSafety.reason}`, redirectChain }
+      // Jangan bocorkan kredensial ke origin lain lewat redirect.
+      try {
+        if (new URL(nextUrl).origin !== new URL(currentUrl).origin) {
+          for (const k of Object.keys(fetchOptions.headers)) {
+            if (['authorization', 'x-api-key', 'api-key'].includes(k.toLowerCase())) delete fetchOptions.headers[k]
+          }
+        }
+      } catch {}
       redirectChain.push({ status: res.status, from: currentUrl, to: redirectSafety.cleanUrl })
       currentUrl = redirectSafety.cleanUrl
       if (redirects === 5) return { success: false, error: 'Terlalu banyak redirect (maksimal 5).', redirectChain }
