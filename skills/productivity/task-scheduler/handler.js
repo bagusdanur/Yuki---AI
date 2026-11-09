@@ -15,6 +15,19 @@ export async function executeScheduleTask({ title = 'Pengingat', description = '
     }
   }
 
+  // Anti cron-bomb (audit Nov 2026): interval minimum 5 menit + kuota 20
+  // jadwal aktif per user.
+  const minuteField = String(parsed.cron).split(/\s+/)[0] || ''
+  if (minuteField === '*' || minuteField.startsWith('*/')) {
+    const step = minuteField === '*' ? 1 : Number(minuteField.slice(2))
+    if (step < 5) {
+      return { error: `Jadwal terlalu sering (setiap ${step} menit). Interval minimum yang diizinkan adalah 5 menit.` }
+    }
+  }
+  if (!parsed.runOnce && listScheduledTasks(userId).length >= 20) {
+    return { error: 'Kamu sudah punya 20 jadwal aktif. Batalkan salah satunya dulu sebelum menambah baru.' }
+  }
+
   try {
     const task = createScheduledTask({
       userId,
