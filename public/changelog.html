@@ -124,17 +124,32 @@
 
 <div class="page">
   <header class="lede">
-    <div class="ver-now">Versi terbaru 4.2.0</div>
+    <div class="ver-now">Versi terbaru 4.3.0</div>
     <h1>Apa yang berubah</h1>
     <p>Setiap rilis dicatat di sini — apa yang ditambah, diperbaiki, atau diubah. Versi lama bisa dibuka.</p>
   </header>
 
   <article class="rel latest">
     <div class="meta">
-      <span class="v">4.2.0</span>
+      <span class="v">4.3.0</span>
       <span class="d">9 Nov 2026</span>
       <span class="new">Baru</span>
     </div>
+    <ul class="notes">
+      <li><b>Pesan gangguan lebih rapi.</b> Kalau ada gangguan di server, kamu sekarang hanya melihat pesan sederhana "ada gangguan" — details teknis tidak lagi muncul di layar.</li>
+      <li><b>Kiriman raksasa ditolak.</b> Server kini menolak kiriman yang terlalu besar (di atas 512KB), jadi obrolan hidup tetap ringan dan tidak mudah disalahgunakan.</li>
+      <li><b>Persetujuan Mode Agent tidak bisa ditebak.</b> Tiap akun punya antrean persetujuannya sendiri — akun lain tidak bisa mengintip atau mengakalinya.</li>
+      <li><b>Subagent memakai jatah yang sama.</b> Pekerjaan tambahan yang didelegasikan Yuki kini memakai jatah yang sama dengan tugas utamanya, jadi tidak ada pemakaian berlebih di belakang layar.</li>
+      <li><b>Nama akun lebih aman.</b> Pesan penolakan daftar akun dibuat generik, jadi tidak membocorkan kapan sebuah nama baru saja dipakai.</li>
+    </ul>
+  </article>
+
+  <details class="rel">
+    <summary>
+      <div class="meta"><span class="v">4.2.0</span><span class="d">9 Nov 2026</span></div>
+      <div class="peek"><span>Tanda masuk & penjelajahan lebih aman</span><i class="plus"></i></div>
+    </summary>
+    <div class="body">
     <ul class="notes">
       <li><b>Tanda masuk lebih aman.</b> Tanda masukmu tidak lagi disimpan di tempat yang bisa dibaca halaman — biasanya tidak ada yang terasa berubah, tapi kalau tandanya habis, Yuki memulihkan sendiri memakai kunci ingatan.</li>
       <li><b>Penjelajahan web lebih bersih.</b> Setiap tugas membuka sesi penjelajah baru yang kosong, jadi jejak satu pengguna tidak pernah tercampur ke pengguna lain.</li>
@@ -142,7 +157,8 @@
       <li><b>Akses server lebih tertutup.</b> Server Yuki kini hanya bisa dijangkau lewat jalur resmi di depan — tidak bisa diakses langsung dari internet.</li>
       <li><b>Halaman dimuat dengan pelindung.</b> Aplikasi membuka halaman dengan aturan keamanan berlapis agar konten berbahaya tidak bisa berjalan.</li>
     </ul>
-  </article>
+    </div>
+  </details>
 
   <details class="rel">
     <summary>
