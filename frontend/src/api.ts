@@ -127,7 +127,13 @@ function buildChatBody(userId: string, messages: Message[], isIdle: boolean, mod
   })
 
   const surface = new URLSearchParams(window.location.search).get('embed') === '1' ? 'embed' : 'app'
-  return { userId, messages: sanitizedMessages, isIdle, mode, requestId, surface }
+  // Konteks halaman Ryukomik (dikirim situs induk lewat iframe URL, mis.
+  // embed.html?ctx=Judul%20Chapter%203). Dibaca SEKALI saat module load;
+  // server mencucinya lagi sebelum masuk prompt.
+  const embedContext = surface === 'embed'
+    ? (new URLSearchParams(window.location.search).get('ctx') || '').slice(0, 200)
+    : ''
+  return { userId, messages: sanitizedMessages, isIdle, mode, requestId, surface, ...(embedContext ? { embedContext } : {}) }
 }
 
 /**
