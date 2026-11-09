@@ -268,6 +268,14 @@ app.use((req, res, next) => {
   next()
 })
 
+// Artifact HTML (hasil generate LLM) serve dengan CSP sandbox mutlak: script
+// di dalamnya jalan sebagai origin opak — tidak bisa baca localStorage /
+// cookie origin Yuki (audit Nov 2026: stored XSS -> takeover akun).
+app.use('/artifacts', (_req, res, next) => {
+  res.set('Content-Security-Policy', "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data: https:; font-src data: https:; media-src data: https:")
+  next()
+})
+
 app.use(express.static('dist', { dotfiles: 'ignore' }))
 app.use(express.static('public', { dotfiles: 'ignore' }))
 

@@ -378,7 +378,8 @@ export async function executeBuildInteractiveArtifact(params = {}, context = {})
 
 
 
-  const artifactId = String(params.id || `art_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`)
+  const rawArtifactId = String(params.id || `art_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`)
+  const artifactId = rawArtifactId.replace(/[^a-zA-Z0-9_-]+/g, '_').slice(0, 80) || `art_${Date.now()}`
 
   // 📂 SIMPAN FILE KE FOLDER PER USER: public/artifacts/<username>/
   const rawUsername = context?.username || 'user'

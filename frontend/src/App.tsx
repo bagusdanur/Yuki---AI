@@ -690,7 +690,7 @@ function CodexArtifactModal({ artifact, onClose }: { artifact: ArtifactItem; onC
                 key={reloadKey}
                 title={artifact.title}
                 srcDoc={processedHtml}
-                sandbox="allow-scripts allow-modals allow-forms allow-same-origin allow-pointer-lock"
+                sandbox="allow-scripts allow-modals allow-forms allow-pointer-lock"
                 className="artifact-preview-frame"
                 allow="autoplay"
               />
