@@ -2384,9 +2384,8 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 .journal-pin-item p { margin: 0; font-size: 12.5px; color: #e2e5f3; line-height: 1.45; white-space: pre-wrap; }
 
 
-/* ===== V5.1 Mobile-First Polish & Expressive Aura ===== */
-.mobile-only-menu { display: none !important; }
-.identity { overflow: hidden; }
+/* ===== V5.1 Layout Tidy & Expressive Aura (pertahankan layout asli) ===== */
+.identity { min-width: 0; overflow: hidden; }
 .identity span {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2433,86 +2432,14 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   .character.is-reacting { animation: none !important; }
 }
 
-/* Mobile-First declutter (<= 640px) */
-@media (max-width: 640px) {
-  .desktop-only-action { display: none !important; }
-  .mobile-only-menu { display: flex !important; }
-
-  .chat-header {
-    padding: 0 12px;
-    gap: 9px;
-    min-height: 52px;
-  }
-  .monogram { width: 32px; height: 32px; flex: 0 0 32px; }
-  .identity strong { font-size: 14px; }
-  .identity span { font-size: 9px; letter-spacing: .07em; }
-  .header-actions { gap: 6px; flex: 0 0 auto; }
-  .header-actions a, .header-actions button { width: 34px; height: 34px; }
-
-  .mode-switcher-bar { padding: 6px 12px; }
-  .messages { padding: 12px 12px 14px; gap: 10px; }
+/* Perapian ringan di layar kecil tanpa menyembunyikan tombol apa pun */
+@media (max-width: 520px) {
+  .header-actions { flex: 0 0 auto; gap: 4px; }
+  .header-actions a, .header-actions button { width: 32px; height: 32px; }
   .message.burst-part { padding-left: 0; margin-top: -4px; }
-
-  /* Contextual touch tools: hanya tampil pada pesan yang di-tap atau balasan terakhir */
-  .message-tools {
-    opacity: 0;
-    max-height: 0;
-    overflow: hidden;
-    margin-top: 0;
-    pointer-events: none;
-    transition: opacity .16s ease, max-height .18s ease, margin-top .18s ease;
-  }
-  .message.tools-open .message-tools,
-  .message:focus-within .message-tools {
-    opacity: 1;
-    max-height: 36px;
-    margin-top: 6px;
-    pointer-events: auto;
-  }
-  .message-tools button,
-  .message-tools button:not(.speak) {
-    width: 28px;
-    height: 28px;
-    border-radius: 7px;
-  }
-
-  .reply-preview-bar {
-    margin: 0 10px 6px;
-    padding: 6px 10px;
-  }
-
-  .activities {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    padding: 4px 10px max(8px, env(safe-area-inset-bottom));
-    gap: 6px;
-  }
-  .activities button {
-    flex: 0 0 auto;
-    padding: 6px 11px;
-    font-size: 11px;
-    border-radius: 99px;
-  }
-
-  /* Bottom-sheet modals di mobile */
-  .timeline-overlay {
-    align-items: flex-end;
-    padding: 0;
-  }
-  .timeline-card,
-  .journal-modal {
-    width: 100%;
-    max-width: 100%;
-    height: auto;
-    max-height: 86dvh;
-    border-radius: 16px 16px 0 0;
-    border-bottom: 0;
-    padding-bottom: max(12px, env(safe-area-inset-bottom));
-    animation: sheetSlideUp .2s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  @keyframes sheetSlideUp {
-    from { transform: translateY(24px); opacity: 0.7; }
-    to { transform: translateY(0); opacity: 1; }
-  }
+  .message-tools { flex-wrap: wrap; gap: 4px; }
+  .reply-preview-bar { margin: 0 10px 6px; padding: 6px 10px; }
+  .journal-stats { gap: 6px; }
+  .journal-stats > div { padding: 8px 6px; }
+  .journal-stats b { font-size: 16px; }
 }

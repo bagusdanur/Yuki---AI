@@ -6,7 +6,7 @@ import rehypeSanitize from 'rehype-sanitize'
 import {
   Bell, Bookmark, BookOpen, Bot, Brain, Check, ChevronDown, ChevronUp, Clock3, Code2, Copy, Download,
   Gamepad2, Globe, Heart, History as HistoryIcon, KeyRound, ListTodo, LoaderCircle, Lock, Maximize2, MessageSquare,
-  Minimize2, Pause, Pin, Play, Radio, RefreshCw, Reply, RotateCcw, Save, Search, Send, Settings, Sparkles, Star,
+  Minimize2, Pause, Pin, Play, Radio, RefreshCw, Reply, RotateCcw, Save, Send, Settings, Sparkles, Star,
   Terminal, ThumbsDown, ThumbsUp, Volume2, WifiOff, Wrench, X, Zap, Eye, EyeOff,
   Grid3x3, HandFist, ChevronRight, ShieldAlert,
 } from 'lucide-react'
@@ -1332,7 +1332,6 @@ export default function App() {
   const [dailyStatus, setDailyStatus] = useState<DailyStatus | null>(null)
   const [proactivePush, setProactivePush] = useState<ProactivePushSettings | null>(null)
   const [proactiveSaving, setProactiveSaving] = useState(false)
-  const [activeMsgIndex, setActiveMsgIndex] = useState<number | null>(null)
   const [bookmarks, setBookmarks] = useState<BookmarkedComic[]>([])
   const [bookmarksOpen, setBookmarksOpen] = useState(false)
   const [skills, setSkills] = useState<SkillInfo[]>([])
@@ -1904,15 +1903,6 @@ export default function App() {
           </span>
         </div>
         <div className="header-actions">
-          <button
-            type="button"
-            className="desktop-only-action"
-            onClick={() => setHistoryOpen(true)}
-            aria-label="Cari riwayat obrolan"
-            title="Cari & lihat riwayat obrolan"
-          >
-            <Search size={17} />
-          </button>
           {gameEligible && (
             <div className="games-menu">
               <button
@@ -1931,12 +1921,12 @@ export default function App() {
               </button>
             </div>
           )}
-          <a href="/docs" target="_blank" className="desktop-only-action" aria-label="Dokumentasi" title="Panduan"><BookOpen size={17} /></a>
+          <a href="/docs" target="_blank" aria-label="Dokumentasi" title="Panduan"><BookOpen size={17} /></a>
           <a
             href="/changelog"
             target="_blank"
             rel="noopener"
-            className="log-link desktop-only-action"
+            className="log-link"
             aria-label={changelogSeen ? 'Log pembaruan' : 'Log pembaruan — ada yang baru'}
             title={changelogSeen ? 'Log pembaruan' : 'Ada pembaruan baru'}
             onClick={() => {
@@ -1968,8 +1958,6 @@ export default function App() {
           <button onClick={() => { setAgendaOpen(true); setSettingsOpen(false) }}><Bell size={15} /><span><b>{EMBED_COMPANION_ONLY ? 'Pengingat' : 'Agenda & Pengingat'}</b><small>{EMBED_COMPANION_ONLY ? 'Yang kamu minta Yuki ingatkan' : 'Jadwal, status, dan notifikasi HP'}</small></span></button>
           <button onClick={() => { setBookmarksOpen(true); setSettingsOpen(false) }}><Bookmark size={15} /><span><b>Komik tersimpan</b><small>{bookmarks.length} judul tersimpan</small></span></button>
           <button onClick={() => { setJournalTab('timeline'); setTimelineOpen(true); setSettingsOpen(false); if (session) getRelationship(session.userId).then(d => { setJournal(d); setMilestones(d.milestones || []); setNicknameInput(d.nickname || '') }).catch(() => {}) }}><Heart size={15} /><span><b>Buku kenangan & hubungan</b><small>{milestones.length} momen · {pins.length} pesan dipin</small></span></button>
-          <button className="mobile-only-menu" onClick={() => { window.open('/docs', '_blank', 'noopener'); setSettingsOpen(false) }}><BookOpen size={15} /><span><b>Panduan Yuki</b><small>Dokumentasi fitur & karakter</small></span></button>
-          <button className="mobile-only-menu" onClick={() => { try { localStorage.setItem('yuki_changelog_seen', CHANGELOG_VERSION) } catch {}; setChangelogSeen(true); window.open('/changelog', '_blank', 'noopener'); setSettingsOpen(false) }}><Sparkles size={15} /><span><b>Log pembaruan</b><small>Versi {CHANGELOG_VERSION}</small></span></button>
           {installPrompt && <button onClick={installApp}><Download size={15} /><span><b>Pasang aplikasi Yuki</b><small>Tambahkan ke layar utama</small></span></button>}
           <button onClick={() => window.open('/privacy', '_blank', 'noopener')}><BookOpen size={15} /><span><b>Privasi pengguna</b><small>Data yang disimpan dan kontrolmu</small></span></button>
           <button onClick={() => setShowAccessCode(value => !value)}><KeyRound size={15} /><span><b>{showAccessCode ? 'Sembunyikan' : 'Tampilkan'} kunci ingatan</b><small>{showAccessCode ? (session?.accessCode || 'Belum tersedia') : 'YUKI-••••-••••'}</small></span></button>
@@ -2146,12 +2134,9 @@ export default function App() {
         </div>}
         {messages.map((message, index) => {
           const isPinned = pins.some(p => (message.messageId && p.messageId === message.messageId) || p.content === message.content)
-          const isLastAssistant = message.role === 'assistant' && index === messages.length - 1
-          const toolsOpen = activeMsgIndex === index || isLastAssistant
           return <article
-            className={`message ${message.role} ${message.mode === 'agent' ? 'agent-msg' : ''} ${message.burstPart ? 'burst-part' : ''} ${toolsOpen ? 'tools-open' : ''}`}
+            className={`message ${message.role} ${message.mode === 'agent' ? 'agent-msg' : ''} ${message.burstPart ? 'burst-part' : ''}`}
             key={`${index}-${message.content.slice(0, 12)}`}
-            onClick={() => setActiveMsgIndex(current => (current === index ? null : index))}
           >
           {message.role === 'assistant' && !message.burstPart && (
             <div className="message-avatar">
