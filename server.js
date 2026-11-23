@@ -1074,7 +1074,7 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
     const { mood: kwMood, bond } = isIdle 
       ? { mood: emotion.label(), bond: emotion.bondLevel() } 
       : emotion.react(userText)
-    const gestureCue = !isIdle && (['malu', 'kesal', 'sedih', 'cemburu', 'cemas', 'kecewa', 'senang'].includes(kwMood) || _turns % 3 === 0)
+    const gestureCue = !isIdle && (['malu', 'kesal', 'sedih', 'cemburu', 'sayang/manja'].includes(kwMood) || _turns % 4 === 0)
 
     // 2) RECALL SEMANTIK + KOMIK + BUKTI SITUS secara PARALEL (pangkas latensi pre-LLM)
     const shouldFetchComic = !isIdle && mode !== 'agent' && wantsComic(userText)
