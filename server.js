@@ -627,8 +627,9 @@ async function getEmotion(userId) {
 // sampai v4 dirilis.
 // Beta: hanya user yang terdaftar di GAMES_BETA_IDS yang bisa memakai.
 // GAMES_PUBLIC=true membuka untuk semua (dipakai nanti saat v4 rilis).
-const GAMES_PUBLIC = process.env.GAMES_PUBLIC === 'true'
 const GAMES_BETA_IDS = new Set(String(process.env.GAMES_BETA_IDS || '').split(',').map((s) => s.trim()).filter(Boolean))
+// Default terbuka untuk semua saat GAMES_ENABLED=true kecuali GAMES_PUBLIC=false atau GAMES_BETA_IDS diisi.
+const GAMES_PUBLIC = process.env.GAMES_PUBLIC === 'true' || (process.env.GAMES_PUBLIC !== 'false' && GAMES_BETA_IDS.size === 0)
 const gameEligible = (userId) => GAMES_PUBLIC || GAMES_BETA_IDS.has(String(userId || ''))
 
 if (process.env.GAMES_ENABLED === 'true') {
