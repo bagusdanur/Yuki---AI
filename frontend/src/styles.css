@@ -2191,3 +2191,194 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   .ttt-bubble p { font-size: 11px; }
   .ttt-dock { padding: 4px 10px 0; }
 }
+
+
+/* ===== V5.0 Companion Chat Enhancements ===== */
+.message.burst-part {
+  margin-top: -6px;
+  padding-left: 34px;
+}
+
+.quoted-reply {
+  border-left: 2px solid #7c6df0;
+  background: rgba(124, 109, 240, 0.1);
+  padding: 5px 8px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  font-size: 11.5px;
+}
+.quoted-reply span {
+  display: block;
+  font-weight: 600;
+  color: #b7aefb;
+  font-size: 10.5px;
+  margin-bottom: 2px;
+}
+.quoted-reply p {
+  margin: 0;
+  color: #cfd2df;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 280px;
+}
+
+.reply-preview-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  margin: 0 12px 6px;
+  border-radius: 10px;
+  background: #171a24;
+  border: 1px solid #2b3042;
+  border-left: 3px solid #7c6df0;
+  color: #d8daf0;
+  font-size: 12px;
+}
+.reply-preview-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.reply-preview-text b { font-size: 11px; color: #b7aefb; }
+.reply-preview-text span {
+  font-size: 11.5px;
+  color: #a6abbe;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.reply-preview-bar button {
+  background: transparent;
+  border: 0;
+  color: #8f94a8;
+  cursor: pointer;
+  padding: 3px;
+  border-radius: 6px;
+}
+.reply-preview-bar button:hover { color: #fff; background: rgba(255,255,255,.08); }
+
+.message-tools.user-tools {
+  justify-content: flex-end;
+  opacity: 0.55;
+}
+.message.user:hover .message-tools.user-tools { opacity: 1; }
+
+.journal-modal { max-width: 520px; width: 92vw; }
+.journal-tabs { margin: 0 0 10px; }
+.journal-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.journal-stats > div {
+  background: #151822;
+  border: 1px solid #252a38;
+  border-radius: 10px;
+  padding: 10px 8px;
+  text-align: center;
+}
+.journal-stats b { display: block; font-size: 18px; color: #ece9ff; }
+.journal-stats span { font-size: 11px; color: #8c91a4; }
+
+.journal-body { display: flex; flex-direction: column; gap: 14px; max-height: 55vh; overflow-y: auto; }
+.journal-section {
+  background: #141720;
+  border: 1px solid #242938;
+  border-radius: 10px;
+  padding: 12px;
+}
+.journal-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.journal-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #b4b8c8;
+  background: #1f2331;
+  padding: 3px 8px;
+  border-radius: 99px;
+}
+.journal-hint { margin: 4px 0 0; font-size: 12px; color: #969bb0; line-height: 1.45; }
+.journal-notice { display: block; margin-top: 6px; font-size: 11.5px; color: #9ee6b8; }
+.nickname-form { display: flex; gap: 6px; }
+.nickname-form input {
+  flex: 1;
+  background: #0e1017;
+  border: 1px solid #2b3042;
+  border-radius: 8px;
+  padding: 7px 10px;
+  color: #f1f2f8;
+  font-size: 13px;
+}
+.nickname-form button {
+  background: #6d5ce7;
+  border: 0;
+  border-radius: 8px;
+  padding: 7px 14px;
+  color: #fff;
+  font-weight: 600;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.journal-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #d6daf0;
+  cursor: pointer;
+}
+.journal-events { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.journal-event-item {
+  background: #0f1219;
+  border: 1px solid #222634;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: #d4d7e6;
+}
+.journal-event-item p { margin: 4px 0 0; }
+.journal-mood-tag {
+  display: inline-block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #c2b8ff;
+  background: rgba(124, 109, 240, 0.16);
+  padding: 2px 7px;
+  border-radius: 99px;
+}
+
+.journal-pins { display: flex; flex-direction: column; gap: 8px; max-height: 55vh; overflow-y: auto; }
+.journal-pin-item {
+  background: #141720;
+  border: 1px solid #242938;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.journal-pin-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: #b7aefb;
+}
+.journal-pin-head button {
+  background: transparent;
+  border: 0;
+  color: #8c91a4;
+  cursor: pointer;
+}
+.journal-pin-item p { margin: 0; font-size: 12.5px; color: #e2e5f3; line-height: 1.45; white-space: pre-wrap; }

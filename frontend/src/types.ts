@@ -43,6 +43,51 @@ export interface SkillInfo {
   version: string
 }
 
+export interface ReplyQuote {
+  messageId?: number
+  role: Role
+  snippet: string
+}
+
+export interface PinnedMessage {
+  id: number
+  messageId?: number | null
+  role: Role
+  content: string
+  note?: string
+  createdAt: string
+}
+
+export interface DailyStatus {
+  id: string
+  slot?: string
+  label: string
+  detail?: string
+  starters?: Array<{ id: string; label: string; text: string }>
+}
+
+export interface RelationshipJournalResponse {
+  bond: string
+  bondValue: number
+  milestones: Milestone[]
+  nickname?: string
+  nicknameUnlocked?: boolean
+  stats?: {
+    totalMessages: number
+    factsCount: number
+    openLoopsCount: number
+    pinnedCount: number
+  }
+  recentEvents?: Array<{ id: number; summary: string; mood?: string | null; createdAt: string }>
+}
+
+export interface ProactivePushSettings {
+  enabled: boolean
+  quietStart: number
+  quietEnd: number
+  pushConfigured?: boolean
+}
+
 export interface Message {
   role: Role
   content: string
@@ -56,6 +101,8 @@ export interface Message {
   comics?: ComicRecommendation[]
   messageId?: number
   createdAt?: string
+  replyTo?: ReplyQuote
+  burstPart?: boolean
 }
 
 export interface Milestone {
@@ -85,6 +132,8 @@ export interface ChatResponse {
   messageId?: number
   milestones?: Milestone[]
   comics?: ComicRecommendation[]
+  bubbles?: string[]
+  dailyStatus?: { id: string; label: string }
 }
 
 export interface AgentProgressResponse {

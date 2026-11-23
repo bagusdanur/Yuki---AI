@@ -1,4 +1,4 @@
-import type { AgendaResponse, AgentMemory, AgentProgressResponse, BookmarkedComic, ChatMode, ChatResponse, ComicRecommendation, DynamicSkill, Message, Milestone, PlainMemory, SkillInfo } from './types'
+import type { AgendaResponse, AgentMemory, AgentProgressResponse, BookmarkedComic, ChatMode, ChatResponse, ComicRecommendation, DailyStatus, DynamicSkill, Message, Milestone, PinnedMessage, PlainMemory, ProactivePushSettings, RelationshipJournalResponse, ReplyQuote, SkillInfo } from './types'
 
 async function parse<T>(response: Response): Promise<T> {
   const rawText = await response.text()
@@ -100,14 +100,14 @@ export async function resetSession() {
   return request<{ success: true }>('/api/session/reset', { method: 'POST' }, 10_000, 0)
 }
 
-export async function sendChat(userId: string, messages: Message[], isIdle = false, mode: ChatMode = 'companion', requestId = '') {
-  const body = buildChatBody(userId, messages, isIdle, mode, requestId)
+export async function sendChat(userId: string, messages: Message[], isIdle = false, mode: ChatMode = 'companion', requestId = '', replyTo?: ReplyQuote | null) {
+  const body = buildChatBody(userId, messages, isIdle, mode, requestId, replyTo)
   return request<ChatResponse>('/api/chat', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   }, 150_000)
 }
 
-function buildChatBody(userId: string, messages: Message[], isIdle: boolean, mode: ChatMode, requestId: string) {
+function buildChatBody(userId: string, messages: Message[], isIdle: boolean, mode: ChatMode, requestId: string, replyTo?: ReplyQuote | null) {
   // Padatkan pesan-pesan lampau agar payload ringan dan tidak overload
   const recentMessages = messages.slice(-30)
   const sanitizedMessages = recentMessages.map((m, idx) => {
@@ -133,7 +133,14 @@ function buildChatBody(userId: string, messages: Message[], isIdle: boolean, mod
   const embedContext = surface === 'embed'
     ? (new URLSearchParams(window.location.search).get('ctx') || '').slice(0, 200)
     : ''
-  return { userId, messages: sanitizedMessages, isIdle, mode, requestId, surface, ...(embedContext ? { embedContext } : {}) }
+  const cleanReplyTo = replyTo?.snippet
+    ? { messageId: replyTo.messageId, role: replyTo.role, snippet: replyTo.snippet.slice(0, 220) }
+    : undefined
+  return {
+    userId, messages: sanitizedMessages, isIdle, mode, requestId, surface,
+    ...(embedContext ? { embedContext } : {}),
+    ...(cleanReplyTo ? { replyTo: cleanReplyTo } : {})
+  }
 }
 
 /**
@@ -143,18 +150,18 @@ function buildChatBody(userId: string, messages: Message[], isIdle: boolean, mod
  */
 export async function sendChatStream(
   userId: string, messages: Message[], mode: ChatMode = 'companion',
-  onDelta: (text: string) => void, signal?: AbortSignal
+  onDelta: (text: string) => void, signal?: AbortSignal, replyTo?: ReplyQuote | null
 ): Promise<ChatResponse> {
   const response = await fetch('/api/chat', {
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...buildChatBody(userId, messages, false, mode, ''), stream: true }),
+    body: JSON.stringify({ ...buildChatBody(userId, messages, false, mode, '', replyTo), stream: true }),
     signal
   })
   if (!response.ok || !response.body) {
     // Fallback: server tidak mendukung streaming / error sebelum alir → pakai jalur biasa.
-    return sendChat(userId, messages, false, mode)
+    return sendChat(userId, messages, false, mode, '', replyTo)
   }
 
   const reader = response.body.getReader()
@@ -292,7 +299,41 @@ export async function sendFeedback(userId: string, messageId: number | undefined
 }
 
 export async function getRelationship(userId: string) {
-  return request<{ bond: string; bondValue: number; milestones: Milestone[] }>(`/api/relationship/${encodeURIComponent(userId)}`, { method: 'GET' })
+  return request<RelationshipJournalResponse>(`/api/relationship/${encodeURIComponent(userId)}`, { method: 'GET' })
+}
+
+export async function getCompanionStatus() {
+  return request<DailyStatus>('/api/companion/status', { method: 'GET' }, 10_000, 0)
+}
+
+export async function getPinnedMessages() {
+  return request<{ pins: PinnedMessage[] }>('/api/chat/pins', { method: 'GET' }, 10_000, 0)
+}
+
+export async function pinChatMessage(payload: { messageId?: number; role: 'user' | 'assistant'; content: string; note?: string }) {
+  return request<{ ok: true; pins: PinnedMessage[] }>('/api/chat/pins', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+  }, 10_000, 0)
+}
+
+export async function unpinChatMessage(pinId: number) {
+  return request<{ ok: true; pins: PinnedMessage[] }>(`/api/chat/pins/${pinId}`, { method: 'DELETE' }, 10_000, 0)
+}
+
+export async function updateNickname(nickname: string) {
+  return request<{ ok: true; nickname: string }>('/api/relationship/nickname', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nickname })
+  }, 10_000, 0)
+}
+
+export async function getProactivePushSettings() {
+  return request<ProactivePushSettings>('/api/push/proactive', { method: 'GET' }, 10_000, 0)
+}
+
+export async function updateProactivePushSettings(body: { enabled?: boolean; quietStart?: number; quietEnd?: number }) {
+  return request<{ ok: true } & ProactivePushSettings>('/api/push/proactive', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+  }, 10_000, 0)
 }
 
 export async function speak(text: string) {

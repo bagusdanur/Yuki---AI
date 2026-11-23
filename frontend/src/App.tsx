@@ -5,18 +5,18 @@ import remarkGfm from 'remark-gfm'
 import rehypeSanitize from 'rehype-sanitize'
 import {
   Bell, Bookmark, BookOpen, Bot, Brain, Check, ChevronDown, ChevronUp, Clock3, Code2, Copy, Download,
-  Gamepad2, Globe, Heart, History as HistoryIcon, KeyRound, ListTodo, LoaderCircle, Maximize2, MessageSquare,
-  Minimize2, Pause, Play, Radio, RefreshCw, RotateCcw, Save, Send, Settings, Sparkles, Star,
+  Gamepad2, Globe, Heart, History as HistoryIcon, KeyRound, ListTodo, LoaderCircle, Lock, Maximize2, MessageSquare,
+  Minimize2, Pause, Pin, Play, Radio, RefreshCw, Reply, RotateCcw, Save, Search, Send, Settings, Sparkles, Star,
   Terminal, ThumbsDown, ThumbsUp, Volume2, WifiOff, Wrench, X, Zap, Eye, EyeOff,
   Grid3x3, HandFist, ChevronRight, ShieldAlert,
 } from 'lucide-react'
 import {
-  addBookmark, cancelAgentRun, createDynamicSkill, decideAgentApproval, deleteAccount, deleteMemory, deletePlainMemory, dynamicSkillAction, getActiveAgentRun, getAgenda, getBookmarks, getChatHistoryPage, getDynamicSkills, getMemories, getPushConfig, getRelationship,
-  getAgentProgress, getPendingAgentWorkflows, getScheduledReminders, getSkills, refreshSession, register, removeBookmark, resetSession, restore, savePushSubscription, searchChatHistory, sendChat, sendChatStream, sendFeedback, setMemoryAutoCapture, speak, updateAgendaTask, updateMemory
+  addBookmark, cancelAgentRun, createDynamicSkill, decideAgentApproval, deleteAccount, deleteMemory, deletePlainMemory, dynamicSkillAction, getActiveAgentRun, getAgenda, getBookmarks, getChatHistoryPage, getCompanionStatus, getDynamicSkills, getMemories, getPinnedMessages, getProactivePushSettings, getPushConfig, getRelationship,
+  getAgentProgress, getPendingAgentWorkflows, getScheduledReminders, getSkills, pinChatMessage, refreshSession, register, removeBookmark, resetSession, restore, savePushSubscription, searchChatHistory, sendChat, sendChatStream, sendFeedback, setMemoryAutoCapture, speak, unpinChatMessage, updateAgendaTask, updateMemory, updateNickname, updateProactivePushSettings
 } from './api'
 import type {
-  AgendaResponse, AgentMemory, AgentStep, ArtifactItem, BookmarkedComic, ChatMode, ComicRecommendation, DynamicSkill,
-  Message, Milestone, PlainMemory, Session, SkillInfo
+  AgendaResponse, AgentMemory, AgentStep, ArtifactItem, BookmarkedComic, ChatMode, ComicRecommendation, DailyStatus, DynamicSkill,
+  Message, Milestone, PinnedMessage, PlainMemory, ProactivePushSettings, RelationshipJournalResponse, ReplyQuote, Session, SkillInfo
 } from './types'
 import AvatarStage from './AvatarStage'
 import TicTacToe from './TicTacToe'
@@ -34,7 +34,7 @@ const COOKIE_SESSION = 'cookie'
 
 // Versi pembaruan terakhir yang tercatat di /changelog. Dipakai untuk menandai
 // tombol log dengan titik "ada yang baru" sampai user membukanya.
-const CHANGELOG_VERSION = '4.6.0'
+const CHANGELOG_VERSION = '5.0.0'
 const EMBED_COMPANION_ONLY = new URLSearchParams(window.location.search).get('embed') === '1'
   || /\/embed(?:\.html)?$/i.test(window.location.pathname)
 
@@ -1322,6 +1322,16 @@ export default function App() {
   const [streamingText, setStreamingText] = useState('')
   const [milestones, setMilestones] = useState<Milestone[]>([])
   const [timelineOpen, setTimelineOpen] = useState(false)
+  const [journal, setJournal] = useState<RelationshipJournalResponse | null>(null)
+  const [journalTab, setJournalTab] = useState<'timeline' | 'memory' | 'pins'>('timeline')
+  const [nicknameInput, setNicknameInput] = useState('')
+  const [nicknameSaving, setNicknameSaving] = useState(false)
+  const [nicknameNotice, setNicknameNotice] = useState('')
+  const [pins, setPins] = useState<PinnedMessage[]>([])
+  const [replyTo, setReplyTo] = useState<ReplyQuote | null>(null)
+  const [dailyStatus, setDailyStatus] = useState<DailyStatus | null>(null)
+  const [proactivePush, setProactivePush] = useState<ProactivePushSettings | null>(null)
+  const [proactiveSaving, setProactiveSaving] = useState(false)
   const [bookmarks, setBookmarks] = useState<BookmarkedComic[]>([])
   const [bookmarksOpen, setBookmarksOpen] = useState(false)
   const [skills, setSkills] = useState<SkillInfo[]>([])
@@ -1527,9 +1537,14 @@ export default function App() {
   useEffect(() => {
     if (!session?.sessionToken) return
     getRelationship(session.userId).then(data => {
+      setJournal(data)
       setMilestones(data.milestones || [])
       setBond(data.bond); setBondValue(data.bondValue)
+      setNicknameInput(data.nickname || '')
     }).catch(() => {})
+    getCompanionStatus().then(data => setDailyStatus(data)).catch(() => {})
+    getPinnedMessages().then(data => setPins(data.pins || [])).catch(() => {})
+    getProactivePushSettings().then(data => setProactivePush(data)).catch(() => {})
     getBookmarks().then(data => setBookmarks(data.bookmarks || [])).catch(() => {})
     if (!EMBED_COMPANION_ONLY) getSkills().then(data => setSkills(data.skills || [])).catch(() => {})
   }, [session?.userId, session?.sessionToken])
@@ -1623,14 +1638,60 @@ export default function App() {
     }
   }
 
+  async function handleTogglePin(message: Message) {
+    if (!session) return
+    const existing = pins.find(p => (message.messageId && p.messageId === message.messageId) || p.content === message.content)
+    try {
+      if (existing) {
+        const res = await unpinChatMessage(existing.id)
+        setPins(res.pins || [])
+      } else {
+        const res = await pinChatMessage({ messageId: message.messageId, role: message.role, content: message.content })
+        setPins(res.pins || [])
+      }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Gagal memperbarui pin pesan')
+    }
+  }
+
+  async function handleSaveNickname(event: React.FormEvent) {
+    event.preventDefault()
+    if (!session || nicknameSaving) return
+    setNicknameSaving(true); setNicknameNotice('')
+    try {
+      const res = await updateNickname(nicknameInput)
+      setNicknameInput(res.nickname || '')
+      setJournal(prev => prev ? { ...prev, nickname: res.nickname || '' } : prev)
+      setNicknameNotice(res.nickname ? `Yuki akan mengingat panggilan "${res.nickname}".` : 'Panggilan khusus dihapus.')
+    } catch (cause) {
+      setNicknameNotice(cause instanceof Error ? cause.message : 'Gagal menyimpan panggilan.')
+    } finally {
+      setNicknameSaving(false)
+    }
+  }
+
+  async function handleToggleProactivePush(next: Partial<ProactivePushSettings>) {
+    if (!session || proactiveSaving) return
+    setProactiveSaving(true)
+    try {
+      const res = await updateProactivePushSettings(next)
+      setProactivePush(prev => ({ ...(prev || { enabled: false, quietStart: 22, quietEnd: 7 }), ...res }))
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Gagal menyimpan pengaturan notifikasi proaktif.')
+    } finally {
+      setProactiveSaving(false)
+    }
+  }
+
   async function submit(event: React.FormEvent) {
     event.preventDefault()
     const content = input.trim()
     if (!content || busy || !session) return
     navigator.vibrate?.(10)
     const effectiveMode: ChatMode = EMBED_COMPANION_ONLY ? 'companion' : chatMode
-    const next: Message[] = [...messages, { role: 'user', content, mode: effectiveMode }]
-    setMessages(next); setInput(''); setBusy(true); setError(''); setConnection('thinking'); setLiveAgentSteps([]); setStreamingText('')
+    const activeQuote = replyTo
+    const next: Message[] = [...messages, { role: 'user', content, mode: effectiveMode, ...(activeQuote ? { replyTo: activeQuote } : {}) }]
+    setMessages(next); setInput(''); setReplyTo(null); setBusy(true); setError(''); setConnection('thinking'); setLiveAgentSteps([]); setStreamingText('')
     requestTimers.current.forEach(window.clearTimeout)
     requestTimers.current = [
       window.setTimeout(() => setConnection('slow'), 8_000),
@@ -1654,22 +1715,42 @@ export default function App() {
       // non-stream karena hasilnya berupa langkah/artifact terstruktur.
       const useStream = effectiveMode === 'companion'
       const result = useStream
-        ? await sendChatStream(session.userId, next, effectiveMode, (delta) => setStreamingText(prev => prev + delta))
-        : await sendChat(session.userId, next, false, effectiveMode, requestId)
+        ? await sendChatStream(session.userId, next, effectiveMode, (delta) => setStreamingText(prev => prev + delta), undefined, activeQuote)
+        : await sendChat(session.userId, next, false, effectiveMode, requestId, activeQuote)
       if (!result.reply?.trim()) throw new Error('Yuki mengirim balasan kosong. Coba lagi.')
-      setMessages([...next, {
-        role: 'assistant',
-        content: result.reply,
+      const baseMeta = {
+        role: 'assistant' as const,
         gesture: result.gesture,
         markdown: result.markdown,
         workflowState: result.workflowState,
         truncated: result.truncated,
         comics: result.comics || [],
         messageId: result.messageId,
-        mode: EMBED_COMPANION_ONLY ? 'companion' : result.mode || effectiveMode,
+        mode: EMBED_COMPANION_ONLY ? 'companion' as const : (result.mode || effectiveMode),
         steps: result.steps || [],
         artifacts: result.artifacts || []
-      }])
+      }
+      if (effectiveMode === 'companion' && Array.isArray(result.bubbles) && result.bubbles.length > 1) {
+        const [firstBubble, ...restBubbles] = result.bubbles
+        setStreamingText('')
+        setMessages([...next, { ...baseMeta, content: firstBubble, comics: [], artifacts: [] }])
+        await new Promise(resolve => window.setTimeout(resolve, 550))
+        setMessages(current => [
+          ...current,
+          ...restBubbles.map((part, idx) => ({
+            ...baseMeta,
+            content: part,
+            burstPart: true,
+            comics: idx === restBubbles.length - 1 ? (result.comics || []) : [],
+            artifacts: idx === restBubbles.length - 1 ? (result.artifacts || []) : []
+          }))
+        ])
+      } else {
+        setMessages([...next, { ...baseMeta, content: result.reply }])
+      }
+      if (result.dailyStatus?.label) {
+        setDailyStatus(prev => prev ? { ...prev, ...result.dailyStatus } : { id: result.dailyStatus!.id, label: result.dailyStatus!.label })
+      }
       setMood(result.mood || 'tenang'); setBond(result.bond || bond)
       setBondValue(result.bondValue || 0); setFeeling(result.feeling || feeling)
       if (result.milestones) setMilestones(result.milestones)
@@ -1816,9 +1897,20 @@ export default function App() {
         <div className="monogram">Y</div>
         <div className="identity">
           <strong>Yuki</strong>
-          <span><i className={`connection-dot ${connection}`} /> {connectionLabel[connection]}</span>
+          <span>
+            <i className={`connection-dot ${connection}`} />{' '}
+            {connection === 'idle' && dailyStatus?.label ? dailyStatus.label : connectionLabel[connection]}
+          </span>
         </div>
         <div className="header-actions">
+          <button
+            type="button"
+            onClick={() => setHistoryOpen(true)}
+            aria-label="Cari riwayat obrolan"
+            title="Cari & lihat riwayat obrolan"
+          >
+            <Search size={17} />
+          </button>
           {gameEligible && (
             <div className="games-menu">
               <button
@@ -1873,7 +1965,7 @@ export default function App() {
           {!EMBED_COMPANION_ONLY && <button onClick={() => { setSkillsModalOpen(true); setSettingsOpen(false) }}><Wrench size={15} /><span><b>Katalog Skills Yuki Agent</b><small>{skills.length || 14} skills aktif</small></span></button>}
           <button onClick={() => { setAgendaOpen(true); setSettingsOpen(false) }}><Bell size={15} /><span><b>{EMBED_COMPANION_ONLY ? 'Pengingat' : 'Agenda & Pengingat'}</b><small>{EMBED_COMPANION_ONLY ? 'Yang kamu minta Yuki ingatkan' : 'Jadwal, status, dan notifikasi HP'}</small></span></button>
           <button onClick={() => { setBookmarksOpen(true); setSettingsOpen(false) }}><Bookmark size={15} /><span><b>Komik tersimpan</b><small>{bookmarks.length} judul tersimpan</small></span></button>
-          <button onClick={() => { setTimelineOpen(true); setSettingsOpen(false) }}><Heart size={15} /><span><b>Perjalanan hubungan</b><small>{milestones.length} momen tersimpan</small></span></button>
+          <button onClick={() => { setJournalTab('timeline'); setTimelineOpen(true); setSettingsOpen(false); if (session) getRelationship(session.userId).then(d => { setJournal(d); setMilestones(d.milestones || []); setNicknameInput(d.nickname || '') }).catch(() => {}) }}><Heart size={15} /><span><b>Buku kenangan & hubungan</b><small>{milestones.length} momen · {pins.length} pesan dipin</small></span></button>
           {installPrompt && <button onClick={installApp}><Download size={15} /><span><b>Pasang aplikasi Yuki</b><small>Tambahkan ke layar utama</small></span></button>}
           <button onClick={() => window.open('/privacy', '_blank', 'noopener')}><BookOpen size={15} /><span><b>Privasi pengguna</b><small>Data yang disimpan dan kontrolmu</small></span></button>
           <button onClick={() => setShowAccessCode(value => !value)}><KeyRound size={15} /><span><b>{showAccessCode ? 'Sembunyikan' : 'Tampilkan'} kunci ingatan</b><small>{showAccessCode ? (session?.accessCode || 'Belum tersedia') : 'YUKI-••••-••••'}</small></span></button>
@@ -1934,9 +2026,87 @@ export default function App() {
         <CodexArtifactModal artifact={selectedArtifact} onClose={() => setSelectedArtifact(null)} />
       )}
 
-      {timelineOpen && <div className="timeline-overlay" onClick={() => setTimelineOpen(false)}><section className="timeline-card" onClick={event => event.stopPropagation()}>
-        <header><div><small>Relationship archive</small><h2>Perjalanan kalian</h2></div><button onClick={() => setTimelineOpen(false)}><X size={17}/></button></header>
-        <div className="timeline-list">{milestones.map((item, index) => <article key={`${item.kind}-${index}`}><i/><div><strong>{item.title}</strong><span>{item.detail || `Terbuka pada bond ${Math.round(item.bondValue)}`}</span></div></article>)}</div>
+      {timelineOpen && <div className="timeline-overlay" onClick={() => setTimelineOpen(false)}><section className="timeline-card journal-modal" onClick={event => event.stopPropagation()}>
+        <header><div><small>Buku Kenangan · {bond} ({Math.round(bondValue)}/100)</small><h2>Hubungan Kalian</h2></div><button onClick={() => setTimelineOpen(false)}><X size={17}/></button></header>
+        <div className="memory-tabs journal-tabs">
+          <button type="button" className={journalTab === 'timeline' ? 'active' : ''} onClick={() => setJournalTab('timeline')}>Perjalanan</button>
+          <button type="button" className={journalTab === 'memory' ? 'active' : ''} onClick={() => setJournalTab('memory')}>Kenangan & Panggilan</button>
+          <button type="button" className={journalTab === 'pins' ? 'active' : ''} onClick={() => setJournalTab('pins')}>Dipin ({pins.length})</button>
+        </div>
+        {journalTab === 'timeline' && <>
+          {journal?.stats && <div className="journal-stats">
+            <div><b>{journal.stats.totalMessages}</b><span>Obrolan</span></div>
+            <div><b>{journal.stats.factsCount}</b><span>Fakta diingat</span></div>
+            <div><b>{pins.length}</b><span>Pesan dipin</span></div>
+          </div>}
+          <div className="timeline-list">{milestones.length === 0 ? <div className="agenda-empty">Mulai mengobrol dengan Yuki untuk membuka momen pertama kalian.</div> : milestones.map((item, index) => <article key={`${item.kind}-${index}`}><i/><div><strong>{item.title}</strong><span>{item.detail || `Terbuka pada bond ${Math.round(item.bondValue)}`}</span></div></article>)}</div>
+        </>}
+        {journalTab === 'memory' && <div className="journal-body">
+          <div className="journal-section">
+            <div className="journal-section-head">
+              <strong>Panggilan Khusus</strong>
+              {!journal?.nicknameUnlocked && <span className="journal-lock"><Lock size={12}/> Terbuka di bond 50+ (Luluh)</span>}
+            </div>
+            {journal?.nicknameUnlocked ? (
+              <form className="nickname-form" onSubmit={handleSaveNickname}>
+                <input
+                  type="text"
+                  maxLength={24}
+                  value={nicknameInput}
+                  onChange={e => setNicknameInput(e.target.value)}
+                  placeholder="Contoh: Kakak, Sayang, atau namamu…"
+                />
+                <button type="submit" disabled={nicknameSaving}>{nicknameSaving ? 'Menyimpan…' : 'Simpan'}</button>
+              </form>
+            ) : (
+              <p className="journal-hint">Terus ngobrol dengan Yuki sampai mencapai level Luluh (bond 50) untuk mengatur panggilan khusus.</p>
+            )}
+            {nicknameNotice && <small className="journal-notice">{nicknameNotice}</small>}
+          </div>
+
+          <div className="journal-section">
+            <div className="journal-section-head">
+              <strong>Follow-Up Proaktif (Web Push)</strong>
+              <label className="journal-switch">
+                <input
+                  type="checkbox"
+                  checked={Boolean(proactivePush?.enabled)}
+                  disabled={proactiveSaving}
+                  onChange={e => handleToggleProactivePush({ enabled: e.target.checked })}
+                />
+                <span>{proactivePush?.enabled ? 'Aktif' : 'Nonaktif'}</span>
+              </label>
+            </div>
+            <p className="journal-hint">
+              Yuki sesekali menanyakan kabar rencanamu yang belum selesai (maks 1× per 12 jam, menghormati jam tenang {String(proactivePush?.quietStart ?? 22).padStart(2, '0')}:00–{String(proactivePush?.quietEnd ?? 7).padStart(2, '0')}:00 WIB).
+            </p>
+          </div>
+
+          <div className="journal-section">
+            <strong>Momen Emosional Terbaru</strong>
+            <div className="journal-events">
+              {(!journal?.recentEvents || journal.recentEvents.length === 0) && <p className="journal-hint">Belum ada momen emosional yang tercatat.</p>}
+              {journal?.recentEvents?.map(ev => (
+                <div className="journal-event-item" key={ev.id}>
+                  {ev.mood && <span className="journal-mood-tag">{ev.mood}</span>}
+                  <p>{ev.summary}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>}
+        {journalTab === 'pins' && <div className="journal-pins">
+          {pins.length === 0 && <div className="agenda-empty">Belum ada pesan yang dipin. Klik ikon pin di balasan Yuki untuk menyimpannya di sini.</div>}
+          {pins.map(pin => (
+            <article className="journal-pin-item" key={pin.id}>
+              <div className="journal-pin-head">
+                <strong>{pin.role === 'user' ? 'Kamu' : 'Yuki'}</strong>
+                <button type="button" onClick={() => unpinChatMessage(pin.id).then(r => setPins(r.pins || [])).catch(() => {})} aria-label="Hapus pin"><X size={13}/></button>
+              </div>
+              <p>{pin.content}</p>
+            </article>
+          ))}
+        </div>}
       </section></div>}
 
       {bookmarksOpen && <div className="timeline-overlay" onClick={() => setBookmarksOpen(false)}><section className="timeline-card bookmarks-modal" onClick={event => event.stopPropagation()}>
@@ -1970,13 +2140,21 @@ export default function App() {
             ? 'Minta Yuki merakit web mini-game interaktif, riset web, eksekusi kode, atau mengelola tugas.'
             : 'Mulai dari hal sederhana. Jangan berharap dia langsung ramah.'}</p>
         </div>}
-        {messages.map((message, index) => <article className={`message ${message.role} ${message.mode === 'agent' ? 'agent-msg' : ''}`} key={`${index}-${message.content.slice(0, 12)}`}>
-          {message.role === 'assistant' && (
+        {messages.map((message, index) => {
+          const isPinned = pins.some(p => (message.messageId && p.messageId === message.messageId) || p.content === message.content)
+          return <article className={`message ${message.role} ${message.mode === 'agent' ? 'agent-msg' : ''} ${message.burstPart ? 'burst-part' : ''}`} key={`${index}-${message.content.slice(0, 12)}`}>
+          {message.role === 'assistant' && !message.burstPart && (
             <div className="message-avatar">
               {message.mode === 'agent' ? <Zap size={13} /> : 'Y'}
             </div>
           )}
           <div className="message-content">
+            {message.replyTo && (
+              <div className="quoted-reply">
+                <span>{message.replyTo.role === 'user' ? 'Membalas pesanmu' : 'Membalas Yuki'}</span>
+                <p>{message.replyTo.snippet}</p>
+              </div>
+            )}
             <MessageBody
               message={message}
               bookmarks={bookmarks}
@@ -1985,8 +2163,43 @@ export default function App() {
               onApproval={handleAgentApproval}
             />
           </div>
+          {message.role === 'user' && (
+            <div className="message-tools user-tools">
+              <button
+                type="button"
+                onClick={() => {
+                  setReplyTo({ messageId: message.messageId, role: 'user', snippet: message.content.slice(0, 160) })
+                  composerRef.current?.focus()
+                }}
+                aria-label="Balas pesan ini"
+                title="Balas / kutip pesan ini"
+              >
+                <Reply size={12} />
+              </button>
+            </div>
+          )}
           {message.role === 'assistant' && (
             <div className="message-tools">
+              <button
+                type="button"
+                onClick={() => {
+                  setReplyTo({ messageId: message.messageId, role: 'assistant', snippet: cleanMessageContent(message.content).slice(0, 160) })
+                  composerRef.current?.focus()
+                }}
+                aria-label="Balas pesan Yuki"
+                title="Balas / kutip balasan ini"
+              >
+                <Reply size={12} />
+              </button>
+              <button
+                type="button"
+                className={isPinned ? 'selected' : ''}
+                onClick={() => handleTogglePin(message)}
+                aria-label={isPinned ? 'Lepas pin pesan' : 'Pin pesan favorit'}
+                title={isPinned ? 'Tersimpan di pesan dipin' : 'Pin pesan favorit'}
+              >
+                <Pin size={12} />
+              </button>
               <button
                 onClick={async () => {
                   try {
@@ -2028,7 +2241,7 @@ export default function App() {
               </button>
             </div>
           )}
-        </article>)}
+        </article>})}
         {busy && (
           chatMode === 'agent' ? (
             <LiveAgentWorkingBubble steps={liveAgentSteps} onStop={activeAgentRequestId ? stopAgentRun : undefined} />
@@ -2124,6 +2337,17 @@ export default function App() {
         </button>
       )}
 
+      {replyTo && (
+        <div className="reply-preview-bar" role="status">
+          <Reply size={13} />
+          <div className="reply-preview-text">
+            <b>{replyTo.role === 'user' ? 'Membalas pesanmu' : 'Membalas Yuki'}</b>
+            <span>{replyTo.snippet}</span>
+          </div>
+          <button type="button" onClick={() => setReplyTo(null)} aria-label="Batalkan balasan"><X size={14} /></button>
+        </div>
+      )}
+
       <form className="composer" onSubmit={submit}>
         <span className="composer-index">
           {chatMode === 'agent' ? <Zap size={12} /> : <MessageSquare size={12} />}
@@ -2140,8 +2364,12 @@ export default function App() {
         <button disabled={busy || !input.trim()} aria-label="Kirim pesan">{busy ? <LoaderCircle className="spin" size={19}/> : <Send size={19}/>}</button>
       </form>
       <div className="activities" aria-label="Aktivitas bersama">
-
-        {(chatMode === 'agent' ? agentSuggestions : companionSuggestions).map(item => {
+        {(chatMode === 'agent'
+          ? agentSuggestions
+          : (dailyStatus?.starters?.length
+            ? dailyStatus.starters.map(s => ({ icon: Sparkles, label: s.label, text: s.text }))
+            : companionSuggestions)
+        ).map(item => {
           const Icon = item.icon
           return (
             <button
