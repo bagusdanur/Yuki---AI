@@ -158,7 +158,7 @@ export default function AvatarStage({ expression, blinking, talking }: AvatarSta
     'character',
     `mood-${current}`,
     talking ? 'is-talking' : '',
-    reacting ? 'is-react' : '',
+    reacting ? 'is-reacting is-react' : '',
     hematData ? 'is-static' : ''
   ].filter(Boolean).join(' ')
 

@@ -1075,8 +1075,39 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
       : emotion.react(userText)
     const gestureCue = !isIdle && (['malu', 'kesal', 'sedih', 'cemburu', 'cemas', 'kecewa', 'senang'].includes(kwMood) || _turns % 3 === 0)
 
-    // 2) RECALL SEMANTIK: ambil memori yang maknanya paling relevan dgn pesan user
-    const recall = await recallMemory(userId, userText)
+    // 2) RECALL SEMANTIK + KOMIK + BUKTI SITUS secara PARALEL (pangkas latensi pre-LLM)
+    const shouldFetchComic = !isIdle && mode !== 'agent' && wantsComic(userText)
+    const urlMatch = !isIdle && mode !== 'agent' ? String(userText || '').match(/https?:\/\/[^\s"'<>]+/i) : null
+    const shouldFetchEvidence = Boolean(urlMatch && /(analisa|analisis|cek|techstack|bedah|reverse|\bRE\b|kerentanan|celah)/i.test(userText))
+
+    const [recall, comicPack, evidencePack] = await Promise.all([
+      recallMemory(userId, userText),
+      shouldFetchComic
+        ? (async () => {
+            try {
+              const q = extractQuery(userText)
+              const genre = !adult ? detectRequestedGenre(userText) : null
+              const results = wantsLatestComics(userText)
+                ? await latestComics({ genre })
+                : q ? await searchComics(q, { adult }) : await latestComics()
+              const list = results.length || genre ? results : await latestComics()
+              const sliced = list.slice(0, 6)
+              return { results: sliced, context: buildComicContext(sliced, { query: q || genre?.slug || 'terbaru' }) }
+            } catch (err) {
+              console.error('[ryukomik] parallel fetch error:', err.message)
+              return { results: [], context: '' }
+            }
+          })()
+        : Promise.resolve({ results: [], context: '' }),
+      shouldFetchEvidence
+        ? fetchSiteEvidence(urlMatch[0])
+            .then((ev) => ev.ok
+              ? `BUKTI FETCH ${urlMatch[0]}: status ${ev.status}, header ${JSON.stringify(ev.headers)}, markers ${JSON.stringify(ev.markers)}${ev.truncated ? ' (HTML dipotong)' : ''}. Simpulkan techstack HANYA dari evidence ini; marker false = tidak terbukti, katakan tidak dapat dipastikan.`
+              : `BUKTI FETCH ${urlMatch[0]} GAGAL (${ev.reason}). Katakan kamu tidak dapat memverifikasi situs itu — jangan mengarang techstack atau hasil pemindaian.`
+            )
+            .catch((err) => { console.error('[web-evidence] error:', err.message); return '' })
+        : Promise.resolve('')
+    ])
     const memoryContext = buildMemoryContext(recall)
 
     // === MODE AGENT AI (Yuki Agent Skills ReAct Loop) ===
@@ -1154,20 +1185,9 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
       userText
     })
 
-    // 2b) Kalau user minta rekomendasi/cari komik -> ambil judul REAL dari Ryukomik
-    let comicContext = ''
-    let comicResults = []
-    if (!isIdle && wantsComic(userText)) {
-      const q = extractQuery(userText)
-      const genre = !adult ? detectRequestedGenre(userText) : null
-      const results = wantsLatestComics(userText)
-        ? await latestComics({ genre })
-        : q ? await searchComics(q, { adult }) : await latestComics()
-      // Genre kosong tidak boleh diam-diam diganti rekomendasi acak.
-      const list = results.length || genre ? results : await latestComics()
-      comicResults = list.slice(0, 6)
-      comicContext = buildComicContext(comicResults, { query: q || genre?.slug || 'terbaru' })
-    }
+    // 2b) Hasil komik & bukti situs sudah diambil paralel di atas
+    let comicContext = comicPack.context || ''
+    const comicResults = comicPack.results || []
 
 
     // Perbaiki bug loop balas diri sendiri: sisipkan pesan user tiruan agar API LLM menerima giliran user
@@ -1203,23 +1223,8 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
     // 3) balas + emosi yang DIPILIH SENDIRI oleh Yuki (lewat tag [emosi: X])
     //    Saat user meminta streaming: alirkan potongan teks realtime, lalu seluruh guard
     //    di bawah tetap berjalan dan hasil FINAL dikirim lewat event "done" (otoritatif).
-    // 2.6) Bukti fetch untuk analisis situs (hardening V4): bila user menyebut URL
-    //      dan meminta analisa, ambil evidence nyata dulu supaya klaim techstack
-    //      berbasis HTML+header, bukan tebakan.
-    let evidenceContext = ''
-    if (!isIdle) {
-      try {
-        const urlMatch = String(userText || '').match(/https?:\/\/[^\s"'<>]+/i)
-        if (urlMatch && /(analisa|analisis|cek|techstack|bedah|reverse|\bRE\b|kerentanan|celah)/i.test(userText)) {
-          const ev = await fetchSiteEvidence(urlMatch[0])
-          evidenceContext = ev.ok
-            ? `BUKTI FETCH ${urlMatch[0]}: status ${ev.status}, header ${JSON.stringify(ev.headers)}, markers ${JSON.stringify(ev.markers)}${ev.truncated ? ' (HTML dipotong)' : ''}. Simpulkan techstack HANYA dari evidence ini; marker false = tidak terbukti, katakan tidak dapat dipastikan.`
-            : `BUKTI FETCH ${urlMatch[0]} GAGAL (${ev.reason}). Katakan kamu tidak dapat memverifikasi situs itu — jangan mengarang techstack atau hasil pemindaian.`
-        }
-      } catch (error) {
-        console.error('[web-evidence] error:', error.message)
-      }
-    }
+    // 2.6) Bukti fetch untuk analisis situs (sudah diambil paralel di atas)
+    const evidenceContext = evidencePack || ''
 
     // Konteks embed (widget Ryukomik): frontend meneruskan ?ctx= halaman yang
     // sedang dibaca user. Dipakai sebagai DATA konteks untuk model, bukan
