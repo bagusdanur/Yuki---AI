@@ -1718,36 +1718,19 @@ export default function App() {
         ? await sendChatStream(session.userId, next, effectiveMode, (delta) => setStreamingText(prev => prev + delta), undefined, activeQuote)
         : await sendChat(session.userId, next, false, effectiveMode, requestId, activeQuote)
       if (!result.reply?.trim()) throw new Error('Yuki mengirim balasan kosong. Coba lagi.')
-      const baseMeta = {
-        role: 'assistant' as const,
+      setMessages([...next, {
+        role: 'assistant',
+        content: result.reply,
         gesture: result.gesture,
         markdown: result.markdown,
         workflowState: result.workflowState,
         truncated: result.truncated,
         comics: result.comics || [],
         messageId: result.messageId,
-        mode: EMBED_COMPANION_ONLY ? 'companion' as const : (result.mode || effectiveMode),
+        mode: EMBED_COMPANION_ONLY ? 'companion' : (result.mode || effectiveMode),
         steps: result.steps || [],
         artifacts: result.artifacts || []
-      }
-      if (effectiveMode === 'companion' && Array.isArray(result.bubbles) && result.bubbles.length > 1) {
-        const [firstBubble, ...restBubbles] = result.bubbles
-        setStreamingText('')
-        setMessages([...next, { ...baseMeta, content: firstBubble, comics: [], artifacts: [] }])
-        await new Promise(resolve => window.setTimeout(resolve, 340))
-        setMessages(current => [
-          ...current,
-          ...restBubbles.map((part, idx) => ({
-            ...baseMeta,
-            content: part,
-            burstPart: true,
-            comics: idx === restBubbles.length - 1 ? (result.comics || []) : [],
-            artifacts: idx === restBubbles.length - 1 ? (result.artifacts || []) : []
-          }))
-        ])
-      } else {
-        setMessages([...next, { ...baseMeta, content: result.reply }])
-      }
+      }])
       if (result.dailyStatus?.label) {
         setDailyStatus(prev => prev ? { ...prev, ...result.dailyStatus } : { id: result.dailyStatus!.id, label: result.dailyStatus!.label })
       }
@@ -2135,107 +2118,109 @@ export default function App() {
         {messages.map((message, index) => {
           const isPinned = pins.some(p => (message.messageId && p.messageId === message.messageId) || p.content === message.content)
           return <article
-            className={`message ${message.role} ${message.mode === 'agent' ? 'agent-msg' : ''} ${message.burstPart ? 'burst-part' : ''}`}
+            className={`message ${message.role} ${message.mode === 'agent' ? 'agent-msg' : ''}`}
             key={`${index}-${message.content.slice(0, 12)}`}
           >
-          {message.role === 'assistant' && !message.burstPart && (
+          {message.role === 'assistant' && (
             <div className="message-avatar">
               {message.mode === 'agent' ? <Zap size={13} /> : 'Y'}
             </div>
           )}
-          <div className="message-content">
-            {message.replyTo && (
-              <div className="quoted-reply">
-                <span>{message.replyTo.role === 'user' ? 'Membalas pesanmu' : 'Membalas Yuki'}</span>
-                <p>{message.replyTo.snippet}</p>
+          <div className="message-col">
+            <div className="message-content">
+              {message.replyTo && (
+                <div className="quoted-reply">
+                  <span>{message.replyTo.role === 'user' ? 'Membalas pesanmu' : 'Membalas Yuki'}</span>
+                  <p>{message.replyTo.snippet}</p>
+                </div>
+              )}
+              <MessageBody
+                message={message}
+                bookmarks={bookmarks}
+                onToggleBookmark={handleToggleBookmark}
+                onOpenArtifact={art => setSelectedArtifact(art)}
+                onApproval={handleAgentApproval}
+              />
+            </div>
+            {message.role === 'user' && (
+              <div className="message-tools user-tools">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReplyTo({ messageId: message.messageId, role: 'user', snippet: message.content.slice(0, 160) })
+                    composerRef.current?.focus()
+                  }}
+                  aria-label="Balas pesan ini"
+                  title="Balas / kutip pesan ini"
+                >
+                  <Reply size={12} />
+                </button>
               </div>
             )}
-            <MessageBody
-              message={message}
-              bookmarks={bookmarks}
-              onToggleBookmark={handleToggleBookmark}
-              onOpenArtifact={art => setSelectedArtifact(art)}
-              onApproval={handleAgentApproval}
-            />
+            {message.role === 'assistant' && (
+              <div className="message-tools">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReplyTo({ messageId: message.messageId, role: 'assistant', snippet: cleanMessageContent(message.content).slice(0, 160) })
+                    composerRef.current?.focus()
+                  }}
+                  aria-label="Balas pesan Yuki"
+                  title="Balas / kutip balasan ini"
+                >
+                  <Reply size={12} />
+                </button>
+                <button
+                  type="button"
+                  className={isPinned ? 'selected' : ''}
+                  onClick={() => handleTogglePin(message)}
+                  aria-label={isPinned ? 'Lepas pin pesan' : 'Pin pesan favorit'}
+                  title={isPinned ? 'Tersimpan di pesan dipin' : 'Pin pesan favorit'}
+                >
+                  <Pin size={12} />
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(message.content)
+                      setCopiedIndex(index)
+                      window.setTimeout(() => setCopiedIndex(current => (current === index ? null : current)), 1600)
+                    } catch { /* clipboard ditolak browser */ }
+                  }}
+                  aria-label="Salin balasan"
+                  title={copiedIndex === index ? 'Tersalin' : 'Salin teks balasan'}
+                >
+                  {copiedIndex === index ? <Check size={12}/> : <Copy size={12}/>}
+                </button>
+                <button
+                  className={speakingIndex === index ? 'selected' : ''}
+                  onClick={() => play(message.content, index)}
+                  aria-label={speakingIndex === index ? 'Hentikan suara' : 'Putar suara'}
+                  title={speakingIndex === index ? 'Hentikan suara' : 'Dengarkan balasan ini'}
+                  disabled={speakingIndex !== null && speakingIndex !== index}
+                >
+                  <Volume2 size={12}/>
+                </button>
+                {message.truncated && <button onClick={() => setInput(`Lanjutkan jawaban sebelumnya dari message ID ${message.messageId || index}, tanpa mengulang bagian yang sudah tampil.`)} aria-label="Lanjutkan jawaban yang terpotong" title="Lanjutkan jawaban"><RefreshCw size={12}/></button>}
+                <button
+                  className={feedback[index] === 1 ? 'selected' : ''}
+                  onClick={() => rateMessage(index, message, 1)}
+                  aria-label="Balasan cocok"
+                  title="Suka balasan ini"
+                >
+                  <ThumbsUp size={12}/>
+                </button>
+                <button
+                  className={feedback[index] === -1 ? 'selected negative' : ''}
+                  onClick={() => rateMessage(index, message, -1)}
+                  aria-label="Balasan kurang cocok"
+                  title="Kurang suka balasan ini"
+                >
+                  <ThumbsDown size={12}/>
+                </button>
+              </div>
+            )}
           </div>
-          {message.role === 'user' && (
-            <div className="message-tools user-tools">
-              <button
-                type="button"
-                onClick={() => {
-                  setReplyTo({ messageId: message.messageId, role: 'user', snippet: message.content.slice(0, 160) })
-                  composerRef.current?.focus()
-                }}
-                aria-label="Balas pesan ini"
-                title="Balas / kutip pesan ini"
-              >
-                <Reply size={12} />
-              </button>
-            </div>
-          )}
-          {message.role === 'assistant' && (
-            <div className="message-tools">
-              <button
-                type="button"
-                onClick={() => {
-                  setReplyTo({ messageId: message.messageId, role: 'assistant', snippet: cleanMessageContent(message.content).slice(0, 160) })
-                  composerRef.current?.focus()
-                }}
-                aria-label="Balas pesan Yuki"
-                title="Balas / kutip balasan ini"
-              >
-                <Reply size={12} />
-              </button>
-              <button
-                type="button"
-                className={isPinned ? 'selected' : ''}
-                onClick={() => handleTogglePin(message)}
-                aria-label={isPinned ? 'Lepas pin pesan' : 'Pin pesan favorit'}
-                title={isPinned ? 'Tersimpan di pesan dipin' : 'Pin pesan favorit'}
-              >
-                <Pin size={12} />
-              </button>
-              <button
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(message.content)
-                    setCopiedIndex(index)
-                    window.setTimeout(() => setCopiedIndex(current => (current === index ? null : current)), 1600)
-                  } catch { /* clipboard ditolak browser */ }
-                }}
-                aria-label="Salin balasan"
-                title={copiedIndex === index ? 'Tersalin' : 'Salin teks balasan'}
-              >
-                {copiedIndex === index ? <Check size={12}/> : <Copy size={12}/>}
-              </button>
-              <button
-                className={speakingIndex === index ? 'selected' : ''}
-                onClick={() => play(message.content, index)}
-                aria-label={speakingIndex === index ? 'Hentikan suara' : 'Putar suara'}
-                title={speakingIndex === index ? 'Hentikan suara' : 'Dengarkan balasan ini'}
-                disabled={speakingIndex !== null && speakingIndex !== index}
-              >
-                <Volume2 size={12}/>
-              </button>
-              {message.truncated && <button onClick={() => setInput(`Lanjutkan jawaban sebelumnya dari message ID ${message.messageId || index}, tanpa mengulang bagian yang sudah tampil.`)} aria-label="Lanjutkan jawaban yang terpotong" title="Lanjutkan jawaban"><RefreshCw size={12}/></button>}
-              <button
-                className={feedback[index] === 1 ? 'selected' : ''}
-                onClick={() => rateMessage(index, message, 1)}
-                aria-label="Balasan cocok"
-                title="Suka balasan ini"
-              >
-                <ThumbsUp size={12}/>
-              </button>
-              <button
-                className={feedback[index] === -1 ? 'selected negative' : ''}
-                onClick={() => rateMessage(index, message, -1)}
-                aria-label="Balasan kurang cocok"
-                title="Kurang suka balasan ini"
-              >
-                <ThumbsDown size={12}/>
-              </button>
-            </div>
-          )}
         </article>})}
         {busy && (
           chatMode === 'agent' ? (

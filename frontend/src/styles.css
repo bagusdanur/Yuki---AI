@@ -2433,11 +2433,30 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 }
 
 /* Perapian ringan di layar kecil tanpa menyembunyikan tombol apa pun */
+.message-col {
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.message.user .message-col { align-items: flex-end; }
+.message-col > .message-tools {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 5px;
+}
+.message-col > .message-tools button {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+}
+
 @media (max-width: 520px) {
   .header-actions { flex: 0 0 auto; gap: 4px; }
   .header-actions a, .header-actions button { width: 32px; height: 32px; }
-  .message.burst-part { padding-left: 0; margin-top: -4px; }
-  .message-tools { flex-wrap: wrap; gap: 4px; }
   .reply-preview-bar { margin: 0 10px 6px; padding: 6px 10px; }
   .journal-stats { gap: 6px; }
   .journal-stats > div { padding: 8px 6px; }
