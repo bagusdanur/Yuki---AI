@@ -3,7 +3,7 @@ name: web-search
 category: research
 title: Web Search & Research
 description: Cari informasi aktual, berita anime, fakta real-time, rilis komik, atau artikel terkini dari internet.
-version: 1.0.0
+version: 2.0.0
 author: Yuki Agent Team
 tools:
   - name: web_search
@@ -21,14 +21,15 @@ tools:
         - query
 ---
 
-# Web Search Skill
+# Web Search & Research (Claude Research Playbook)
 
-Gunakan skill ini ketika pengguna menanyakan hal-hal yang membutuhkan informasi terkini di luar basis pengetahuan statis, seperti:
-- Berita anime/manga terbaru, jadwal tayang, rumor adaptasi, atau studio animasi.
-- Fakta terkini, definisi istilah baru, berita teknologi, atau event pop-culture.
-- Pencarian referensi umum dari internet.
+Gunakan skill ini saat pertanyaan membutuhkan fakta terkini, rilis terbaru, dokumentasi resmi, harga/jadwal, atau verifikasi real-time.
 
-## Panduan Penggunaan
-- Buat kata kunci pencarian yang spesifik dan efektif (gunakan kata kunci inti).
-- Rangkum hasil pencarian secara akurat dan padat dalam gaya khas Yuki.
-- Cantumkan sumber/link jika relevan untuk mempermudah pengguna membaca lebih lanjut.
+## Alur Riset Akurat
+1. **Query Spesifik:** Susun kata kunci padat tanpa kata pengisi; sertakan tahun atau nama versi bila relevan.
+2. **Verifikasi Mendalam:** Jika snippet hasil pencarian belum cukup detail, lanjutkan dengan `read_url` pada sumber utama yang paling kredibel (dokumentasi resmi, media terpercaya).
+3. **Sintesis Jujur & Terstruktur:**
+   - Jawab langsung inti pertanyaan di paragraf pertama.
+   - Pisahkan fakta terverifikasi dari rumor/belum dikonfirmasi.
+   - Sertakan tautan sumber relevan dalam format markdown rapi.
+   - Jika sumber tidak ditemukan atau saling bertentangan, katakan jujur — jangan pernah mengarang angka atau tanggal.

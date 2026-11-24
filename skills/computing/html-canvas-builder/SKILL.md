@@ -1,7 +1,7 @@
 ---
 name: html-canvas-builder
 title: Interactive HTML/Canvas Artifact Builder & Workspace
-version: 1.2.0
+version: 2.0.0
 category: computing
 description: Merakit, membaca, memodifikasi, dan memperluas kode HTML5, Canvas, CSS, dan JavaScript interaktif mandiri (game, widget, chart visual, simulasi) secara persisten di Live Artifact Workspace.
 tools:
@@ -62,21 +62,24 @@ tools:
     description: Memperbaiki bagian kecil artifact aktif dengan old_text/new_text tanpa mengirim ulang seluruh HTML.
 ---
 
-# Interactive HTML/Canvas Artifact Builder & Workspace Skill
+# Interactive HTML/Canvas Artifact Builder (Claude Frontend Design Playbook)
 
-Skill ini digunakan untuk merakit kode antarmuka web interaktif, mini-game, visualisasi data, dan mengelola persistent artifact workspace seperti Hermes Agent.
+Gunakan skill ini untuk membangun dan mengiterasi aplikasi web interaktif, landing page, dashboard, widget, visualisasi data, maupun mini-game 2D mandiri di Live Artifact Workspace.
 
-## Panduan Penggunaan & Iterasi:
-1. **Membaca Sebelum Mengubah:** Saat user meminta penambahan level (misal Level 4-5) atau perbaikan bug, periksa kode artifact aktif terlebih dahulu (`get_active_artifact` atau konteks aktif yang diinjeksi).
-2. **Iterasi & Pertahankan Kode:** Jangan membuat game baru dari nol saat user meminta penambahan level/fitur. Pertahankan mekanika kontrol, identitas visual yang sudah dipilih user, sound effect, dan kelas player, lalu tambahkan level baru ke dalam array/logika game.
-3. **Penyimpanan:** Untuk bugfix gunakan `patch_interactive_artifact` agar hemat token. Gunakan `update_interactive_artifact` hanya jika struktur besar memang harus berubah, dan `build_interactive_artifact` hanya untuk game baru.
+## Alur Kerja & Iterasi Persisten
+1. **Baca Dulu Sebelum Modifikasi:** Untuk perbaikan bug atau penambahan fitur/level pada artifact yang sudah ada, selalu panggil `get_active_artifact` (jika belum ada di konteks) dan pertahankan seluruh struktur, kontrol, dan identitas visual yang sudah berjalan.
+2. **Pilih Tool Tepat:**
+   - Game/app baru -> `build_interactive_artifact`.
+   - Bugfix kecil/sedang -> `patch_interactive_artifact` (hemat token, patch atomik `old_text` -> `new_text`).
+   - Perubahan struktur besar -> `update_interactive_artifact` dengan HTML lengkap.
+3. **Kode Mandiri & Tuntas 100%:** Satu file HTML utuh sampai `</html>`, tanpa CDN eksternal yang tidak perlu, tanpa placeholder `// ...`, dan selalu responsif di layar HP maupun desktop.
 
-## Standar Desain Anti AI-Slop
-
-1. Mulai dari sistem visual yang tenang: token semantik `--background`, `--foreground`, `--surface`, `--muted`, `--border`, `--primary`, `--danger`, dan skala radius/spacing yang konsisten.
-2. Gunakan satu warna aksen utama. Warna lain hanya untuk makna seperti sukses, peringatan, dan error.
-3. Utamakan hierarchy, grid, whitespace, tipografi system-ui, focus state, kontras, dan responsivitas—bukan dekorasi efek.
-4. Hindari default neon cyan/ungu, glow, text-shadow, glassmorphism, gradient besar, blob dekoratif, kartu bersarang, semua sudut terlalu bulat, serta hero dengan copy generik.
-5. Jangan memakai emoji sebagai ikon tombol. Gunakan SVG sederhana atau teks yang jelas.
-6. Untuk game, pilih art direction yang spesifik (editorial, paper-cut, pixel, arcade CRT, hand-drawn, board-game, industrial) sesuai tema. Neon hanya boleh digunakan jika user meminta cyberpunk/neon secara eksplisit.
-7. Live Artifact harus mandiri. Jangan menambahkan CDN/library eksternal hanya untuk meniru shadcn; terapkan pola komponen dan tokennya langsung dalam HTML/CSS.
+## Standar Desain Produk (Claude Anti AI-Slop)
+1. **Sistem Visual Disengaja:** Definisikan CSS custom properties semantik (`--bg`, `--surface`, `--fg`, `--muted`, `--border`, `--accent`, `--danger`) dengan skala spacing & tipografi yang konsisten.
+2. **Satu Aksen Dominan:** Gunakan 1 warna aksen utama yang kuat; warna semantik lain hanya untuk status (sukses, peringatan, error).
+3. **Hirarki & Interaksi Nyata:** Fokus pada kontras terbaca, grid bersih, whitespace lega, hover/focus/active state yang responsif, dan ikon SVG minimalis (bukan emoji sebagai ikon tombol).
+4. **Larangan AI-Slop:** Hindari neon cyan/ungu default, glow berlebihan, glassmorphism murahan, gradient raksasa, blob dekoratif, atau kartu bersarang kecuali diminta eksplisit oleh tema user.
+5. **Standar Mini-Game & Canvas:**
+   - Gunakan `requestAnimationFrame` dengan delta-time yang stabil (clamp `dt` agar tidak melompat saat tab berpindah).
+   - Wajib dukung **Keyboard (WASD/Arrow/Space)** DAN **kontrol sentuh on-screen** untuk HP.
+   - Wajib memiliki state lengkap: start/HUD skor/pause/game-over/restart bersih tanpa memory leak listener.

@@ -3,7 +3,7 @@ name: delegate-task
 category: computing
 title: Yuki Subagent — Paralel Task Delegation
 description: Membagi task kompleks menjadi beberapa subtask yang dikerjakan secara paralel oleh subagent terisolasi, lalu hasilnya dirangkum.
-version: 1.1.0
+version: 2.0.0
 author: Yuki Agent Team
 tools:
   - name: delegate_tasks
@@ -23,26 +23,15 @@ tools:
         - tasks
 ---
 
-# Delegate Task Skill
+# Parallel Subagent Orchestration (Claude Multi-Agent Playbook)
 
-Gunakan skill ini ketika:
-- Task terlalu kompleks untuk diselesaikan dalam satu langkah
-- Perlu riset beberapa aspek yang bisa dikerjakan bersamaan
-- Perlu membandingkan beberapa sumber/sudut pandang sekaligus
+Gunakan skill ini saat tugas mencakup beberapa aspek independen (misal membandingkan beberapa teknologi/anime/sumber, riset multi-sudut, atau analisis paralel).
 
-## Contoh Penggunaan
+## Prinsip Dekomposisi
+1. **Subtask Independen & Tidak Tumpang Tindih:** Setiap item di `tasks` harus punya tujuan tunggal yang jelas dan format hasil yang terukur.
+2. **Konteks Bersama Ringkas:** Isi `shared_context` dengan batasan utama (tahun, bahasa, kriteria perbandingan) agar semua worker konsisten.
+3. **Sintesis Agent Utama:** Setelah semua worker selesai, gabungkan temuan dalam tabel/ringkasan terpadu, soroti perbedaan antar sumber, dan laporkan bila ada subtask yang gagal tanpa mengarang datanya.
 
-**User:** "Bandingkan 3 anime isekai terbaik musim ini dari berbagai sisi"
-
-**Delegation:**
-- Subtask 1: "Cari sinopsis dan rating Mushoku Tensei Season 3"
-- Subtask 2: "Cari sinopsis dan rating That Time I Got Reincarnated as a Slime"
-- Subtask 3: "Cari review penonton dan skor MAL untuk kedua anime tersebut"
-
-## Batasan
-- Maksimal 4 subtask; paling banyak 2 worker aktif bersamaan agar RAM/CPU VPS tetap aman
-- Setiap subagent timeout setelah 45 detik
-- Subagent tidak bisa spawn subagent lagi
-- Tool worker hanya read-only dan tetap memakai scope user parent
-- Hasil worker terstruktur dan diverifikasi agent utama
-- Worker gagal/timeout tidak merusak hasil worker lain
+## Batasan Sistem
+- Maksimal 4 subtask (2 worker aktif paralel, timeout 45 detik per worker).
+- Worker bersifat read-only dan tidak dapat spawn subagent lagi.
