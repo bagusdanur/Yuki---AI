@@ -2719,3 +2719,51 @@ html[data-theme="obsidian"] .composer button:not(:disabled),
 html[data-theme="obsidian"] .quiz-next-btn,
 html[data-theme="obsidian"] .nickname-form button { background: #3f3f46; color: #fff; }
 html[data-theme="obsidian"] .theme-swatch.active { border-color: #d4d4d8 !important; background: rgba(212,212,216,.14) !important; }
+
+/* ===== V5.4 Slash Commands Popup ===== */
+.slash-menu {
+  margin: 0 14px 8px;
+  padding: 6px;
+  border-radius: 12px;
+  background: #121521;
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, #242a3d);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.slash-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #dfe2f0;
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+  transition: background .12s ease;
+}
+.slash-item:hover,
+.slash-item.active {
+  background: color-mix(in srgb, var(--accent) 18%, #191d2d);
+}
+.slash-item code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  min-width: 64px;
+}
+.slash-item span {
+  color: #a5aac0;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -1338,6 +1338,30 @@ input:focus, select:focus, textarea:focus {
   grid-template-columns: repeat(auto-fill, minmax(min(330px, 100%), 1fr));
   gap: 12px;
 }
+.sk-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(270px, 100%), 1fr));
+  gap: 10px;
+}
+.sk-preset-card {
+  background: #0f131f;
+  border: 1px solid #22293d;
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sk-preset-title { font-size: 13.5px; color: var(--ink); }
+.sk-preset-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 6px;
+  border-top: 1px solid #1a2030;
+}
 .sk-card {
   background: #0f131f;
   border: 1px solid #22293d;

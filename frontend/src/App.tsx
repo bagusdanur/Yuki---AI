@@ -1353,6 +1353,7 @@ export default function App() {
   const [nicknameNotice, setNicknameNotice] = useState('')
   const [pins, setPins] = useState<PinnedMessage[]>([])
   const [replyTo, setReplyTo] = useState<ReplyQuote | null>(null)
+  const [slashIndex, setSlashIndex] = useState(0)
   const [dailyStatus, setDailyStatus] = useState<DailyStatus | null>(null)
   const [proactivePush, setProactivePush] = useState<ProactivePushSettings | null>(null)
   const [proactiveSaving, setProactiveSaving] = useState(false)
@@ -2384,21 +2385,77 @@ export default function App() {
         </div>
       )}
 
-      <form className="composer" onSubmit={submit}>
-        <span className="composer-index">
-          {chatMode === 'agent' ? <Zap size={12} /> : <MessageSquare size={12} />}
-        </span>
-        <textarea
-          rows={1}
-          ref={composerRef}
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onFocus={() => setAvatarCompact(true)}
-          placeholder={chatMode === 'agent' ? 'Tulis tugas untuk Yuki Agent…' : 'Tulis pesan untuk Yuki…'}
-          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit() } }}
-        />
-        <button disabled={busy || !input.trim()} aria-label="Kirim pesan">{busy ? <LoaderCircle className="spin" size={19}/> : <Send size={19}/>}</button>
-      </form>
+      {(() => {
+        const rawSlash = input.startsWith('/') && !input.includes(' ') ? input.slice(1).toLowerCase() : null
+        const slashItems = [
+          { cmd: '/komik', desc: 'Minta rekomendasi komik seru di Ryukomik', run: () => { setInput('Rekomendasikan komik seru di Ryukomik sesuai mood santai dong.'); composerRef.current?.focus() } },
+          { cmd: '/tebak', desc: 'Main mini-game Tebak Komik Ryukomik', run: () => { setInput(''); setComicQuizOpen(true) } },
+          { cmd: '/ttt', desc: 'Main mini-game Tic-Tac-Toe lawan Yuki', run: () => { setInput(''); setGameOpen(true) } },
+          { cmd: '/suit', desc: 'Main mini-game Batu-Kertas-Gunting', run: () => { setInput(''); setRpsOpen(true) } },
+          { cmd: '/kartu', desc: 'Buka Buku Kenangan, Streak & Kartu Kedekatan', run: () => { setInput(''); setJournalTab('timeline'); setTimelineOpen(true) } },
+          { cmd: '/cari', desc: 'Cari riwayat obrolan lama', run: () => { setInput(''); setHistoryOpen(true) } },
+          { cmd: '/tema', desc: 'Ganti tema warna chat (Violet / Sakura / Emerald / Obsidian)', run: () => {
+            const order: CompanionTheme[] = ['violet', 'sakura', 'emerald', 'obsidian']
+            setTheme(curr => order[(order.indexOf(curr) + 1) % order.length])
+            setInput('')
+          } },
+          { cmd: '/agent', desc: chatMode === 'agent' ? 'Matikan Mode Agent AI' : 'Aktifkan Mode Agent AI (coding & riset)', run: () => {
+            setChatMode(m => m === 'agent' ? 'companion' : 'agent')
+            setInput('')
+          } },
+          { cmd: '/ingat', desc: 'Pasang pengingat / jadwal baru', run: () => { setInput('Ingatkan aku '); composerRef.current?.focus() } }
+        ]
+        const matches = rawSlash !== null
+          ? slashItems.filter(it => it.cmd.slice(1).includes(rawSlash) || it.desc.toLowerCase().includes(rawSlash))
+          : []
+        const activeIdx = matches.length ? Math.min(slashIndex, matches.length - 1) : 0
+
+        return (
+          <>
+            {matches.length > 0 && (
+              <div className="slash-menu" role="listbox" aria-label="Perintah cepat">
+                {matches.map((item, idx) => (
+                  <button
+                    key={item.cmd}
+                    type="button"
+                    role="option"
+                    aria-selected={idx === activeIdx}
+                    className={`slash-item${idx === activeIdx ? ' active' : ''}`}
+                    onMouseDown={e => { e.preventDefault(); item.run(); setSlashIndex(0) }}
+                  >
+                    <code>{item.cmd}</code>
+                    <span>{item.desc}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <form className="composer" onSubmit={submit}>
+              <span className="composer-index">
+                {chatMode === 'agent' ? <Zap size={12} /> : <MessageSquare size={12} />}
+              </span>
+              <textarea
+                rows={1}
+                ref={composerRef}
+                value={input}
+                onChange={e => { setInput(e.target.value); setSlashIndex(0) }}
+                onFocus={() => setAvatarCompact(true)}
+                placeholder={chatMode === 'agent' ? 'Tulis tugas atau ketik / untuk perintah cepat…' : 'Tulis pesan atau ketik / untuk perintah cepat…'}
+                onKeyDown={e => {
+                  if (matches.length > 0) {
+                    if (e.key === 'ArrowDown') { e.preventDefault(); setSlashIndex((activeIdx + 1) % matches.length); return }
+                    if (e.key === 'ArrowUp') { e.preventDefault(); setSlashIndex((activeIdx - 1 + matches.length) % matches.length); return }
+                    if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab') { e.preventDefault(); matches[activeIdx].run(); setSlashIndex(0); return }
+                    if (e.key === 'Escape') { e.preventDefault(); setInput(''); return }
+                  }
+                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit() }
+                }}
+              />
+              <button disabled={busy || !input.trim()} aria-label="Kirim pesan">{busy ? <LoaderCircle className="spin" size={19}/> : <Send size={19}/>}</button>
+            </form>
+          </>
+        )
+      })()}
       <div className="activities" aria-label="Aktivitas bersama">
         {(chatMode === 'agent'
           ? agentSuggestions

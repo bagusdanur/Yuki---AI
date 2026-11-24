@@ -1133,6 +1133,176 @@ if ($('alert-refresh')) $('alert-refresh').onclick = loadOverview
    ═══════════════════════════════════════════════════════ */
 let skillsCache = []
 
+const SKILL_PRESETS = [
+  {
+    slug: 'seo-audit-pro',
+    title: 'SEO & Meta Audit Pro',
+    category: 'marketing',
+    desc: 'Audit SEO on-page, title/meta description, hirarki heading, dan saran copywriting siap pakai.',
+    markdown: `---
+name: seo-audit-pro
+title: SEO & Meta Audit Pro
+category: marketing
+description: Audit SEO on-page, struktur heading, meta tag, dan saran optimasi artikel/landing page.
+version: 1.0.0
+triggers: seo, meta tag, heading, copywriting, landing page, google search
+---
+
+# SEO & Meta Audit Pro
+
+Gunakan panduan ini saat pengguna meminta audit SEO atau optimasi halaman web:
+1. Periksa title tag (ideal 50-60 karakter), meta description (140-160 karakter), dan hirarki H1-H3.
+2. Evaluasi kejelasan value proposition, CTA, internal linking, dan keterbacaan di layar HP.
+3. Berikan rekomendasi konkret berupa teks siap pakai (sebelum -> sesudah) dan prioritas dampak.`
+  },
+  {
+    slug: 'sql-db-optimizer',
+    title: 'SQL & Database Optimizer',
+    category: 'computing',
+    desc: 'Optimasi query SQLite/PostgreSQL/MySQL, desain index, deteksi N+1, dan keamanan query.',
+    markdown: `---
+name: sql-db-optimizer
+title: SQL & Database Optimizer
+category: computing
+description: Optimasi query SQL, rekomendasi index, deteksi N+1, dan pencegahan SQL injection.
+version: 1.0.0
+triggers: sql, sqlite, postgres, mysql, query, index, database, schema
+---
+
+# SQL & Database Optimizer
+
+Gunakan panduan ini saat pengguna membahas query SQL, performa database, atau desain tabel:
+1. Identifikasi full table scan, missing composite index, query N+1, dan penggunaan SELECT * berlebihan.
+2. Pastikan semua input user memakai parameterized query (anti SQL injection).
+3. Berikan query hasil optimasi lengkap + perintah CREATE INDEX yang spesifik beserta alasan singkat.`
+  },
+  {
+    slug: 'security-code-reviewer',
+    title: 'Security Code Reviewer',
+    category: 'computing',
+    desc: 'Audit keamanan OWASP Top 10: XSS, SSRF, auth/cookie, validasi input, dan kebocoran secret.',
+    markdown: `---
+name: security-code-reviewer
+title: Security Code Reviewer
+category: computing
+description: Audit keamanan kode berdasarkan OWASP Top 10 (XSS, SSRF, CSRF, auth, secrets hygiene).
+version: 1.0.0
+triggers: security, keamanan, xss, ssrf, csrf, vuln, audit keamanan, owasp, pentest
+---
+
+# Security Code Reviewer
+
+Gunakan panduan ini saat pengguna meminta review keamanan kode atau endpoint:
+1. Kelompokkan temuan berdasarkan tingkat risiko: Critical, High, Medium, Low.
+2. Periksa XSS (innerHTML/dangerouslySetInnerHTML), SSRF, injection, auth bypass, IDOR, dan hardcoded secrets.
+3. Sertakan patch perbaikan konkret yang aman dan tidak merusak fungsionalitas utama.`
+  },
+  {
+    slug: 'copywriter-id-pro',
+    title: 'Copywriter Indonesia Pro',
+    category: 'content',
+    desc: 'Tulis pengumuman komunitas, caption medsos, microcopy UI, dan teks promosi yang natural.',
+    markdown: `---
+name: copywriter-id-pro
+title: Copywriter Indonesia Pro
+category: content
+description: Penulisan caption, pengumuman Discord/IG, microcopy UI, dan teks promosi bahasa Indonesia yang natural.
+version: 1.0.0
+triggers: caption, copywriting, pengumuman, promosi, iklan, microcopy, discord post
+---
+
+# Copywriter Indonesia Pro
+
+Gunakan panduan ini saat pengguna meminta dibuatkan teks promosi, caption, atau pengumuman:
+1. Pakai bahasa Indonesia yang mengalir, ringkas, dan tidak kaku seperti terjemahan mesin.
+2. Berikan 2-3 variasi tone (santai/komunitas, tegas/to-the-point, dan menarik perhatian/hook kuat).
+3. Sertakan CTA jelas tanpa clickbait murahan.`
+  },
+  {
+    slug: 'uiux-mobile-critic',
+    title: 'UI/UX Mobile Critic',
+    category: 'design',
+    desc: 'Evaluasi layout mobile-first, kontras, touch target >=44px, whitespace, dan alur pengguna.',
+    markdown: `---
+name: uiux-mobile-critic
+title: UI/UX Mobile Critic
+category: design
+description: Review UI/UX mobile-first, keterbacaan, kontras, touch target, dan perbaikan CSS konkret.
+version: 1.0.0
+triggers: ui, ux, redesign, tampilan, layout, responsif, mobile ui, css review
+---
+
+# UI/UX Mobile Critic
+
+Gunakan panduan ini saat pengguna meminta review desain atau perbaikan tampilan:
+1. Audit 5 hal utama: hirarki visual, keterbacaan di layar 360px-430px, ukuran tombol sentuh (>=40px), kontras warna, dan bebas scroll samping.
+2. Hindari saran abstrak — berikan perubahan CSS/layout yang spesifik dan langsung bisa diterapkan.`
+  },
+  {
+    slug: 'anime-manga-curator',
+    title: 'Anime & Manga Curator Pro',
+    category: 'media',
+    desc: 'Kurasi rekomendasi anime/manga/manhwa mendalam sesuai mood, pacing, dan karya favorit user.',
+    markdown: `---
+name: anime-manga-curator
+title: Anime & Manga Curator Pro
+category: media
+description: Kurasi rekomendasi anime, manga, dan manhwa mendalam sesuai selera, mood, dan tema cerita.
+version: 1.0.0
+triggers: rekomendasi anime, anime mirip, manhwa mirip, manga mirip, tontonan, bacaan
+---
+
+# Anime & Manga Curator Pro
+
+Gunakan panduan ini saat pengguna meminta rekomendasi anime/manga/manhwa yang mendalam:
+1. Analisis elemen yang disukai user (pacing, dinamika karakter, tone gelap/ringan, worldbuilding).
+2. Rekomendasikan 3-5 judul terkurasi dengan alasan spesifik kenapa cocok (tanpa spoiler berat).
+3. Jika terkait komik di Ryukomik, kombinasikan dengan pencarian katalog Ryukomik agar user bisa langsung baca.`
+  }
+]
+
+function renderSkillPresets() {
+  const box = $('sk-presets')
+  if (!box) return
+  const installed = new Set(skillsCache.map(s => s.name))
+  box.innerHTML = `<div class="sk-preset-grid">${SKILL_PRESETS.map(p => {
+    const isInstalled = installed.has(p.slug)
+    return `<article class="sk-preset-card">
+      <div class="between" style="gap:6px">
+        <b class="sk-preset-title">${esc(p.title)}</b>
+        <span class="rec-badge tone-dim">${esc(p.category)}</span>
+      </div>
+      <p class="sk-desc">${esc(p.desc)}</p>
+      <div class="sk-preset-foot">
+        <code class="rec-id">${esc(p.slug)}</code>
+        <button type="button" class="btn sm ${isInstalled ? 'ghost' : ''}" data-preset="${esc(p.slug)}" ${isInstalled ? 'disabled' : ''}>
+          ${isInstalled ? '✓ Terpasang' : 'Pasang 1-Klik'}
+        </button>
+      </div>
+    </article>`
+  }).join('')}</div>`
+
+  box.querySelectorAll('[data-preset]').forEach(btn => {
+    btn.onclick = async () => {
+      const preset = SKILL_PRESETS.find(x => x.slug === btn.dataset.preset)
+      if (!preset) return
+      btn.disabled = true
+      btn.textContent = 'Memasang…'
+      try {
+        await request('/api/admin/skills/install', {
+          method: 'POST', headers: headers(true),
+          body: JSON.stringify({ slug: preset.slug, markdown: preset.markdown })
+        })
+        await loadAdminSkills()
+      } catch (e) {
+        showError(e.message)
+        btn.disabled = false
+        btn.textContent = 'Pasang 1-Klik'
+      }
+    }
+  })
+}
+
 async function loadAdminSkills() {
   try {
     const data = await request('/api/admin/skills', { headers: headers() })
@@ -1142,6 +1312,7 @@ async function loadAdminSkills() {
     if ($('sk-enabled')) $('sk-enabled').textContent = fmt(s.enabled || 0)
     if ($('sk-custom')) $('sk-custom').textContent = fmt(s.custom || 0)
     if ($('sk-tools')) $('sk-tools').textContent = fmt(s.tools || 0)
+    renderSkillPresets()
     renderAdminSkills()
   } catch (e) { showError(e.message) }
 }
