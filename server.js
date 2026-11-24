@@ -888,8 +888,24 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
     ])
     const memoryContext = buildMemoryContext(recall)
 
+    // Smart Routing Mode Agent (v5.4):
+    // Jika Mode Agent nyala tetapi pesan jelas hanya obrolan singkat/roleplay tanpa butuh tool/riset/file/kode,
+    // alihkan ke jalur chat companion yang jauh lebih cepat & hemat kuota model Agent.
+    const isCasualChatterForAgent = (text) => {
+      const t = String(text || '').trim()
+      if (!t) return true
+      // Pesan sangat pendek cuma tanda baca / emoji / 1-2 kata sapaan
+      if (/^[\s.,!?~…\-_*()]+$/.test(t)) return true
+      if (t.length > 160) return false
+      // Jika ada URL, kode, atau kata kunci tugas/alat/riset -> wajib tetap lewat Mode Agent
+      if (/https?:\/\/|www\.|```|`|\/[a-z0-9_-]+\.[a-z]{2,4}/i.test(t)) return false
+      const taskPattern = /\b(cari|carikan|buka|cek|periksa|buat|buatkan|bikin|bikinkan|tulis|tuliskan|kode|code|script|html|css|js|ts|python|file|folder|workspace|analisis|analisa|riset|research|ringkas|rangkum|jadwal|ingatkan|reminder|agenda|hitung|kalkulasi|scrape|browse|browser|web|situs|website|link|url|berita|cuaca|kurs|harga|saham|crypto|komik|rekomendasi|download|skill|deploy|server|database|db|sql|data|tabel|grafik|chart|pdf|json|csv|api|translate|terjemah|terjemahkan|bandingkan|daftar|list|jelaskan|tutorial|langkah|cara\s+buat|debug|error|bug|fix|edit|hapus|simpan|ekspor|export|import|buat\s+laporan|ringkasan)\b/i
+      if (taskPattern.test(t)) return false
+      return true
+    }
+
     // === MODE AGENT AI (Yuki Agent Skills ReAct Loop) ===
-    if (mode === 'agent' && !isIdle) {
+    if (mode === 'agent' && !isIdle && !isCasualChatterForAgent(userText)) {
       const messagesToSend = sanitizedMessages.slice(-18)
       const currentUsername = getUsernameByUserId(userId) || req.body.username || 'User'
       const run = requestId ? createOrGetAgentRun({ requestId, userId, goal: userText }) : null

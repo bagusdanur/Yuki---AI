@@ -3,7 +3,7 @@
 
 import {
   getPinnedMessages, pinMessage, unpinMessage,
-  setUserNickname, getUserNickname, getRelationshipJournal,
+  setUserNickname, getUserNickname, getRelationshipJournal, getUserChatStreak,
   getProactivePushSettings, setProactivePushSettings,
   syncBondMilestones, getComicBookmarks, saveComicBookmark, deleteComicBookmark,
   saveResponseFeedback, dbHandle
@@ -12,11 +12,13 @@ import { getYukiDailyStatus } from '../lib/daily-life.js'
 import { getPushConfig } from '../lib/push.js'
 
 export function registerCompanionRoutes(app, { requireSession, rateLimit, getEmotion }) {
-  // Status & aktivitas harian Yuki ("Daily Life") + Quick Conversation Starters
+  // Status & aktivitas harian Yuki ("Daily Life") + Quick Conversation Starters + Streak
   app.get('/api/companion/status', requireSession, rateLimit({ max: 60 }), async (req, res) => {
     try {
       const emotion = await getEmotion(req.authUserId)
-      res.json(getYukiDailyStatus({ bondValue: emotion.bond }))
+      const bookmarks = getComicBookmarks(req.authUserId)
+      const streak = getUserChatStreak(req.authUserId)
+      res.json({ ...getYukiDailyStatus({ bondValue: emotion.bond, bookmarks }), streak })
     } catch (e) { console.error('[api 500]', e?.message || e); res.status(500).json({ error: 'Terjadi kesalahan internal pada server.' }) }
   })
 
@@ -98,6 +100,7 @@ export function registerCompanionRoutes(app, { requireSession, rateLimit, getEmo
         milestones: syncBondMilestones(req.authUserId, emotion.bond),
         nickname: journal.nickname,
         nicknameUnlocked: emotion.bond >= 50,
+        streak: journal.streak,
         stats: journal.stats,
         recentEvents: journal.recentEvents
       })

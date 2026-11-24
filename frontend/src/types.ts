@@ -58,12 +58,19 @@ export interface PinnedMessage {
   createdAt: string
 }
 
+export interface ChatStreak {
+  current: number
+  longest: number
+  activeToday: boolean
+}
+
 export interface DailyStatus {
   id: string
   slot?: string
   label: string
   detail?: string
   starters?: Array<{ id: string; label: string; text: string }>
+  streak?: ChatStreak
 }
 
 export interface RelationshipJournalResponse {
@@ -72,11 +79,14 @@ export interface RelationshipJournalResponse {
   milestones: Milestone[]
   nickname?: string
   nicknameUnlocked?: boolean
+  streak?: ChatStreak
   stats?: {
     totalMessages: number
     factsCount: number
     openLoopsCount: number
     pinnedCount: number
+    streakDays?: number
+    longestStreak?: number
   }
   recentEvents?: Array<{ id: number; summary: string; mood?: string | null; createdAt: string }>
 }

@@ -2088,6 +2088,7 @@ export default function App() {
       {timelineOpen && (
         <Suspense fallback={null}>
           <RelationshipJournalModal
+            username={session?.username || 'Kamu'}
             bond={bond}
             bondValue={bondValue}
             milestones={milestones}
