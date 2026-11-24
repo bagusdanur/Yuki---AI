@@ -1,8 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import rehypeSanitize from 'rehype-sanitize'
 import {
   Bell, Bookmark, BookOpen, Bot, Brain, Check, ChevronDown, ChevronUp, Clock3, Code2, Copy, Download,
   Gamepad2, Globe, Heart, History as HistoryIcon, KeyRound, ListTodo, LoaderCircle, Maximize2, MessageSquare,
@@ -19,10 +16,12 @@ import type {
   Message, Milestone, PinnedMessage, PlainMemory, ProactivePushSettings, RelationshipJournalResponse, ReplyQuote, Session, SkillInfo
 } from './types'
 import AvatarStage from './AvatarStage'
-import TicTacToe from './TicTacToe'
-import RockPaperScissors from './RockPaperScissors'
-import ComicQuiz from './ComicQuiz'
-import RelationshipJournalModal from './components/RelationshipJournalModal'
+
+const MarkdownView = lazy(() => import('./components/MarkdownView'))
+const TicTacToe = lazy(() => import('./TicTacToe'))
+const RockPaperScissors = lazy(() => import('./RockPaperScissors'))
+const ComicQuiz = lazy(() => import('./ComicQuiz'))
+const RelationshipJournalModal = lazy(() => import('./components/RelationshipJournalModal'))
 
 const SESSION_KEYS = {
   userId: 'yuki_uid_v3', username: 'yuki_username_v3', accessCode: 'yuki_access_code_v3',
@@ -339,20 +338,9 @@ function splitLegacyGesture(text: string) {
 
 function MarkdownMessage({ children }: { children: string }) {
   return (
-    <div className="markdown-body">
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeSanitize]}
-        components={{
-          a: ({ href, children: linkChildren, ...props }) => <a {...props} href={href} target="_blank" rel="noopener noreferrer">{linkChildren}</a>,
-          code: ({ className, children: codeChildren, ...props }) => {
-            const block = /language-/.test(className || '')
-            const value = String(codeChildren).replace(/\n$/, '')
-            return block ? <span className="code-block-wrap"><button type="button" onClick={() => navigator.clipboard.writeText(value)}>Salin</button><code {...props} className={className}>{value}</code></span> : <code {...props} className={className}>{codeChildren}</code>
-          }
-        }}
-      >{children}</ReactMarkdown>
-    </div>
+    <Suspense fallback={<div className="markdown-body">{children}</div>}>
+      <MarkdownView>{children}</MarkdownView>
+    </Suspense>
   )
 }
 
@@ -1589,10 +1577,25 @@ export default function App() {
     }).catch(() => {})
     getCompanionStatus().then(data => setDailyStatus(data)).catch(() => {})
     getPinnedMessages().then(data => setPins(data.pins || [])).catch(() => {})
-    getProactivePushSettings().then(data => setProactivePush(data)).catch(() => {})
-    getBookmarks().then(data => setBookmarks(data.bookmarks || [])).catch(() => {})
-    if (!EMBED_COMPANION_ONLY) getSkills().then(data => setSkills(data.skills || [])).catch(() => {})
   }, [session?.userId, session?.sessionToken])
+
+  // Lazy-fetch data sekunder hanya saat fitur/modal dibuka (pangkas request boot awal di HP)
+  useEffect(() => {
+    if (!session?.sessionToken || !timelineOpen || proactivePush) return
+    getProactivePushSettings().then(data => setProactivePush(data)).catch(() => {})
+  }, [session?.sessionToken, timelineOpen, proactivePush])
+
+  useEffect(() => {
+    if (!session?.sessionToken || !bookmarksOpen) return
+    getBookmarks().then(data => setBookmarks(data.bookmarks || [])).catch(() => {})
+  }, [session?.sessionToken, bookmarksOpen])
+
+  useEffect(() => {
+    if (!session?.sessionToken || EMBED_COMPANION_ONLY || skills.length > 0) return
+    if (chatMode === 'agent' || skillsModalOpen) {
+      getSkills().then(data => setSkills(data.skills || [])).catch(() => {})
+    }
+  }, [session?.sessionToken, chatMode, skillsModalOpen, skills.length])
 
   // Cek apakah akun ini punya akses beta mini game (server yang menentukan).
   useEffect(() => {
@@ -2065,25 +2068,27 @@ export default function App() {
       )}
 
       {timelineOpen && (
-        <RelationshipJournalModal
-          bond={bond}
-          bondValue={bondValue}
-          milestones={milestones}
-          journal={journal}
-          tab={journalTab}
-          onTabChange={setJournalTab}
-          nicknameInput={nicknameInput}
-          onNicknameChange={setNicknameInput}
-          nicknameSaving={nicknameSaving}
-          nicknameNotice={nicknameNotice}
-          onSaveNickname={handleSaveNickname}
-          proactivePush={proactivePush}
-          proactiveSaving={proactiveSaving}
-          onToggleProactivePush={handleToggleProactivePush}
-          pins={pins}
-          onUnpin={(pinId) => unpinChatMessage(pinId).then(r => setPins(r.pins || [])).catch(() => {})}
-          onClose={() => setTimelineOpen(false)}
-        />
+        <Suspense fallback={null}>
+          <RelationshipJournalModal
+            bond={bond}
+            bondValue={bondValue}
+            milestones={milestones}
+            journal={journal}
+            tab={journalTab}
+            onTabChange={setJournalTab}
+            nicknameInput={nicknameInput}
+            onNicknameChange={setNicknameInput}
+            nicknameSaving={nicknameSaving}
+            nicknameNotice={nicknameNotice}
+            onSaveNickname={handleSaveNickname}
+            proactivePush={proactivePush}
+            proactiveSaving={proactiveSaving}
+            onToggleProactivePush={handleToggleProactivePush}
+            pins={pins}
+            onUnpin={(pinId) => unpinChatMessage(pinId).then(r => setPins(r.pins || [])).catch(() => {})}
+            onClose={() => setTimelineOpen(false)}
+          />
+        </Suspense>
       )}
 
       {bookmarksOpen && <div className="timeline-overlay" onClick={() => setBookmarksOpen(false)}><section className="timeline-card bookmarks-modal" onClick={event => event.stopPropagation()}>
@@ -2312,24 +2317,30 @@ export default function App() {
       )}
 
       {gameOpen && session && (
-        <TicTacToe
-          onClose={() => setGameOpen(false)}
-          onMood={next => setMood(next)}
-        />
+        <Suspense fallback={null}>
+          <TicTacToe
+            onClose={() => setGameOpen(false)}
+            onMood={next => setMood(next)}
+          />
+        </Suspense>
       )}
 
       {rpsOpen && session && (
-        <RockPaperScissors
-          onClose={() => setRpsOpen(false)}
-          onMood={next => setMood(next)}
-        />
+        <Suspense fallback={null}>
+          <RockPaperScissors
+            onClose={() => setRpsOpen(false)}
+            onMood={next => setMood(next)}
+          />
+        </Suspense>
       )}
 
       {comicQuizOpen && session && (
-        <ComicQuiz
-          onClose={() => setComicQuizOpen(false)}
-          onMood={next => setMood(next)}
-        />
+        <Suspense fallback={null}>
+          <ComicQuiz
+            onClose={() => setComicQuizOpen(false)}
+            onMood={next => setMood(next)}
+          />
+        </Suspense>
       )}
 
       {showJump && (

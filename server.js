@@ -391,8 +391,20 @@ app.get('/embed.html', (req, res) => {
   res.redirect(`/?${q.toString()}`)
 })
 
-app.use(express.static('dist', { dotfiles: 'ignore' }))
-app.use(express.static('public', { dotfiles: 'ignore' }))
+// Cache-Control cerdas untuk aset statis: file ber-hash Vite (/assets/) immutable 1 tahun,
+// gambar ekspresi WebP 7 hari, sedangkan HTML & service worker selalu no-cache agar update cepat masuk.
+const setStaticCacheHeaders = (res, filePath) => {
+  const normalized = String(filePath || '').replace(/\\/g, '/')
+  if (normalized.includes('/assets/')) {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+  } else if (/\.(?:webp|png|svg|woff2)$/i.test(normalized)) {
+    res.setHeader('Cache-Control', 'public, max-age=604800')
+  } else if (/(?:index\.html|sw\.js|manifest\.webmanifest)$/i.test(normalized)) {
+    res.setHeader('Cache-Control', 'no-cache')
+  }
+}
+app.use(express.static('dist', { dotfiles: 'ignore', setHeaders: setStaticCacheHeaders }))
+app.use(express.static('public', { dotfiles: 'ignore', setHeaders: setStaticCacheHeaders }))
 
 
 // Rute Dokumentasi Yuki AI
