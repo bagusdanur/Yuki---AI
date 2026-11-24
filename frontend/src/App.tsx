@@ -718,7 +718,8 @@ function CodexArtifactModal({ artifact, onClose }: { artifact: ArtifactItem; onC
               <iframe
                 key={reloadKey}
                 title={artifact.title}
-                srcDoc={processedHtml}
+                src={artifact.id ? `/api/artifacts/render/${encodeURIComponent(artifact.id)}?r=${reloadKey}` : undefined}
+                srcDoc={artifact.id ? undefined : processedHtml}
                 sandbox="allow-scripts allow-modals allow-forms allow-pointer-lock"
                 className="artifact-preview-frame"
                 allow="autoplay"

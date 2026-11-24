@@ -365,12 +365,37 @@ app.use((req, res, next) => {
   next()
 })
 
-// Artifact HTML (hasil generate LLM) serve dengan CSP sandbox mutlak: script
-// di dalamnya jalan sebagai origin opak — tidak bisa baca localStorage /
-// cookie origin Yuki (audit Nov 2026: stored XSS -> takeover akun).
+// Artifact HTML (hasil generate LLM) serve dengan CSP sandbox mutlak:
+// allow-scripts TANPA allow-same-origin -> script game/app jalan 100% mulus di origin opak,
+// tetap tidak bisa membaca cookie, localStorage, atau DOM origin Yuki.
+const ARTIFACT_SANDBOX_CSP = "sandbox allow-scripts allow-modals allow-forms allow-pointer-lock; default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob: https:; font-src data: https:; media-src data: blob: https:"
 app.use('/artifacts', (_req, res, next) => {
-  res.set('Content-Security-Policy', "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data: https:; font-src data: https:; media-src data: https:")
+  res.set('Content-Security-Policy', ARTIFACT_SANDBOX_CSP)
   next()
+})
+
+// Render artifact langsung dari database/disk dengan CSP sandbox terisolasi
+// (menghindari pewarisan CSP script-src 'self' dari halaman utama pada iframe srcDoc)
+app.get('/api/artifacts/render/:id', (req, res) => {
+  const safeId = String(req.params.id || '').replace(/[^a-zA-Z0-9_-]+/g, '_').slice(0, 80)
+  if (!safeId) return res.status(400).send('Invalid artifact ID')
+  let html = ''
+  try {
+    const row = dbHandle.prepare('SELECT content FROM user_artifacts WHERE id = ? LIMIT 1').get(safeId)
+    if (row?.content) html = String(row.content)
+  } catch {}
+  if (!html) {
+    const filePath = path.resolve('public/artifacts', `${safeId}.html`)
+    if (filePath.startsWith(path.resolve('public/artifacts') + path.sep) && fs.existsSync(filePath)) {
+      try { html = fs.readFileSync(filePath, 'utf8') } catch {}
+    }
+  }
+  if (!html) return res.status(404).send('Artifact tidak ditemukan.')
+  res.set('Content-Type', 'text/html; charset=utf-8')
+  res.set('Content-Security-Policy', ARTIFACT_SANDBOX_CSP)
+  res.set('X-Content-Type-Options', 'nosniff')
+  res.set('Cache-Control', 'no-store')
+  return res.send(html)
 })
 
 // File sensitif tidak boleh tersaji sebagai statis walau nyasar ke dist/public
@@ -889,19 +914,17 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
     ])
     const memoryContext = buildMemoryContext(recall)
 
-    // Smart Routing Mode Agent (v5.4):
-    // Jika Mode Agent nyala tetapi pesan jelas hanya obrolan singkat/roleplay tanpa butuh tool/riset/file/kode,
-    // alihkan ke jalur chat companion yang jauh lebih cepat & hemat kuota model Agent.
+    // Smart Routing Mode Agent (v5.4.1):
+    // Hanya alihkan spam tanda baca tunggal (".", "...") atau RP/sapaan super singkat (<=35 char)
+    // yang 100% jelas bukan tugas/kelanjutan Agent. Jangan pernah mencegat permintaan game/hasil/artifact/lanjut!
     const isCasualChatterForAgent = (text) => {
       const t = String(text || '').trim()
       if (!t) return true
-      // Pesan sangat pendek cuma tanda baca / emoji / 1-2 kata sapaan
       if (/^[\s.,!?~…\-_*()]+$/.test(t)) return true
-      if (t.length > 160) return false
-      // Jika ada URL, kode, atau kata kunci tugas/alat/riset -> wajib tetap lewat Mode Agent
+      if (t.length > 35) return false
       if (/https?:\/\/|www\.|```|`|\/[a-z0-9_-]+\.[a-z]{2,4}/i.test(t)) return false
-      const taskPattern = /\b(cari|carikan|buka|cek|periksa|buat|buatkan|bikin|bikinkan|tulis|tuliskan|kode|code|script|html|css|js|ts|python|file|folder|workspace|analisis|analisa|riset|research|ringkas|rangkum|jadwal|ingatkan|reminder|agenda|hitung|kalkulasi|scrape|browse|browser|web|situs|website|link|url|berita|cuaca|kurs|harga|saham|crypto|komik|rekomendasi|download|skill|deploy|server|database|db|sql|data|tabel|grafik|chart|pdf|json|csv|api|translate|terjemah|terjemahkan|bandingkan|daftar|list|jelaskan|tutorial|langkah|cara\s+buat|debug|error|bug|fix|edit|hapus|simpan|ekspor|export|import|buat\s+laporan|ringkasan)\b/i
-      if (taskPattern.test(t)) return false
+      const keepInAgent = /\b(game|catur|chess|kirim|hasil|mana|lanjut|buka|lihat|tampil|mainkan|artifact|perbaiki|benerin|ubah|tambah|hapus|buat|bikin|cek|cari|kode|code|bug|fix|file|web|situs|api|jadwal|ingat|hitung|riset|analisis|tes|test|ulang|coba|komik)\b/i
+      if (keepInAgent.test(t)) return false
       return true
     }
 
