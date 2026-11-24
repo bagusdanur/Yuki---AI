@@ -36,7 +36,40 @@ const COOKIE_SESSION = 'cookie'
 
 // Versi pembaruan terakhir yang tercatat di /changelog. Dipakai untuk menandai
 // tombol log dengan titik "ada yang baru" sampai user membukanya.
-const CHANGELOG_VERSION = '5.1.0'
+const CHANGELOG_VERSION = '5.2.0'
+type CompanionTheme = 'violet' | 'sakura' | 'emerald' | 'obsidian'
+const COMPANION_THEMES: Array<{ id: CompanionTheme; label: string; dot: string }> = [
+  { id: 'violet', label: 'Violet', dot: '#aaa7ff' },
+  { id: 'sakura', label: 'Sakura', dot: '#f48fb1' },
+  { id: 'emerald', label: 'Emerald', dot: '#34d399' },
+  { id: 'obsidian', label: 'Obsidian', dot: '#d4d4d8' }
+]
+
+function parseMsgDate(value?: string): Date | null {
+  if (!value) return null
+  const raw = String(value).trim()
+  const iso = /T/.test(raw) ? raw : raw.replace(' ', 'T') + 'Z'
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? null : d
+}
+
+function wibDateKey(date: Date): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date)
+}
+
+function formatDayDivider(date: Date): string {
+  const key = wibDateKey(date)
+  const now = new Date()
+  if (key === wibDateKey(now)) return 'Hari ini'
+  if (key === wibDateKey(new Date(now.getTime() - 86_400_000))) return 'Kemarin'
+  return new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'short', year: 'numeric' }).format(date)
+}
+
+function formatMsgTime(value?: string): string {
+  const d = parseMsgDate(value)
+  if (!d) return ''
+  return new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false }).format(d)
+}
 const EMBED_COMPANION_ONLY = new URLSearchParams(window.location.search).get('embed') === '1'
   || /\/embed(?:\.html)?$/i.test(window.location.pathname)
 
@@ -1335,6 +1368,15 @@ export default function App() {
   const [dailyStatus, setDailyStatus] = useState<DailyStatus | null>(null)
   const [proactivePush, setProactivePush] = useState<ProactivePushSettings | null>(null)
   const [proactiveSaving, setProactiveSaving] = useState(false)
+  const [theme, setTheme] = useState<CompanionTheme>(() => {
+    const saved = localStorage.getItem('yuki_theme_v5') as CompanionTheme | null
+    return saved && ['violet', 'sakura', 'emerald', 'obsidian'].includes(saved) ? saved : 'violet'
+  })
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    try { localStorage.setItem('yuki_theme_v5', theme) } catch {}
+  }, [theme])
   const [bookmarks, setBookmarks] = useState<BookmarkedComic[]>([])
   const [bookmarksOpen, setBookmarksOpen] = useState(false)
   const [skills, setSkills] = useState<SkillInfo[]>([])
@@ -1693,7 +1735,7 @@ export default function App() {
     navigator.vibrate?.(10)
     const effectiveMode: ChatMode = EMBED_COMPANION_ONLY ? 'companion' : chatMode
     const activeQuote = replyTo
-    const next: Message[] = [...messages, { role: 'user', content, mode: effectiveMode, ...(activeQuote ? { replyTo: activeQuote } : {}) }]
+    const next: Message[] = [...messages, { role: 'user', content, mode: effectiveMode, createdAt: new Date().toISOString(), ...(activeQuote ? { replyTo: activeQuote } : {}) }]
     setMessages(next); setInput(''); setReplyTo(null); setBusy(true); setError(''); setConnection('thinking'); setLiveAgentSteps([]); setStreamingText('')
     requestTimers.current.forEach(window.clearTimeout)
     requestTimers.current = [
@@ -1730,6 +1772,7 @@ export default function App() {
         truncated: result.truncated,
         comics: result.comics || [],
         messageId: result.messageId,
+        createdAt: new Date().toISOString(),
         mode: EMBED_COMPANION_ONLY ? 'companion' : (result.mode || effectiveMode),
         steps: result.steps || [],
         artifacts: result.artifacts || []
@@ -1938,6 +1981,23 @@ export default function App() {
         </div>
         {settingsOpen && <div className="settings-card">
           <div className="settings-card-head"><strong>Menu Yuki</strong><button type="button" onClick={() => setSettingsOpen(false)} aria-label="Tutup menu"><X size={15}/></button></div>
+          <div className="theme-picker" role="group" aria-label="Tema warna chat">
+            <small>Tema warna</small>
+            <div className="theme-swatches">
+              {COMPANION_THEMES.map(item => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`theme-swatch${theme === item.id ? ' active' : ''}`}
+                  onClick={() => setTheme(item.id)}
+                  title={`Tema ${item.label}`}
+                >
+                  <i style={{ background: item.dot }} />
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
           <button onClick={() => { setHistoryOpen(true); setSettingsOpen(false) }}><HistoryIcon size={15} /><span><b>Riwayat obrolan</b><small>Semua percakapanmu dengan Yuki</small></span></button>
           <button onClick={() => { setMemoryOpen(true); setSettingsOpen(false) }}><Brain size={15} /><span><b>Ingatan Yuki tentangmu</b><small>Lihat, koreksi, atau hapus yang Yuki ingat</small></span></button>
           {!EMBED_COMPANION_ONLY && <button onClick={() => { setSkillsModalOpen(true); setSettingsOpen(false) }}><Wrench size={15} /><span><b>Katalog Skills Yuki Agent</b><small>{skills.length || 14} skills aktif</small></span></button>}
@@ -2059,9 +2119,16 @@ export default function App() {
         </div>}
         {messages.map((message, index) => {
           const isPinned = pins.some(p => (message.messageId && p.messageId === message.messageId) || p.content === message.content)
-          return <article
+          const msgDate = parseMsgDate(message.createdAt)
+          const prevDate = index > 0 ? parseMsgDate(messages[index - 1]?.createdAt) : null
+          const showDayDivider = Boolean(msgDate && (!prevDate || wibDateKey(msgDate) !== wibDateKey(prevDate)))
+          const msgTime = formatMsgTime(message.createdAt)
+          return <div className="message-row-wrap" key={`${index}-${message.content.slice(0, 12)}`}>
+          {showDayDivider && msgDate && (
+            <div className="day-divider" role="separator"><span>{formatDayDivider(msgDate)}</span></div>
+          )}
+          <article
             className={`message ${message.role} ${message.mode === 'agent' ? 'agent-msg' : ''}`}
-            key={`${index}-${message.content.slice(0, 12)}`}
           >
           {message.role === 'assistant' && (
             <div className="message-avatar">
@@ -2083,6 +2150,7 @@ export default function App() {
                 onOpenArtifact={art => setSelectedArtifact(art)}
                 onApproval={handleAgentApproval}
               />
+              {msgTime && <time className="message-time">{msgTime}</time>}
             </div>
             {message.role === 'user' && (
               <div className="message-tools user-tools">
@@ -2163,7 +2231,7 @@ export default function App() {
               </div>
             )}
           </div>
-        </article>})}
+        </article></div>})}
         {busy && (
           chatMode === 'agent' ? (
             <LiveAgentWorkingBubble steps={liveAgentSteps} onStop={activeAgentRequestId ? stopAgentRun : undefined} />

@@ -1,4 +1,4 @@
-const CACHE = 'yuki-shell-v5.1'
+const CACHE = 'yuki-shell-v5.2'
 // Avatar kini WebP (~40-55 KB/gambar). Dulu precache 6 PNG ≈ 4 MB sekali install —
 // boros kuota di HP. Versi cache dinaikkan supaya cache PNG lama dibuang.
 const CORE = [
