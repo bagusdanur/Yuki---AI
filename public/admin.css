@@ -1064,7 +1064,14 @@ input:focus, select:focus, textarea:focus {
   background: #0d1019;
   padding: 14px;
 }
-.chart-bar { border-radius: 4px 4px 0 0; border: 0; }
+.chart-bars {
+  align-items: stretch;
+  border: 0;
+  border-radius: 8px;
+  background-color: transparent;
+}
+.chart-col { height: 100%; }
+.chart-bar { border-radius: 5px 5px 0 0; border: 0; transition: height .25s ease, filter .15s ease; }
 .hbar-track { border-radius: 99px; border: 0; background: #1a2030; height: 9px; }
 .hbar-fill { border-radius: 99px; }
 .tbl th {
