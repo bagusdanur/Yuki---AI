@@ -3,10 +3,10 @@
 
 import {
   getPinnedMessages, pinMessage, unpinMessage,
-  setUserNickname, getRelationshipJournal,
+  setUserNickname, getUserNickname, getRelationshipJournal,
   getProactivePushSettings, setProactivePushSettings,
   syncBondMilestones, getComicBookmarks, saveComicBookmark, deleteComicBookmark,
-  saveResponseFeedback
+  saveResponseFeedback, dbHandle
 } from '../lib/memory.js'
 import { getYukiDailyStatus } from '../lib/daily-life.js'
 import { getPushConfig } from '../lib/push.js'
@@ -17,6 +17,49 @@ export function registerCompanionRoutes(app, { requireSession, rateLimit, getEmo
     try {
       const emotion = await getEmotion(req.authUserId)
       res.json(getYukiDailyStatus({ bondValue: emotion.bond }))
+    } catch (e) { console.error('[api 500]', e?.message || e); res.status(500).json({ error: 'Terjadi kesalahan internal pada server.' }) }
+  })
+
+  // Sapaan "Welcome Back" otomatis jika user kembali setelah >= 24 jam tidak chat
+  app.get('/api/companion/welcome-back', requireSession, rateLimit({ max: 30 }), async (req, res) => {
+    try {
+      const row = dbHandle.prepare('SELECT MAX(created_at) AS lastAt, COUNT(*) AS cnt FROM chat_history WHERE user_id = ?').get(String(req.authUserId))
+      if (!row?.lastAt || Number(row.cnt || 0) < 2) return res.json({ shouldGreet: false })
+      const lastIso = String(row.lastAt).includes('T') ? String(row.lastAt) : String(row.lastAt).replace(' ', 'T') + 'Z'
+      const diffHours = (Date.now() - Date.parse(lastIso)) / 3600_000
+      if (!Number.isFinite(diffHours) || diffHours < 24) return res.json({ shouldGreet: false })
+
+      const daysAway = Math.max(1, Math.floor(diffHours / 24))
+      const emotion = await getEmotion(req.authUserId)
+      const bond = Number(emotion.bond) || 0
+      const nick = bond >= 50 ? getUserNickname(req.authUserId) : ''
+      const call = nick ? `, ${nick}` : ''
+
+      let mood = 'tenang'
+      let message = ''
+      if (bond >= 78) {
+        mood = daysAway >= 3 ? 'malu' : 'sayang/manja'
+        message = daysAway >= 3
+          ? `*langsung menoleh ke layar begitu namamu muncul* Akhirnya balik juga${call}... ${daysAway} hari nggak ada kabar, aku sempat kepikiran tahu. Bukan berarti aku nungguin terus sih, tapi lain kali kabari dong.`
+          : `*tersenyum tipis lalu cepat-cepat memalingkan muka* Baru nongol lagi${call}? Yaudah sini cerita, kemarin sibuk apa aja?`
+      } else if (bond >= 50) {
+        mood = daysAway >= 3 ? 'kesal' : 'malu'
+        message = daysAway >= 3
+          ? `Baru kelihatan lagi setelah ${daysAway} hari${call}? Kirain udah lupa sama aku... yaudah, kamu baik-baik aja kan?`
+          : `Oh, akhirnya balik juga${call}. Kemarin ke mana aja? Bukan kepo sih, cuma nanya aja.`
+      } else if (bond >= 24) {
+        mood = 'tenang'
+        message = daysAway >= 3
+          ? `Lama nggak kelihatan (${daysAway} hari). Sibuk banget ya sampai baru mampir lagi?`
+          : `Eh, balik lagi. Ada cerita menarik apa sejak kemarin?`
+      } else {
+        mood = 'tenang'
+        message = daysAway >= 3
+          ? `Oh, kamu lagi. Kirain kemarin cuma mampir sekali terus hilang ${daysAway} hari.`
+          : `Balik lagi? Yaudah, mau bahas apa hari ini?`
+      }
+
+      res.json({ shouldGreet: true, daysAway, mood, message })
     } catch (e) { console.error('[api 500]', e?.message || e); res.status(500).json({ error: 'Terjadi kesalahan internal pada server.' }) }
   })
 

@@ -174,7 +174,26 @@ async function loadOverview() {
     $('ov-success').textContent = `${pt.successRate ? pct(pt.successRate) : '—'} sukses`
     $('ov-latency').textContent = `${fmt(rt.averageLatency)} ms`
     $('ov-latency-sub').textContent = `${fmt(pt.calls)} panggilan LLM`
-$('ov-bond').textContent = Number(db.averageBond || 0).toFixed(2)
+    $('ov-bond').textContent = Number(db.averageBond || 0).toFixed(2)
+
+    // KPI Companion v5.3 & Memori lengkap
+    const setV5 = (id, val) => { const el = $(id); if (el) el.textContent = val }
+    setV5('ov-mem-total', compact(db.memoryTotal || 0))
+    setV5('ov-mem-sub', `${compact(db.facts)} fakta · ${compact(db.structuredMemory)} terstruktur`)
+    setV5('ov-feedback', db.feedbackTotal ? `${Number(db.feedbackRatio || 0).toFixed(1)}%` : '—')
+    setV5('ov-feedback-sub', `${fmt(db.feedbackPositive)} suka · ${fmt(db.feedbackNegative)} kurang`)
+    setV5('ov-feedback-pill', db.feedbackTotal ? `${fmt(db.feedbackTotal)} penilaian` : 'belum ada')
+    setV5('ov-pins', fmt(db.pinnedMessages || 0))
+    setV5('ov-bookmarks-sub', `${fmt(db.bookmarks || 0)} bookmark komik`)
+    setV5('ov-nicknames', fmt(db.customNicknames || 0))
+    setV5('ov-openloops', fmt(db.openLoopsActive || 0))
+    setV5('ov-openloops-sub', `${fmt(db.openLoopsResolved || 0)} selesai`)
+    setV5('ov-proactive', fmt(db.proactivePushUsers || 0))
+    setV5('ov-push-sub', `${fmt(db.pushSubscriptions || 0)} perangkat push`)
+    setV5('ov-tasks', fmt(db.scheduledTasks || 0))
+    setV5('ov-tasks-sub', `${fmt(db.scheduledDone || 0)} terkirim`)
+    setV5('ov-summaries', fmt(db.summaries || 0))
+    setV5('ov-artifacts-sub', `${fmt(db.artifacts || 0)} artifact`)
 
     // Provider token & estimasi biaya DeepSeek
     const inTok = pt.inputTokens || 0
@@ -506,7 +525,7 @@ async function loadSummary() {
       : 'belum ada yang main')
     const daftar = $('sh-games-list')
     if (daftar) {
-      const nama = { 'tic-tac-toe': 'Tic-Tac-Toe', 'batu-kertas-gunting': 'Batu-Kertas-Gunting' }
+      const nama = { 'tic-tac-toe': 'Tic-Tac-Toe', 'batu-kertas-gunting': 'Batu-Kertas-Gunting', 'tebak-komik': 'Tebak Komik Ryukomik' }
       const baris = g.byGame || []
       if (!baris.length) {
         daftar.innerHTML = '<div class="sg-card sg-empty">Belum ada yang main.</div>'

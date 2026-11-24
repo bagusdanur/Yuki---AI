@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import {
   addBookmark, cancelAgentRun, createDynamicSkill, decideAgentApproval, deleteAccount, deleteMemory, deletePlainMemory, dynamicSkillAction, getActiveAgentRun, getAgenda, getBookmarks, getChatHistoryPage, getCompanionStatus, getDynamicSkills, getMemories, getPinnedMessages, getProactivePushSettings, getPushConfig, getRelationship,
-  getAgentProgress, getPendingAgentWorkflows, getScheduledReminders, getSkills, pinChatMessage, refreshSession, register, removeBookmark, resetSession, restore, savePushSubscription, searchChatHistory, sendChat, sendChatStream, sendFeedback, setMemoryAutoCapture, speak, unpinChatMessage, updateAgendaTask, updateMemory, updateNickname, updateProactivePushSettings
+  getAgentProgress, getPendingAgentWorkflows, getScheduledReminders, getSkills, getWelcomeBack, pinChatMessage, refreshSession, register, removeBookmark, resetSession, restore, savePushSubscription, searchChatHistory, sendChat, sendChatStream, sendFeedback, setMemoryAutoCapture, speak, unpinChatMessage, updateAgendaTask, updateMemory, updateNickname, updateProactivePushSettings
 } from './api'
 import type {
   AgendaResponse, AgentMemory, AgentStep, ArtifactItem, BookmarkedComic, ChatMode, ComicRecommendation, DailyStatus, DynamicSkill,
@@ -35,7 +35,7 @@ const COOKIE_SESSION = 'cookie'
 
 // Versi pembaruan terakhir yang tercatat di /changelog. Dipakai untuk menandai
 // tombol log dengan titik "ada yang baru" sampai user membukanya.
-const CHANGELOG_VERSION = '5.2.0'
+const CHANGELOG_VERSION = '5.3.0'
 type CompanionTheme = 'violet' | 'sakura' | 'emerald' | 'obsidian'
 const COMPANION_THEMES: Array<{ id: CompanionTheme; label: string; dot: string }> = [
   { id: 'violet', label: 'Violet', dot: '#aaa7ff' },
@@ -1577,6 +1577,20 @@ export default function App() {
     }).catch(() => {})
     getCompanionStatus().then(data => setDailyStatus(data)).catch(() => {})
     getPinnedMessages().then(data => setPins(data.pins || [])).catch(() => {})
+    // Sapaan Welcome Back otomatis (maksimal sekali per hari WIB saat user kembali setelah >= 24 jam)
+    const wbKey = `yuki_wb_day_${session.userId}`
+    const todayKey = wibDateKey(new Date())
+    if (localStorage.getItem(wbKey) !== todayKey) {
+      getWelcomeBack().then(wb => {
+        if (!wb?.shouldGreet || !wb.message) return
+        localStorage.setItem(wbKey, todayKey)
+        if (wb.mood) setMood(wb.mood)
+        setMessages(current => {
+          if (current.some(m => m.content === wb.message)) return current
+          return [...current, { role: 'assistant', content: wb.message!, mode: 'companion', createdAt: new Date().toISOString() }]
+        })
+      }).catch(() => {})
+    }
   }, [session?.userId, session?.sessionToken])
 
   // Lazy-fetch data sekunder hanya saat fitur/modal dibuka (pangkas request boot awal di HP)

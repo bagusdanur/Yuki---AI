@@ -306,6 +306,10 @@ export async function getCompanionStatus() {
   return request<DailyStatus>('/api/companion/status', { method: 'GET' }, 10_000, 0)
 }
 
+export async function getWelcomeBack() {
+  return request<{ shouldGreet: boolean; daysAway?: number; mood?: string; message?: string }>('/api/companion/welcome-back', { method: 'GET' }, 10_000, 0)
+}
+
 export async function getPinnedMessages() {
   return request<{ pins: PinnedMessage[] }>('/api/chat/pins', { method: 'GET' }, 10_000, 0)
 }
