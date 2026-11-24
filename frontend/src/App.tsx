@@ -2019,9 +2019,11 @@ export default function App() {
 
       {/* Embed dikunci sebagai companion-only; switcher hanya tersedia di aplikasi penuh. */}
       {!EMBED_COMPANION_ONLY && <div className="mode-switcher-bar">
-        <div className="mode-switcher-pill" role="tablist">
+        <div className="mode-switcher-pill" role="tablist" aria-label="Pilih mode Yuki">
           <button
             type="button"
+            role="tab"
+            aria-selected={chatMode === 'companion'}
             className={`mode-btn ${chatMode === 'companion' ? 'active' : ''}`}
             onClick={() => setChatMode('companion')}
             aria-label="Aktifkan mode Teman Ngobrol"
@@ -2031,6 +2033,8 @@ export default function App() {
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={chatMode === 'agent'}
             className={`mode-btn agent-btn ${chatMode === 'agent' ? 'active' : ''}`}
             onClick={() => setChatMode('agent')}
             aria-label="Aktifkan mode Yuki Agent"

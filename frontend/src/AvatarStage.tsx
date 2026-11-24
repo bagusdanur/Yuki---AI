@@ -137,6 +137,7 @@ export default function AvatarStage({ expression, blinking, talking }: AvatarSta
       alt=""
       draggable={false}
       decoding="async"
+      fetchPriority={front ? 'high' : 'low'}
       onError={(event) => {
         const target = event.currentTarget
         // Jangan biarkan gambar kosong: jatuh ke ekspresi netral sekali saja.

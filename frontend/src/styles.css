@@ -47,7 +47,7 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 .monogram { width: 36px; height: 36px; border-radius: 6px; }
 .identity { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
 .identity strong { font-size: 15px; letter-spacing: -.02em; }
-.identity span { display: flex; align-items: center; gap: 7px; color: #858995; font: 700 9px/1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .11em; text-transform: uppercase; }
+.identity span { display: flex; align-items: center; gap: 7px; color: #a3a8b8; font: 700 9px/1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .11em; text-transform: uppercase; }
 .identity i, .online-dot { width: 6px; height: 6px; border-radius: 50%; background: #5fda96; box-shadow: 0 0 0 3px rgba(95,218,150,.11); }
 .identity .connection-dot.slow, .identity .connection-dot.retrying { background: #e0b85c; box-shadow: 0 0 0 3px rgba(224,184,92,.11); }
 .identity .connection-dot.offline, .identity .connection-dot.error { background: #dc7777; box-shadow: 0 0 0 3px rgba(220,119,119,.11); }
@@ -84,7 +84,7 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
   padding: 5px 12px;
   border: 0;
   border-radius: 16px;
-  color: #828795;
+  color: #a6acc0;
   background: transparent;
   font: 700 11px/1.2 ui-sans-serif, system-ui, sans-serif;
   transition: all .18s ease;
