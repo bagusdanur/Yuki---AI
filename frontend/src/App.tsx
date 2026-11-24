@@ -8,7 +8,7 @@ import {
   Grid3x3, HandFist, ChevronRight, ShieldAlert,
 } from 'lucide-react'
 import {
-  addBookmark, cancelAgentRun, createDynamicSkill, decideAgentApproval, deleteAccount, deleteMemory, deletePlainMemory, dynamicSkillAction, getActiveAgentRun, getAgenda, getBookmarks, getChatHistoryPage, getCompanionStatus, getDynamicSkills, getMemories, getPinnedMessages, getProactivePushSettings, getPushConfig, getRelationship,
+  addBookmark, cancelAgentRun, createDynamicSkill, decideAgentApproval, deleteAccount, deleteMemory, deletePlainMemory, dynamicSkillAction, getActiveAgentRun, getAgenda, getBookmarks, getChatHistoryPage, getCompanionStatus, getDynamicSkills, getGameStatus, getMemories, getPinnedMessages, getProactivePushSettings, getPushConfig, getRelationship,
   getAgentProgress, getPendingAgentWorkflows, getScheduledReminders, getSkills, getWelcomeBack, pinChatMessage, refreshSession, register, removeBookmark, resetSession, restore, savePushSubscription, searchChatHistory, sendChat, sendChatStream, sendFeedback, setMemoryAutoCapture, speak, unpinChatMessage, updateAgendaTask, updateMemory, updateNickname, updateProactivePushSettings
 } from './api'
 import type {
@@ -1614,14 +1614,15 @@ export default function App() {
 
   // Cek apakah akun ini punya akses beta mini game (server yang menentukan).
   useEffect(() => {
-    // Game tersedia di app penuh MAUPUN embed (3.5): embed tetap chat biasa,
-    // hanya tanpa tab Agent — bukan tanpa mini game.
-    if (!session?.sessionToken) { setGameEligible(false); return }
-    fetch('/api/game/status', { credentials: 'same-origin' })
-      .then(res => (res.ok ? res.json() : { eligible: false }))
-      .then(data => setGameEligible(Boolean(data?.eligible)))
-      .catch(() => setGameEligible(false))
-  }, [session?.userId, session?.sessionToken])
+    // Mini-game aktif untuk semua user yang sudah login (cookie httpOnly tidak selalu mengisi sessionToken).
+    if (!session?.userId) { setGameEligible(false); return }
+    let cancelled = false
+    setGameEligible(true)
+    getGameStatus()
+      .then(data => { if (!cancelled) setGameEligible(data?.eligible !== false) })
+      .catch(() => { /* biarkan tombol tetap tampil jika hanya gangguan jaringan sementara */ })
+    return () => { cancelled = true }
+  }, [session?.userId])
 
   const hitungPosisiGame = () => {
     const r = gameBtnRef.current?.getBoundingClientRect()

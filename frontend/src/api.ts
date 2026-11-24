@@ -1,5 +1,33 @@
 import type { AgendaResponse, AgentMemory, AgentProgressResponse, BookmarkedComic, ChatMode, ChatResponse, ComicRecommendation, DailyStatus, DynamicSkill, Message, Milestone, PinnedMessage, PlainMemory, ProactivePushSettings, RelationshipJournalResponse, ReplyQuote, SkillInfo } from './types'
 
+async function handleUnauthorized() {
+  // Cookie sesi httpOnly mati (kedaluwarsa/dirotasi/reset). Coba pulihkan
+  // diam-diam pakai kunci ingatan, lalu muat ulang sekali.
+  try {
+    const accessCode = localStorage.getItem('yuki_access_code_v3') || ''
+    if (accessCode && !sessionStorage.getItem('yuki_401_restored')) {
+      sessionStorage.setItem('yuki_401_restored', '1')
+      const restored = await fetch('/api/login-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ accessCode })
+      })
+      if (restored.ok) {
+        window.location.reload()
+      } else {
+        for (const key of ['yuki_uid_v3', 'yuki_username_v3', 'yuki_access_code_v3', 'yuki_session_token_v3', 'yuki_mode_v3']) {
+          localStorage.removeItem(key)
+        }
+        window.location.reload()
+      }
+    } else if (!sessionStorage.getItem('yuki_401_reloaded')) {
+      sessionStorage.setItem('yuki_401_reloaded', '1')
+      window.location.reload()
+    }
+  } catch {}
+}
+
 async function parse<T>(response: Response): Promise<T> {
   const rawText = await response.text()
   let data: any
@@ -11,32 +39,7 @@ async function parse<T>(response: Response): Promise<T> {
         throw new Error('Akses dari jaringan ini diblokir sementara.')
       }
       if (response.status === 401) {
-        // Cookie sesi httpOnly mati (kedaluwarsa/dirotasi/reset). Coba pulihkan
-        // diam-diam pakai kunci ingatan, lalu muat ulang sekali.
-        try {
-          const accessCode = localStorage.getItem('yuki_access_code_v3') || ''
-          if (accessCode && !sessionStorage.getItem('yuki_401_restored')) {
-            sessionStorage.setItem('yuki_401_restored', '1')
-            const restored = await fetch('/api/login-code', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'same-origin',
-              body: JSON.stringify({ accessCode })
-            })
-            if (restored.ok) {
-              window.location.reload()
-            } else {
-              // Kunci ingatan sudah tidak cocok -> kembali ke gerbang login.
-              for (const key of ['yuki_uid_v3', 'yuki_username_v3', 'yuki_access_code_v3', 'yuki_session_token_v3', 'yuki_mode_v3']) {
-                localStorage.removeItem(key)
-              }
-              window.location.reload()
-            }
-          } else if (!sessionStorage.getItem('yuki_401_reloaded')) {
-            sessionStorage.setItem('yuki_401_reloaded', '1')
-            window.location.reload()
-          }
-        } catch {}
+        await handleUnauthorized()
         throw new Error('Sesi tidak valid atau telah berakhir. Muat ulang halaman untuk masuk kembali.')
       }
       if (response.status === 502 || response.status === 504) {
@@ -48,6 +51,9 @@ async function parse<T>(response: Response): Promise<T> {
   }
 
   if (!response.ok) {
+    if (response.status === 401) {
+      await handleUnauthorized()
+    }
     throw new Error(data?.error || `Request gagal (${response.status})`)
   }
   return data as T
@@ -75,6 +81,10 @@ async function request<T>(url: string, init: RequestInit, timeoutMs = 30_000, re
   } finally {
     window.clearTimeout(timeout)
   }
+}
+
+export async function getGameStatus() {
+  return request<{ eligible: boolean }>('/api/game/status', { method: 'GET' }, 12_000, 2)
 }
 
 export async function register(username: string) {
