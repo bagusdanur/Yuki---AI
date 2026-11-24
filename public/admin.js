@@ -102,9 +102,12 @@ function renderBars(containerId, items, valueKey = 'value', labelKey = 'label', 
   const values = items.map(i => Number(i[valueKey]) || 0)
   const max = Math.max(1, ...values)
   const showVal = box.dataset.showval === '1'
+  // Pakai tinggi piksel eksplisit agar 100% proporsional di semua browser (tanpa bug % flex-column)
+  const boxH = parseInt(box.style.height, 10) || box.clientHeight || 160
+  const usableH = Math.max(80, boxH - (showVal ? 32 : 16))
   box.innerHTML = items.map((it, i) => {
     const v = Number(it[valueKey]) || 0
-    const h = Math.max(4, Math.round((v / max) * 100))
+    const px = v > 0 ? Math.max(6, Math.round((v / max) * usableH)) : 3
     const tip = tipKey ? it[tipKey] : `${it[labelKey] ?? ''}: ${fmt(v)}`
     let cls = 'bar-lime'
     if (colorMode === 'alt') cls = i % 2 ? 'bar-violet' : 'bar-lime'
@@ -118,7 +121,7 @@ function renderBars(containerId, items, valueKey = 'value', labelKey = 'label', 
     const valTag = showVal && v > 0 ? `<span class="chart-num">${compact(v)}</span>` : ''
     return `<div class="chart-col" data-tip="${esc(tip)}">
       ${valTag}
-      <div class="chart-bar ${cls}" style="height:${h}%"></div>
+      <div class="chart-bar ${cls}" style="height:${px}px"></div>
     </div>`
   }).join('')
 }
