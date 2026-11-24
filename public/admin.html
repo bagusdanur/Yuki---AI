@@ -7,7 +7,7 @@
 <title>Yuki Control</title>
 <link rel="icon" type="image/svg+xml" href="/yuki-icon.svg">
 <link rel="alternate icon" href="/favicon.ico">
-<link rel="stylesheet" href="/admin.css?v=5.3.1">
+<link rel="stylesheet" href="/admin.css?v=5.3.2">
 </head>
 <body>
 
@@ -455,9 +455,25 @@
           <div class="block-body" id="ud-summary"></div>
           <div class="block-body">
             <div class="btn-row" id="ud-tabs"></div>
+            <div class="ud-toolbar">
+              <input id="ud-search" type="search" placeholder="Cari isi data pengguna ini…">
+              <select id="ud-size" style="width:auto">
+                <option value="20" selected>20 / hal</option>
+                <option value="50">50 / hal</option>
+                <option value="100">100 / hal</option>
+              </select>
+              <span class="status-line" id="ud-count-badge">—</span>
+            </div>
           </div>
-          <div class="block-body" style="padding:0">
-            <div class="scroll-x"><div id="ud-table"><p class="muted" style="padding:16px">Pilih kategori data di atas.</p></div></div>
+          <div class="block-body" id="ud-body-wrap">
+            <div id="ud-table"><p class="muted">Pilih kategori data di atas.</p></div>
+          </div>
+          <div class="block-body between pager" id="ud-pager">
+            <button class="btn ghost sm" id="ud-first">« Awal</button>
+            <button class="btn ghost sm" id="ud-prev">‹ Sebelumnya</button>
+            <span class="status-line" id="ud-pageinfo">—</span>
+            <button class="btn ghost sm" id="ud-next">Berikutnya ›</button>
+            <button class="btn ghost sm" id="ud-last">Akhir »</button>
           </div>
         </div>
       </div>
@@ -480,10 +496,8 @@
               <span class="status-line" id="lk-status">Siap mencari.</span>
             </div>
           </div>
-          <div class="block-body" style="padding:0">
-            <div class="scroll-x" id="lk-wrap">
-              <p class="muted" style="padding:16px">Ketik nama akun lalu tekan “Cari Kunci”.</p>
-            </div>
+          <div class="block-body" id="lk-wrap">
+            <p class="muted">Ketik nama akun lalu tekan “Cari Kunci”.</p>
           </div>
         </div>
 
@@ -509,8 +523,8 @@
               <button class="btn ghost sm" id="db-load">Muat</button>
             </div>
           </div>
-          <div class="block-body" style="padding:0">
-            <div class="scroll-x" id="db-wrap"><p class="muted" style="padding:16px">Pilih tabel untuk menampilkan data.</p></div>
+          <div class="block-body" id="db-wrap">
+            <p class="muted">Pilih tabel untuk menampilkan data.</p>
           </div>
           <div class="block-body between pager" id="db-pager" style="border-top:3px solid var(--line)">
             <button class="btn ghost sm" id="db-first">« Awal</button>
@@ -698,7 +712,7 @@
 <p id="global-error" class="status-line err" style="text-align:center;padding:12px"></p>
 
 <script src="/lucide-icons.js"></script>
-<script src="/admin.js?v=5.3.1" defer></script>
+<script src="/admin.js?v=5.3.2" defer></script>
 <script src="/admin-tts.js" defer></script>
 </body>
 </html>

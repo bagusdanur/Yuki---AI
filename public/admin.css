@@ -1129,3 +1129,195 @@ input:focus, select:focus, textarea:focus {
   .share-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px; }
   #user-search { width: 100% !important; max-width: 180px; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   v5.3.2 — Smart Record Cards, Chat Viewer & Responsive Lookup
+   Menggantikan tabel lebar yang harus scroll ke samping.
+   ═══════════════════════════════════════════════════════════════ */
+.row-click { cursor: pointer; }
+.row-click:hover td { background: rgba(139, 125, 255, 0.1) !important; }
+
+.ud-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #1e2436;
+}
+.ud-toolbar input[type=search] { flex: 1 1 200px; min-width: 0; }
+.ud-toolbar select { flex: 0 0 auto; }
+.ud-toolbar .status-line { margin-left: auto; font-size: 11px; }
+
+.rec-empty {
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--ink-dim);
+  font-size: 13px;
+  background: #0d1018;
+  border: 1px dashed #242b3f;
+  border-radius: 12px;
+}
+
+/* Chat History Cards */
+.chat-rec-list,
+.record-list,
+.lk-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chat-rec,
+.record-card,
+.lk-card {
+  background: #0f131f;
+  border: 1px solid #22293d;
+  border-radius: 12px;
+  padding: 13px 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  transition: border-color .15s ease;
+}
+.chat-rec:hover,
+.record-card:hover,
+.lk-card:hover {
+  border-color: #343e5c;
+}
+.chat-rec.is-user {
+  border-left: 3px solid var(--accent);
+  background: linear-gradient(90deg, rgba(139, 125, 255, 0.07), #0f131f 32%);
+}
+.chat-rec.is-ai {
+  border-left: 3px solid var(--ok);
+  background: linear-gradient(90deg, rgba(52, 211, 153, 0.06), #0f131f 32%);
+}
+
+.rec-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.rec-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.rec-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 99px;
+  font: 700 10.5px/1.2 var(--mono);
+  letter-spacing: .02em;
+  border: 1px solid #2a3146;
+  background: #171c2b;
+  color: var(--ink-dim);
+}
+.rec-badge.tone-violet { background: rgba(139, 125, 255, 0.16); border-color: rgba(139, 125, 255, 0.4); color: #d0caff; }
+.rec-badge.tone-ok     { background: rgba(52, 211, 153, 0.15); border-color: rgba(52, 211, 153, 0.38); color: #6ee7b7; }
+.rec-badge.tone-info   { background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.38); color: #7dd3fc; }
+.rec-badge.tone-warn   { background: rgba(251, 191, 36, 0.15); border-color: rgba(251, 191, 36, 0.38); color: #fde68a; }
+.rec-badge.tone-bad    { background: rgba(248, 113, 113, 0.15); border-color: rgba(248, 113, 113, 0.38); color: #fca5a5; }
+.rec-badge.tone-dim    { background: #161b29; border-color: #262e44; color: var(--ink-dim); }
+
+.rec-id {
+  font: 700 10.5px/1 var(--mono);
+  color: var(--ink-faint);
+}
+.rec-time {
+  font: 600 11px/1 var(--mono);
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+.rec-body {
+  font-size: 13.5px;
+  line-height: 1.58;
+  color: var(--ink);
+}
+.rec-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+.rec-more {
+  margin-top: 6px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: var(--accent-2);
+  font: 600 11.5px/1 var(--sans);
+  cursor: pointer;
+}
+.rec-more:hover { text-decoration: underline; }
+
+.rec-meta,
+.rec-json-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #1a2030;
+}
+.rec-json-wrap { border-top: 0; padding-top: 0; }
+.rec-kv {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: #141927;
+  border: 1px solid #22293e;
+  font-size: 11.5px;
+  max-width: 100%;
+}
+.rec-kv b {
+  font: 700 10px/1 var(--mono);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  flex: 0 0 auto;
+}
+.rec-kv span {
+  color: var(--ink);
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+.rec-chip {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 7px;
+  background: #141927;
+  border: 1px solid #22293e;
+  font-size: 11.5px;
+  color: var(--ink);
+}
+
+/* Kartu Pencari Kunci Ingatan */
+.lk-top, .lk-mid, .lk-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.lk-name { font-size: 14px; color: var(--ink); }
+.lk-foot {
+  padding-top: 6px;
+  border-top: 1px solid #1a2030;
+  font-size: 11.5px;
+  color: var(--ink-dim);
+}
+.lk-foot b { color: var(--ink); }
+
+@media (max-width: 720px) {
+  .ud-toolbar { flex-direction: column; align-items: stretch; }
+  .ud-toolbar .status-line { margin-left: 0; }
+  .chat-rec, .record-card, .lk-card { padding: 11px 12px; }
+  .rec-body { font-size: 13px; }
+}

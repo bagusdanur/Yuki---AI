@@ -34,6 +34,17 @@ function fmtDate(value) {
   } catch { return String(value) }
 }
 
+function fmtDateTime(value) {
+  if (!value) return '—'
+  try {
+    const raw = String(value)
+    const iso = raw.includes('T') ? (raw.includes('Z') || raw.includes('+') ? raw : raw + 'Z') : raw.replace(' ', 'T') + 'Z'
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) return raw
+    return d.toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+  } catch { return String(value) }
+}
+
 function fmtRelative(value) {
   if (!value) return '—'
   try {
@@ -303,17 +314,23 @@ async function loadOverview() {
       })
     }
 
-    // Top users — dengan ikon peringkat
+    // Top users — dengan ikon peringkat (klik baris untuk buka detail user)
     const top = data.topUsers || []
-    const medalColor = ['c-lime', 'c-amber', 'c-pink']
     $('top-users').innerHTML = top.length
-      ? top.map((u, i) => `<tr>
+      ? top.map((u, i) => `<tr class="row-click" data-uid="${esc(u.userId)}" data-uname="${esc(u.username)}" title="Klik untuk lihat detail ${esc(u.username)}">
           <td><span class="rank-badge ${i < 3 ? 'top' : ''}" style="${i < 3 ? `background:var(--${i === 0 ? 'accent' : i === 1 ? 'warn' : 'accent-3'});color:${i === 1 ? 'var(--line)' : i === 2 ? '#fff' : 'var(--line)'}` : ''}">${i + 1}</span></td>
           <td><b>${esc(u.username)}</b></td>
           <td class="num">${fmt(u.messages)}</td>
           <td class="muted">${esc(fmtRelative(u.lastActive))}</td>
         </tr>`).join('')
       : '<tr><td colspan="4" class="muted">Belum ada data.</td></tr>'
+    $('top-users').querySelectorAll('tr[data-uid]').forEach(tr => {
+      tr.onclick = async () => {
+        showView('view-users')
+        await loadUsers()
+        openUserDetail(tr.dataset.uid, tr.dataset.uname)
+      }
+    })
 
     // Distribusi kedekatan — horizontal bar berwarna + ikon
     const emo = data.emotions || []
@@ -663,10 +680,178 @@ if (resetBtn) {
 }
 
 /* ═══════════════════════════════════════════════════════
-   PENGGUNA
+   PENGGUNA & SMART DATA RENDERER (tanpa scroll samping)
    ═══════════════════════════════════════════════════════ */
 const userState = { page: 1, pageSize: 24, search: '', pageCount: 1 }
-const udState = { userId: '', username: '', table: '', page: 1, pageSize: 50, search: '', pageCount: 1 }
+const udState = { userId: '', username: '', table: '', page: 1, pageSize: 20, search: '', pageCount: 1 }
+
+function syncPager(prefix, page, pageCount, total = null) {
+  const p = Math.max(1, Number(page) || 1)
+  const pc = Math.max(1, Number(pageCount) || 1)
+  const info = $(`${prefix}-pageinfo`)
+  if (info) {
+    info.textContent = total != null
+      ? `Halaman ${p} / ${pc} · ${fmt(total)} data`
+      : `Halaman ${p} / ${pc}`
+  }
+  const setDis = (id, dis) => { const el = $(id); if (el) el.disabled = dis }
+  setDis(`${prefix}-first`, p <= 1)
+  setDis(`${prefix}-prev`, p <= 1)
+  setDis(`${prefix}-next`, p >= pc)
+  setDis(`${prefix}-last`, p >= pc)
+}
+
+function renderExpandableText(rawText, limit = 360) {
+  const str = String(rawText ?? '').trim()
+  if (!str) return '<span class="muted">(kosong)</span>'
+  if (str.length <= limit) return `<div class="rec-text">${esc(str)}</div>`
+  const short = str.slice(0, limit) + '…'
+  return `<div class="rec-text" data-full="${esc(str)}" data-short="${esc(short)}" data-expanded="0">${esc(short)}</div>
+    <button type="button" class="rec-more">Lihat selengkapnya (${fmt(str.length)} karakter)</button>`
+}
+
+function tryFormatJson(val) {
+  if (typeof val !== 'string') return null
+  const s = val.trim()
+  if (!(s.startsWith('{') && s.endsWith('}')) && !(s.startsWith('[') && s.endsWith(']'))) return null
+  try {
+    const parsed = JSON.parse(s)
+    if (Array.isArray(parsed)) {
+      if (!parsed.length) return '<span class="muted">[]</span>'
+      return parsed.slice(0, 12).map(item =>
+        `<span class="rec-chip">${esc(typeof item === 'object' ? JSON.stringify(item) : String(item))}</span>`
+      ).join('') + (parsed.length > 12 ? `<span class="rec-chip muted">+${parsed.length - 12} lagi</span>` : '')
+    }
+    if (parsed && typeof parsed === 'object') {
+      const entries = Object.entries(parsed).filter(([, v]) => v !== null && v !== undefined && v !== '')
+      if (!entries.length) return '<span class="muted">{}</span>'
+      return entries.slice(0, 14).map(([k, v]) => {
+        const vStr = typeof v === 'object' ? JSON.stringify(v) : String(v)
+        return `<span class="rec-kv"><b>${esc(k)}</b><span>${esc(vStr.length > 90 ? vStr.slice(0, 90) + '…' : vStr)}</span></span>`
+      }).join('')
+    }
+  } catch { return null }
+  return null
+}
+
+function bindExpandButtons(root) {
+  if (!root) return
+  root.querySelectorAll('.rec-more').forEach(btn => {
+    btn.onclick = () => {
+      const txt = btn.previousElementSibling
+      if (!txt) return
+      const expanded = txt.dataset.expanded === '1'
+      txt.textContent = expanded ? txt.dataset.short : txt.dataset.full
+      txt.dataset.expanded = expanded ? '0' : '1'
+      btn.textContent = expanded ? `Lihat selengkapnya (${fmt(txt.dataset.full.length)} karakter)` : 'Ringkas'
+    }
+  })
+}
+
+const PRIMARY_COLS = ['content', 'fact', 'summary', 'message', 'description', 'title', 'comic_title', 'text', 'body', 'prompt', 'note', 'event', 'detail', 'value', 'state', 'username']
+const BADGE_COLS = ['role', 'category', 'status', 'kind', 'type', 'mode', 'rating', 'game', 'outcome', 'level', 'importance', 'priority']
+const TIME_COLS = ['created_at', 'updated_at', 'last_active', 'due_at', 'run_at', 'sent_at', 'next_run_at', 'timestamp']
+const SKIP_COLS = new Set(['embedding', 'vector', 'password_hash', 'access_code_hash'])
+
+function badgeTone(col, val) {
+  const v = String(val ?? '').toLowerCase()
+  if (col === 'role') return v === 'user' ? 'tone-violet' : 'tone-ok'
+  if (col === 'rating') return Number(val) > 0 ? 'tone-ok' : 'tone-bad'
+  if (['active', 'done', 'completed', 'win', 'ok', 'resolved'].includes(v)) return 'tone-ok'
+  if (['failed', 'error', 'loss', 'cancelled', 'expired'].includes(v)) return 'tone-bad'
+  if (['pending', 'open_loop', 'promise', 'warn', 'draw'].includes(v)) return 'tone-warn'
+  if (['agent', 'assistant'].includes(v)) return 'tone-info'
+  return 'tone-dim'
+}
+
+function renderSmartRecords(container, data, opts = {}) {
+  if (!container) return
+  const cols = data.columns || []
+  const rows = data.rows || []
+  const table = String(data.table || '')
+  const isUserScoped = Boolean(opts.isUserScoped)
+
+  if (!cols.length || !rows.length) {
+    container.innerHTML = '<div class="rec-empty">Tidak ada data di halaman ini.</div>'
+    return
+  }
+
+  // Tampilan khusus Chat History (bubble percakapan rapi, mudah dibaca)
+  if (table === 'chat_history' || (cols.includes('role') && cols.includes('content'))) {
+    container.innerHTML = `<div class="chat-rec-list">${rows.map(r => {
+      const isUser = String(r.role || '').toLowerCase() === 'user'
+      const who = isUser ? (opts.username || 'User') : 'Yuki'
+      const time = r.created_at ? fmtDateTime(r.created_at) : ''
+      const modeBadge = r.mode && r.mode !== 'companion' ? `<span class="rec-badge tone-info">${esc(r.mode)}</span>` : ''
+      const uidBadge = !isUserScoped && r.user_id ? `<span class="rec-badge tone-dim mono">${esc(r.user_id)}</span>` : ''
+      const idTag = r.id != null ? `<span class="rec-id">#${esc(r.id)}</span>` : ''
+      return `<article class="chat-rec ${isUser ? 'is-user' : 'is-ai'}">
+        <header class="rec-head">
+          <div class="rec-badges">
+            <span class="rec-badge ${isUser ? 'tone-violet' : 'tone-ok'}">${esc(who)}</span>
+            ${modeBadge}${uidBadge}${idTag}
+          </div>
+          <time class="rec-time">${esc(time)}</time>
+        </header>
+        <div class="rec-body">${renderExpandableText(r.content, 420)}</div>
+      </article>`
+    }).join('')}</div>`
+    bindExpandButtons(container)
+    return
+  }
+
+  // Tampilan kartu terstruktur untuk semua tabel lain (memori, fakta, event, bookmark, dll.)
+  const primaryCol = PRIMARY_COLS.find(c => cols.includes(c)) || null
+  const timeCol = TIME_COLS.find(c => cols.includes(c)) || null
+  const badgeCols = BADGE_COLS.filter(c => cols.includes(c))
+
+  container.innerHTML = `<div class="record-list">${rows.map((r, idx) => {
+    const badgesHtml = badgeCols
+      .filter(c => r[c] !== null && r[c] !== undefined && String(r[c]).trim() !== '')
+      .map(c => {
+        const raw = r[c]
+        const label = c === 'rating' ? (Number(raw) > 0 ? '👍 Suka' : '👎 Kurang') : `${c === 'mode' || c === 'role' || c === 'status' || c === 'category' ? '' : c + ': '}${raw}`
+        return `<span class="rec-badge ${badgeTone(c, raw)}">${esc(label)}</span>`
+      }).join('')
+
+    const idVal = r.id != null ? `#${r.id}` : `#${idx + 1}`
+    const timeVal = timeCol && r[timeCol] ? fmtDateTime(r[timeCol]) : ''
+
+    let bodyHtml = ''
+    if (primaryCol && r[primaryCol] !== null && r[primaryCol] !== undefined && String(r[primaryCol]).trim() !== '') {
+      const jsonFormatted = tryFormatJson(String(r[primaryCol]))
+      bodyHtml = jsonFormatted
+        ? `<div class="rec-body rec-json-wrap">${jsonFormatted}</div>`
+        : `<div class="rec-body">${renderExpandableText(r[primaryCol], 360)}</div>`
+    }
+
+    const used = new Set([primaryCol, timeCol, 'id', ...badgeCols])
+    const metaItems = cols
+      .filter(c => !used.has(c) && !SKIP_COLS.has(c) && !(isUserScoped && c === 'user_id'))
+      .map(c => {
+        const v = r[c]
+        if (v === null || v === undefined || String(v).trim() === '') return ''
+        const s = String(v)
+        const formatted = TIME_COLS.includes(c) ? fmtDateTime(s) : (s.length > 140 ? s.slice(0, 140) + '…' : s)
+        return `<span class="rec-kv"><b>${esc(c)}</b><span>${esc(formatted)}</span></span>`
+      })
+      .filter(Boolean)
+      .join('')
+
+    return `<article class="record-card">
+      <header class="rec-head">
+        <div class="rec-badges">
+          <span class="rec-id">${esc(idVal)}</span>
+          ${badgesHtml}
+        </div>
+        <time class="rec-time">${esc(timeVal)}</time>
+      </header>
+      ${bodyHtml}
+      ${metaItems ? `<div class="rec-meta">${metaItems}</div>` : ''}
+    </article>`
+  }).join('')}</div>`
+  bindExpandButtons(container)
+}
 
 async function loadUsers() {
   try {
@@ -678,9 +863,9 @@ async function loadUsers() {
     const users = data.users || []
     window.__usersCache = users
     $('user-grid').innerHTML = users.length
-      ? users.map(u => `<div class="kpi" style="box-shadow:none;border-width:2px;cursor:pointer;gap:8px"
+      ? users.map(u => `<div class="kpi user-card" style="cursor:pointer;gap:8px"
             data-uid="${esc(u.userId)}" data-uname="${esc(u.username)}">
-          <div class="between"><b style="font-size:12px">${esc(u.username || 'tanpa nama')}</b><span class="tag">${fmt(u.messages)}</span></div>
+          <div class="between"><b style="font-size:13px">${esc(u.username || 'tanpa nama')}</b><span class="tag">${fmt(u.messages)}</span></div>
           <span class="kpi-sub">memori ${fmt(u.memories)} · ${esc(fmtRelative(u.lastActive))}</span>
         </div>`).join('')
       : '<p class="muted">Tidak ada pengguna.</p>'
@@ -688,7 +873,7 @@ async function loadUsers() {
     $('user-grid').querySelectorAll('[data-uid]').forEach(card => {
       card.onclick = () => openUserDetail(card.dataset.uid, card.dataset.uname)
     })
-    $('u-pageinfo').textContent = `Halaman ${userState.page} / ${userState.pageCount}`
+    syncPager('u', userState.page, userState.pageCount, data.total)
   } catch (e) { showError(e.message) }
 }
 
@@ -709,21 +894,25 @@ async function openUserDetail(userId, username) {
   udState.userId = userId
   udState.username = username
   udState.table = ''
+  udState.page = 1
+  udState.search = ''
+  if ($('ud-search')) $('ud-search').value = ''
   $('user-detail').classList.remove('hidden')
   $('ud-name').textContent = username || 'tanpa nama'
+  $('user-detail').scrollIntoView({ behavior: 'smooth', block: 'start' })
 
   // Ringkasan diambil dari kartu pengguna yang sudah dimuat (list users).
   const cached = (window.__usersCache || []).find(u => u.userId === userId) || {}
   const wsSize = cached.wsBytes ? (cached.wsBytes / 1024 / 1024).toFixed(1) + ' MB' : '—'
   $('ud-summary').innerHTML = `<div class="kpi-grid">
-      <div class="kpi" style="box-shadow:none;border-width:2px"><span class="kpi-label">Pesan</span><span class="kpi-value sm">${fmt(cached.messages)}</span></div>
-      <div class="kpi" style="box-shadow:none;border-width:2px"><span class="kpi-label">Memori</span><span class="kpi-value sm">${fmt(cached.memories)}</span></div>
-      <div class="kpi" style="box-shadow:none;border-width:2px"><span class="kpi-label">Jadwal</span><span class="kpi-value sm">${fmt(cached.schedules)}</span></div>
-      <div class="kpi" style="box-shadow:none;border-width:2px"><span class="kpi-label">Bookmark</span><span class="kpi-value sm">${fmt(cached.bookmarks)}</span></div>
-      <div class="kpi" style="box-shadow:none;border-width:2px"><span class="kpi-label">Artifact</span><span class="kpi-value sm">${fmt(cached.artifacts)}</span></div>
-      <div class="kpi" style="box-shadow:none;border-width:2px"><span class="kpi-label">Workspace</span><span class="kpi-value sm" style="font-size:15px">${esc(wsSize)}</span></div>
+      <div class="kpi"><span class="kpi-label">Pesan</span><span class="kpi-value sm">${fmt(cached.messages)}</span></div>
+      <div class="kpi"><span class="kpi-label">Memori</span><span class="kpi-value sm">${fmt(cached.memories)}</span></div>
+      <div class="kpi"><span class="kpi-label">Jadwal</span><span class="kpi-value sm">${fmt(cached.schedules)}</span></div>
+      <div class="kpi"><span class="kpi-label">Bookmark</span><span class="kpi-value sm">${fmt(cached.bookmarks)}</span></div>
+      <div class="kpi"><span class="kpi-label">Artifact</span><span class="kpi-value sm">${fmt(cached.artifacts)}</span></div>
+      <div class="kpi"><span class="kpi-label">Workspace</span><span class="kpi-value sm" style="font-size:15px">${esc(wsSize)}</span></div>
     </div>
-    <div class="note" style="margin-top:14px">
+    <div class="note" style="margin-top:12px">
       <b>ID:</b> <span class="mono">${esc(userId)}</span> ·
       <b>Terdaftar:</b> ${esc(fmtDate(cached.createdAt))} ·
       <b>Terakhir aktif:</b> ${esc(fmtRelative(cached.lastActive))}
@@ -733,47 +922,69 @@ async function openUserDetail(userId, username) {
     const data = await request(`/api/admin/users/${encodeURIComponent(userId)}/tables`, { headers: headers() })
     const tables = data.tables || []
     $('ud-tabs').innerHTML = tables.length
-      ? tables.map(t => `<button class="btn ghost sm" data-table="${esc(t.name)}">${esc(t.label || t.name)} <span class="tag">${fmt(t.count)}</span></button>`).join('')
+      ? tables.map((t, i) => `<button type="button" class="btn sm ${i === 0 ? '' : 'ghost'} ud-tab-btn" data-table="${esc(t.name)}">${esc(t.label || t.name)} <span class="tag">${fmt(t.count)}</span></button>`).join('')
       : '<p class="muted">Tidak ada data untuk pengguna ini.</p>'
     $('ud-tabs').querySelectorAll('[data-table]').forEach(b => {
       b.onclick = () => {
-        $('ud-tabs').querySelectorAll('[data-table]').forEach(x => x.classList.remove('btn'))
         $('ud-tabs').querySelectorAll('[data-table]').forEach(x => x.classList.add('ghost'))
         b.classList.remove('ghost')
-        loadUserTable(b.dataset.table)
+        udState.page = 1
+        loadUserTable(b.dataset.table, 1)
       }
     })
-    if (tables.length) loadUserTable(tables[0].name)
-    else $('ud-table').innerHTML = '<p class="muted" style="padding:16px">Tidak ada data.</p>'
+    if (tables.length) loadUserTable(tables[0].name, 1)
+    else {
+      $('ud-table').innerHTML = '<div class="rec-empty">Tidak ada data untuk pengguna ini.</div>'
+      syncPager('ud', 1, 1, 0)
+    }
   } catch (e) { showError(e.message) }
 }
 
-async function loadUserTable(table) {
+async function loadUserTable(table, page = udState.page) {
+  if (!udState.userId || !table) return
   udState.table = table
-  udState.page = 1
+  udState.page = Math.max(1, Number(page) || 1)
+  $('ud-table').innerHTML = '<div class="rec-empty">Memuat data…</div>'
   try {
-    const params = new URLSearchParams({ page: 1, pageSize: udState.pageSize })
+    const params = new URLSearchParams({ page: udState.page, pageSize: udState.pageSize })
+    if (udState.search) params.set('search', udState.search)
     const data = await request(
       `/api/admin/users/${encodeURIComponent(udState.userId)}/table/${encodeURIComponent(table)}?${params}`,
       { headers: headers() })
-    renderUserTable(data)
-  } catch (e) { showError(e.message) }
-}
-
-function renderUserTable(data) {
-  const cols = data.columns || []
-  const rows = data.rows || []
-  if (!cols.length) {
-    $('ud-table').innerHTML = '<p class="muted" style="padding:16px">Tidak ada kolom.</p>'
-    return
+    udState.page = data.page || 1
+    udState.pageCount = data.pageCount || 1
+    renderSmartRecords($('ud-table'), data, { isUserScoped: true, username: udState.username })
+    if ($('ud-count-badge')) $('ud-count-badge').textContent = `${fmt(data.total)} data · ${data.label || data.table}`
+    syncPager('ud', udState.page, udState.pageCount, data.total)
+  } catch (e) {
+    showError(e.message)
+    $('ud-table').innerHTML = `<div class="rec-empty">Gagal memuat: ${esc(e.message)}</div>`
   }
-  $('ud-table').innerHTML = `<table class="tbl">
-      <thead><tr>${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead>
-      <tbody>${rows.map(r => `<tr>${cols.map(c => `<td>${esc(String(r[c] ?? '')).slice(0, 200)}</td>`).join('')}</tr>`).join('')}</tbody>
-    </table>
-    <p class="status-line" style="padding:12px 16px">${fmt(data.total)} baris · halaman ${data.page}/${data.pageCount} · <b>${esc(data.label || data.table)}</b></p>`
 }
 
+if ($('ud-search')) {
+  let t
+  $('ud-search').oninput = (e) => {
+    clearTimeout(t)
+    t = setTimeout(() => {
+      udState.search = e.target.value.trim()
+      if (udState.table) loadUserTable(udState.table, 1)
+    }, 320)
+  }
+}
+if ($('ud-size')) $('ud-size').onchange = (e) => {
+  udState.pageSize = Number(e.target.value)
+  if (udState.table) loadUserTable(udState.table, 1)
+}
+const jumpUdPage = (p) => {
+  if (!udState.table) return
+  loadUserTable(udState.table, p)
+  $('ud-body-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+if ($('ud-first')) $('ud-first').onclick = () => jumpUdPage(1)
+if ($('ud-prev')) $('ud-prev').onclick = () => { if (udState.page > 1) jumpUdPage(udState.page - 1) }
+if ($('ud-next')) $('ud-next').onclick = () => { if (udState.page < udState.pageCount) jumpUdPage(udState.page + 1) }
+if ($('ud-last')) $('ud-last').onclick = () => jumpUdPage(udState.pageCount)
 if ($('ud-close')) $('ud-close').onclick = () => $('user-detail').classList.add('hidden')
 
 /* ═══════════════════════════════════════════════════════
@@ -798,22 +1009,27 @@ async function lookupKey() {
       return
     }
     $('lk-status').textContent = `${users.length} akun ditemukan`
-    $('lk-wrap').innerHTML = `<table class="tbl">
-      <thead><tr>
-        <th>Nama akun</th><th>Kunci ingatan</th><th>Kedekatan</th><th>Pesan</th><th>Aktif terakhir</th><th></th>
-      </tr></thead>
-      <tbody>${users.map(u => `<tr>
-        <td><b>${esc(u.username || '(tanpa nama)')}</b><br><span class="muted" style="font-size:10px">${esc(u.userId)}</span></td>
-        <td>${u.keyRecoverable
+    $('lk-wrap').innerHTML = `<div class="lk-list">${users.map(u => `<article class="lk-card">
+      <div class="lk-top">
+        <div>
+          <b class="lk-name">${esc(u.username || '(tanpa nama)')}</b>
+          <div class="muted mono" style="font-size:11px">${esc(u.userId)}</div>
+        </div>
+        ${bondTag(u.bond, u.bondName)}
+      </div>
+      <div class="lk-mid">
+        <div class="lk-keybox">${u.keyRecoverable
           ? `<code class="lk-code">${esc(u.accessCode)}</code>`
-          : `<span class="lk-locked" title="Kunci disimpan sebagai hash SHA-256 — tidak dapat dikembalikan.">Tersimpan terenkripsi</span>`}</td>
-        <td>${bondTag(u.bond, u.bondName)}</td>
-        <td>${fmt(u.messages)}</td>
-        <td>${u.lastActive ? esc(String(u.lastActive).slice(0, 16)) : '—'}</td>
-        <td class="lk-actions">${u.keyRecoverable
+          : `<span class="lk-locked" title="Kunci disimpan sebagai hash SHA-256 — tidak dapat dikembalikan.">Tersimpan terenkripsi</span>`}</div>
+        <div class="lk-actions">${u.keyRecoverable
           ? `<button class="btn ghost sm" data-copy="${esc(u.accessCode)}">Salin</button>`
-          : `<button class="btn sm" data-newkey="${esc(u.userId)}" data-name="${esc(u.username || '')}">Buat Kunci Baru</button>`}</td>
-      </tr>`).join('')}</tbody></table>`
+          : `<button class="btn sm" data-newkey="${esc(u.userId)}" data-name="${esc(u.username || '')}">Buat Kunci Baru</button>`}</div>
+      </div>
+      <div class="lk-foot">
+        <span><b>${fmt(u.messages)}</b> pesan</span>
+        <span>Aktif: ${u.lastActive ? esc(fmtDateTime(u.lastActive)) : '—'}</span>
+      </div>
+    </article>`).join('')}</div>`
     // Tombol salin kunci
     $('lk-wrap').querySelectorAll('[data-copy]').forEach(btn => {
       btn.onclick = async () => {
@@ -837,19 +1053,13 @@ async function lookupKey() {
         try {
           const data = await request(`/api/admin/users/${encodeURIComponent(uid)}/reset-key`,
             { method: 'POST', headers: headers() })
-          const row = btn.closest('tr')
-          row.querySelector('.lk-code')?.remove()
-          const lock = row.querySelector('.lk-locked')
-          if (lock) lock.remove()
-          const cell = row.children[1]
-          const kode = document.createElement('code')
-          kode.className = 'lk-code lk-new'
-          kode.textContent = data.accessCode
-          cell.appendChild(kode)
-          row.querySelector('.lk-actions').innerHTML =
+          const card = btn.closest('.lk-card')
+          const keybox = card.querySelector('.lk-keybox')
+          keybox.innerHTML = `<code class="lk-code lk-new">${esc(data.accessCode)}</code>`
+          card.querySelector('.lk-actions').innerHTML =
             `<button class="btn ghost sm" data-copy="${esc(data.accessCode)}">Salin</button>`
-          row.querySelector('[data-copy]').onclick = async () => {
-            try { await navigator.clipboard.writeText(data.accessCode) } catch { /* abaikan */ }
+          card.querySelector('[data-copy]').onclick = async (ev) => {
+            try { await navigator.clipboard.writeText(data.accessCode); ev.target.textContent = 'Tersalin ✓' } catch { /* abaikan */ }
           }
           $('lk-status').textContent = `Kunci baru dibuat untuk ${data.username}.`
           hydrateIcons()
@@ -889,19 +1099,15 @@ async function loadDbTables() {
 
 async function loadDbTable() {
   if (!dbState.table) return
+  $('db-wrap').innerHTML = '<div class="rec-empty">Memuat data…</div>'
   try {
     const params = new URLSearchParams({ page: dbState.page, pageSize: dbState.pageSize })
     if (dbState.search) params.set('search', dbState.search)
     const data = await request(`/api/admin/db/table/${encodeURIComponent(dbState.table)}?${params}`, { headers: headers() })
     dbState.page = data.page || 1
     dbState.pageCount = data.pageCount || 1
-    const cols = data.columns || []
-    const rows = data.rows || []
-    $('db-wrap').innerHTML = cols.length ? `<table class="tbl">
-        <thead><tr>${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead>
-        <tbody>${rows.map(r => `<tr>${cols.map(c => `<td>${esc(String(r[c] ?? '')).slice(0, 160)}</td>`).join('')}</tr>`).join('')}</tbody>
-      </table>` : '<p class="muted" style="padding:16px">Tidak ada data.</p>'
-    $('db-pageinfo').textContent = `Halaman ${dbState.page} / ${dbState.pageCount} · ${fmt(data.total)} baris`
+    renderSmartRecords($('db-wrap'), data, { isUserScoped: false })
+    syncPager('db', dbState.page, dbState.pageCount, data.total)
   } catch (e) { showError(e.message) }
 }
 
