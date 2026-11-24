@@ -338,7 +338,7 @@ app.use((req, res, next) => {
   // CSP sandbox-nya sendiri di middleware berikutnya.
   const baseCsp = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss:; media-src 'self' data: blob:; frame-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'"
   if (isEmbedDocument) {
-    res.set('Content-Security-Policy', baseCsp + "; frame-ancestors 'self' https://ryukomik.my.id https://www.ryukomik.my.id https://ryukomik.web.id")
+    res.set('Content-Security-Policy', baseCsp + "; frame-ancestors 'self' https://ryukomik.my.id https://www.ryukomik.my.id https://ryukomik.com https://www.ryukomik.com https://ryukomik.web.id")
   } else {
     res.set('Content-Security-Policy', baseCsp + "; frame-ancestors 'self'")
     res.set('X-Frame-Options', 'SAMEORIGIN')

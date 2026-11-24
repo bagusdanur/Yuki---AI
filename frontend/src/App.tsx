@@ -1219,7 +1219,7 @@ function Onboarding({ onReady }: { onReady: (session: Session, history?: Message
     // top-level. Minta akses storage via Storage Access API — butuh gesture
     // user, dan submit ini memenuhinya. Setelah granted, sesi tersimpan di
     // storage first-party dan persisten antar kunjungan (termasuk dari tab
-    // langsung yuki.ryukomik.web.id). Ditolak -> lanjut apa adanya.
+    // langsung yuki.ryukomik.com). Ditolak -> lanjut apa adanya.
     if (EMBED_COMPANION_ONLY) {
       try {
         const doc = document as Document & { requestStorageAccess?: () => Promise<void> }
@@ -1484,7 +1484,7 @@ export default function App() {
   // ===== Sinkronisasi riwayat lintas-perangkat =====
   // Riwayat chat tersimpan di SERVER (terikat kunci ingatan), tapi tampilan
   // hanya mengambil dari server saat boot. Kalau pengguna chat di embed
-  // (ryukomik.my.id → iframe yuki.ryukomik.web.id) lalu membuka tab web yang
+  // (ryukomik.my.id → iframe yuki.ryukomik.com) lalu membuka tab web yang
   // sudah terbuka dari tadi, chat baru TIDAK pernah muncul — tab itu diam di
   // cache lamanya → terasa "tidak sinkron". Fix: tarik 100 pesan terbaru dari
   // server (1) saat tab kembali aktif/fokus/online, (2) setiap 15 detik selama
