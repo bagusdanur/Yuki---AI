@@ -1,12 +1,20 @@
 import type { AgendaResponse, AgentMemory, AgentProgressResponse, BookmarkedComic, ChatMode, ChatResponse, ComicRecommendation, DailyStatus, DynamicSkill, Message, Milestone, PinnedMessage, PlainMemory, ProactivePushSettings, RelationshipJournalResponse, ReplyQuote, SkillInfo } from './types'
 
+let unauthorizedInFlight: Promise<void> | null = null
+
 async function handleUnauthorized() {
-  // Cookie sesi httpOnly mati (kedaluwarsa/dirotasi/reset). Coba pulihkan
-  // diam-diam pakai kunci ingatan, lalu muat ulang sekali.
-  try {
-    const accessCode = localStorage.getItem('yuki_access_code_v3') || ''
-    if (accessCode && !sessionStorage.getItem('yuki_401_restored')) {
-      sessionStorage.setItem('yuki_401_restored', '1')
+  // Single-flight + cooldown 60 detik agar TIDAK PERNAH terjadi infinite reload loop.
+  if (unauthorizedInFlight) return unauthorizedInFlight
+  unauthorizedInFlight = (async () => {
+    try {
+      const now = Date.now()
+      const lastTry = Number(sessionStorage.getItem('yuki_401_ts') || 0)
+      if (now - lastTry < 60_000) return
+      sessionStorage.setItem('yuki_401_ts', String(now))
+
+      const accessCode = localStorage.getItem('yuki_access_code_v3') || ''
+      if (!accessCode) return
+
       const restored = await fetch('/api/login-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -14,18 +22,19 @@ async function handleUnauthorized() {
         body: JSON.stringify({ accessCode })
       })
       if (restored.ok) {
-        window.location.reload()
-      } else {
+        // Cookie httpOnly baru sudah terpasang — tidak perlu reload paksa.
+        return
+      }
+      if (restored.status === 401 || restored.status === 403) {
+        // Kunci ingatan memang tidak valid -> bersihkan sesi agar muncul layar masuk.
         for (const key of ['yuki_uid_v3', 'yuki_username_v3', 'yuki_access_code_v3', 'yuki_session_token_v3', 'yuki_mode_v3']) {
           localStorage.removeItem(key)
         }
         window.location.reload()
       }
-    } else if (!sessionStorage.getItem('yuki_401_reloaded')) {
-      sessionStorage.setItem('yuki_401_reloaded', '1')
-      window.location.reload()
-    }
-  } catch {}
+    } catch {}
+  })().finally(() => { unauthorizedInFlight = null })
+  return unauthorizedInFlight
 }
 
 async function parse<T>(response: Response): Promise<T> {

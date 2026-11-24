@@ -117,8 +117,6 @@ export default function ComicQuiz({ onClose, onMood }: Props) {
     } finally { setBusy(false) }
   }
 
-  const blurPx = !round ? 14 : round.answered ? 0 : round.hintUsed ? 5 : 13
-
   return (
     <section className="ttt-dock" aria-label="Tebak Komik Ryukomik bersama Yuki">
       <div className="ttt-card quiz-card">
@@ -143,9 +141,8 @@ export default function ComicQuiz({ onClose, onMood }: Props) {
                 {round.cover ? (
                   <img
                     src={round.cover}
-                    alt="Cover komik misteri"
+                    alt="Cover komik Ryukomik"
                     referrerPolicy="no-referrer"
-                    style={{ filter: `blur(${blurPx}px)` }}
                   />
                 ) : (
                   <BookOpen size={28} />
@@ -161,12 +158,12 @@ export default function ComicQuiz({ onClose, onMood }: Props) {
                 {round.hint && (
                   <div className="quiz-hint-pill">
                     <Sparkles size={11} />
-                    <span>{[round.hint.type, round.hint.chapter, round.hint.score ? `★ ${round.hint.score}` : ''].filter(Boolean).join(' · ') || 'Cover diperjelas'}</span>
+                    <span>{[round.hint.type, round.hint.chapter, round.hint.score ? `★ ${round.hint.score}` : ''].filter(Boolean).join(' · ') || 'Info petunjuk terbuka'}</span>
                   </div>
                 )}
                 {!round.answered && !round.hintUsed && (
                   <button type="button" className="quiz-hint-btn" onClick={revealHint} disabled={busy}>
-                    <Eye size={12} /> Petunjuk (perjelas cover)
+                    <Eye size={12} /> Petunjuk (info chapter)
                   </button>
                 )}
               </div>

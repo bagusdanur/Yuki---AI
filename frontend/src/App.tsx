@@ -1498,12 +1498,7 @@ export default function App() {
   useEffect(() => () => requestTimers.current.forEach(window.clearTimeout), [])
   // Bersihkan penanda pemulihan 401 lama supaya pemulihan bisa berjalan lagi
   // kalau cookie mati di tengah sesi yang sama.
-  useEffect(() => {
-    try {
-      sessionStorage.removeItem('yuki_401_restored')
-      sessionStorage.removeItem('yuki_401_reloaded')
-    } catch {}
-  }, [])
+  // Jangan hapus flag cooldown 401 saat mount agar tidak memicu reload loop.
 
   // Rotasi sesi sekali tiap buka aplikasi: server menerbitkan cookie baru
   // (token lama di cookie langsung mati). User tidak sadar; bot yang mencuri

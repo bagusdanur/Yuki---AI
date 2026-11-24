@@ -2508,7 +2508,13 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 
 
 /* ===== V5.1 Mini-Game: Tebak Komik Ryukomik ===== */
-.quiz-card { max-width: 440px; }
+.quiz-card {
+  max-width: 440px;
+  max-height: min(74dvh, 520px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
 .quiz-loading {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   padding: 20px 10px; font-size: 12.5px; color: #9fa4b8;
@@ -2570,7 +2576,19 @@ body { background: radial-gradient(circle at 50% -20%, #1a1c27 0, #08090c 48%); 
 .quiz-opt.is-correct span { background: #46b978; color: #09140e; }
 .quiz-opt.is-wrong { border-color: #dc7777; background: rgba(220, 119, 119, 0.14); }
 .quiz-opt.is-wrong span { background: #dc7777; color: #1d0b0c; }
-.quiz-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 2px; }
+.quiz-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0 2px;
+  margin-top: 2px;
+  background: #0e1017;
+  border-top: 1px solid #202433;
+}
 .quiz-read-link {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 7px 10px; border-radius: 8px; border: 1px solid #353a4d;
