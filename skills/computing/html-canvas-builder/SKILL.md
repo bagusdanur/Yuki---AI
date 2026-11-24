@@ -83,3 +83,4 @@ Gunakan skill ini untuk membangun dan mengiterasi aplikasi web interaktif, landi
    - Gunakan `requestAnimationFrame` dengan delta-time yang stabil (clamp `dt` agar tidak melompat saat tab berpindah).
    - Wajib dukung **Keyboard (WASD/Arrow/Space)** DAN **kontrol sentuh on-screen** untuk HP.
    - Wajib memiliki state lengkap: start/HUD skor/pause/game-over/restart bersih tanpa memory leak listener.
+   - Untuk board/grid game (catur, tic-tac-toe, puzzle): wajib kunci ukuran kotak dengan `grid-template-columns: repeat(N, minmax(0, 1fr))` & `grid-template-rows: repeat(N, minmax(0, 1fr))` + `line-height: 1; overflow: hidden` agar kotak tidak pernah memanjang/mengecil saat bidak berpindah, serta warnai bidak berdasarkan tim/pemain (bukan warna kotak papan).
