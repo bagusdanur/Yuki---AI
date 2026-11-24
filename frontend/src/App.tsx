@@ -5,7 +5,7 @@ import remarkGfm from 'remark-gfm'
 import rehypeSanitize from 'rehype-sanitize'
 import {
   Bell, Bookmark, BookOpen, Bot, Brain, Check, ChevronDown, ChevronUp, Clock3, Code2, Copy, Download,
-  Gamepad2, Globe, Heart, History as HistoryIcon, KeyRound, ListTodo, LoaderCircle, Lock, Maximize2, MessageSquare,
+  Gamepad2, Globe, Heart, History as HistoryIcon, KeyRound, ListTodo, LoaderCircle, Maximize2, MessageSquare,
   Minimize2, Pause, Pin, Play, Radio, RefreshCw, Reply, RotateCcw, Save, Send, Settings, Sparkles, Star,
   Terminal, ThumbsDown, ThumbsUp, Volume2, WifiOff, Wrench, X, Zap, Eye, EyeOff,
   Grid3x3, HandFist, ChevronRight, ShieldAlert,
@@ -21,6 +21,8 @@ import type {
 import AvatarStage from './AvatarStage'
 import TicTacToe from './TicTacToe'
 import RockPaperScissors from './RockPaperScissors'
+import ComicQuiz from './ComicQuiz'
+import RelationshipJournalModal from './components/RelationshipJournalModal'
 
 const SESSION_KEYS = {
   userId: 'yuki_uid_v3', username: 'yuki_username_v3', accessCode: 'yuki_access_code_v3',
@@ -34,7 +36,7 @@ const COOKIE_SESSION = 'cookie'
 
 // Versi pembaruan terakhir yang tercatat di /changelog. Dipakai untuk menandai
 // tombol log dengan titik "ada yang baru" sampai user membukanya.
-const CHANGELOG_VERSION = '5.0.0'
+const CHANGELOG_VERSION = '5.1.0'
 const EMBED_COMPANION_ONLY = new URLSearchParams(window.location.search).get('embed') === '1'
   || /\/embed(?:\.html)?$/i.test(window.location.pathname)
 
@@ -1288,6 +1290,7 @@ export default function App() {
   const [gameEligible, setGameEligible] = useState(false)
   const [gameOpen, setGameOpen] = useState(false)
   const [rpsOpen, setRpsOpen] = useState(false)
+  const [comicQuizOpen, setComicQuizOpen] = useState(false)
   const [gamesOpen, setGamesOpen] = useState(false)
   // Dropdown muncul DI BAWAH tombol; posisinya dihitung lalu dijepit ke tepi
   // layar supaya tidak terpotong di HP (tanpa lapisan abu-abu penuh).
@@ -2001,88 +2004,27 @@ export default function App() {
         <CodexArtifactModal artifact={selectedArtifact} onClose={() => setSelectedArtifact(null)} />
       )}
 
-      {timelineOpen && <div className="timeline-overlay" onClick={() => setTimelineOpen(false)}><section className="timeline-card journal-modal" onClick={event => event.stopPropagation()}>
-        <header><div><small>Buku Kenangan · {bond} ({Math.round(bondValue)}/100)</small><h2>Hubungan Kalian</h2></div><button onClick={() => setTimelineOpen(false)}><X size={17}/></button></header>
-        <div className="memory-tabs journal-tabs">
-          <button type="button" className={journalTab === 'timeline' ? 'active' : ''} onClick={() => setJournalTab('timeline')}>Perjalanan</button>
-          <button type="button" className={journalTab === 'memory' ? 'active' : ''} onClick={() => setJournalTab('memory')}>Kenangan & Panggilan</button>
-          <button type="button" className={journalTab === 'pins' ? 'active' : ''} onClick={() => setJournalTab('pins')}>Dipin ({pins.length})</button>
-        </div>
-        {journalTab === 'timeline' && <>
-          {journal?.stats && <div className="journal-stats">
-            <div><b>{journal.stats.totalMessages}</b><span>Obrolan</span></div>
-            <div><b>{journal.stats.factsCount}</b><span>Fakta diingat</span></div>
-            <div><b>{pins.length}</b><span>Pesan dipin</span></div>
-          </div>}
-          <div className="timeline-list">{milestones.length === 0 ? <div className="agenda-empty">Mulai mengobrol dengan Yuki untuk membuka momen pertama kalian.</div> : milestones.map((item, index) => <article key={`${item.kind}-${index}`}><i/><div><strong>{item.title}</strong><span>{item.detail || `Terbuka pada bond ${Math.round(item.bondValue)}`}</span></div></article>)}</div>
-        </>}
-        {journalTab === 'memory' && <div className="journal-body">
-          <div className="journal-section">
-            <div className="journal-section-head">
-              <strong>Panggilan Khusus</strong>
-              {!journal?.nicknameUnlocked && <span className="journal-lock"><Lock size={12}/> Terbuka di bond 50+ (Luluh)</span>}
-            </div>
-            {journal?.nicknameUnlocked ? (
-              <form className="nickname-form" onSubmit={handleSaveNickname}>
-                <input
-                  type="text"
-                  maxLength={24}
-                  value={nicknameInput}
-                  onChange={e => setNicknameInput(e.target.value)}
-                  placeholder="Contoh: Kakak, Sayang, atau namamu…"
-                />
-                <button type="submit" disabled={nicknameSaving}>{nicknameSaving ? 'Menyimpan…' : 'Simpan'}</button>
-              </form>
-            ) : (
-              <p className="journal-hint">Terus ngobrol dengan Yuki sampai mencapai level Luluh (bond 50) untuk mengatur panggilan khusus.</p>
-            )}
-            {nicknameNotice && <small className="journal-notice">{nicknameNotice}</small>}
-          </div>
-
-          <div className="journal-section">
-            <div className="journal-section-head">
-              <strong>Follow-Up Proaktif (Web Push)</strong>
-              <label className="journal-switch">
-                <input
-                  type="checkbox"
-                  checked={Boolean(proactivePush?.enabled)}
-                  disabled={proactiveSaving}
-                  onChange={e => handleToggleProactivePush({ enabled: e.target.checked })}
-                />
-                <span>{proactivePush?.enabled ? 'Aktif' : 'Nonaktif'}</span>
-              </label>
-            </div>
-            <p className="journal-hint">
-              Yuki sesekali menanyakan kabar rencanamu yang belum selesai (maks 1× per 12 jam, menghormati jam tenang {String(proactivePush?.quietStart ?? 22).padStart(2, '0')}:00–{String(proactivePush?.quietEnd ?? 7).padStart(2, '0')}:00 WIB).
-            </p>
-          </div>
-
-          <div className="journal-section">
-            <strong>Momen Emosional Terbaru</strong>
-            <div className="journal-events">
-              {(!journal?.recentEvents || journal.recentEvents.length === 0) && <p className="journal-hint">Belum ada momen emosional yang tercatat.</p>}
-              {journal?.recentEvents?.map(ev => (
-                <div className="journal-event-item" key={ev.id}>
-                  {ev.mood && <span className="journal-mood-tag">{ev.mood}</span>}
-                  <p>{ev.summary}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>}
-        {journalTab === 'pins' && <div className="journal-pins">
-          {pins.length === 0 && <div className="agenda-empty">Belum ada pesan yang dipin. Klik ikon pin di balasan Yuki untuk menyimpannya di sini.</div>}
-          {pins.map(pin => (
-            <article className="journal-pin-item" key={pin.id}>
-              <div className="journal-pin-head">
-                <strong>{pin.role === 'user' ? 'Kamu' : 'Yuki'}</strong>
-                <button type="button" onClick={() => unpinChatMessage(pin.id).then(r => setPins(r.pins || [])).catch(() => {})} aria-label="Hapus pin"><X size={13}/></button>
-              </div>
-              <p>{pin.content}</p>
-            </article>
-          ))}
-        </div>}
-      </section></div>}
+      {timelineOpen && (
+        <RelationshipJournalModal
+          bond={bond}
+          bondValue={bondValue}
+          milestones={milestones}
+          journal={journal}
+          tab={journalTab}
+          onTabChange={setJournalTab}
+          nicknameInput={nicknameInput}
+          onNicknameChange={setNicknameInput}
+          nicknameSaving={nicknameSaving}
+          nicknameNotice={nicknameNotice}
+          onSaveNickname={handleSaveNickname}
+          proactivePush={proactivePush}
+          proactiveSaving={proactiveSaving}
+          onToggleProactivePush={handleToggleProactivePush}
+          pins={pins}
+          onUnpin={(pinId) => unpinChatMessage(pinId).then(r => setPins(r.pins || [])).catch(() => {})}
+          onClose={() => setTimelineOpen(false)}
+        />
+      )}
 
       {bookmarksOpen && <div className="timeline-overlay" onClick={() => setBookmarksOpen(false)}><section className="timeline-card bookmarks-modal" onClick={event => event.stopPropagation()}>
         <header><div><small>Ryukomik archive</small><h2>Komik Tersimpan</h2></div><button onClick={() => setBookmarksOpen(false)}><X size={17}/></button></header>
@@ -2270,7 +2212,7 @@ export default function App() {
               <button
                 type="button"
                 className="games-item"
-                onClick={() => { setGameOpen(true); setRpsOpen(false); setGamesOpen(false) }}
+                onClick={() => { setGameOpen(true); setRpsOpen(false); setComicQuizOpen(false); setGamesOpen(false) }}
               >
                 <b>Tic-Tac-Toe</b>
                 <small>papan 3×3, dia ikut berpikir</small>
@@ -2279,14 +2221,23 @@ export default function App() {
               <button
                 type="button"
                 className="games-item"
-                onClick={() => { setRpsOpen(true); setGameOpen(false); setGamesOpen(false) }}
+                onClick={() => { setRpsOpen(true); setGameOpen(false); setComicQuizOpen(false); setGamesOpen(false) }}
               >
                 <b>Batu-Kertas-Gunting</b>
                 <small>cepat, satu ronde sekali main</small>
               </button>
+
+              <button
+                type="button"
+                className="games-item"
+                onClick={() => { setComicQuizOpen(true); setGameOpen(false); setRpsOpen(false); setGamesOpen(false) }}
+              >
+                <b>Tebak Komik Ryukomik</b>
+                <small>tebak judul dari cover buram</small>
+              </button>
             </div>
 
-            <footer>Segera: tebak kata, sambung cerita.</footer>
+            <footer>Tebak Komik langsung dari katalog Ryukomik.</footer>
           </div>
         </div>,
         document.body
@@ -2302,6 +2253,13 @@ export default function App() {
       {rpsOpen && session && (
         <RockPaperScissors
           onClose={() => setRpsOpen(false)}
+          onMood={next => setMood(next)}
+        />
+      )}
+
+      {comicQuizOpen && session && (
+        <ComicQuiz
+          onClose={() => setComicQuizOpen(false)}
           onMood={next => setMood(next)}
         />
       )}
