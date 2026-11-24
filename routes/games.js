@@ -13,7 +13,8 @@ export function registerGameRoutes(app, { requireSession, rateLimit, getEmotion 
   const GAMES_PUBLIC = process.env.GAMES_PUBLIC === 'true' || (process.env.GAMES_PUBLIC !== 'false' && GAMES_BETA_IDS.size === 0)
   const gameEligible = (userId) => GAMES_PUBLIC || GAMES_BETA_IDS.has(String(userId || ''))
 
-  if (process.env.GAMES_ENABLED !== 'true') return
+  // Mini-game aktif secara default kecuali GAMES_ENABLED=false
+  if (process.env.GAMES_ENABLED === 'false') return
 
   const batasGame = rateLimit({ max: 120 })
   const khususBeta = (req, res, next) => {
