@@ -914,18 +914,16 @@ app.post('/api/chat', requireSession, rateLimit({ max: 20 }), async (req, res) =
     ])
     const memoryContext = buildMemoryContext(recall)
 
-    // Smart Routing Mode Agent (v5.4.1):
-    // Hanya alihkan spam tanda baca tunggal (".", "...") atau RP/sapaan super singkat (<=35 char)
-    // yang 100% jelas bukan tugas/kelanjutan Agent. Jangan pernah mencegat permintaan game/hasil/artifact/lanjut!
+    // Smart Routing Mode Agent (v5.4.2):
+    // Hanya alihkan pesan tanda baca tunggal (".", "..."), aksi RP murni dalam kurung, atau sapaan 1 kata murni
+    // agar permintaan tugas nyata di Mode Agent (seperti "buatkan tic tactoe") TIDAK PERNAH terlempar ke chat biasa.
     const isCasualChatterForAgent = (text) => {
       const t = String(text || '').trim()
       if (!t) return true
       if (/^[\s.,!?~…\-_*()]+$/.test(t)) return true
-      if (t.length > 35) return false
-      if (/https?:\/\/|www\.|```|`|\/[a-z0-9_-]+\.[a-z]{2,4}/i.test(t)) return false
-      const keepInAgent = /\b(game|catur|chess|kirim|hasil|mana|lanjut|buka|lihat|tampil|mainkan|artifact|perbaiki|benerin|ubah|tambah|hapus|buat|bikin|cek|cari|kode|code|bug|fix|file|web|situs|api|jadwal|ingat|hitung|riset|analisis|tes|test|ulang|coba|komik)\b/i
-      if (keepInAgent.test(t)) return false
-      return true
+      if (/^\([^()]{1,80}\)$/.test(t)) return true
+      if (/^(halo|hai|hi|hey|p|ping|iya|ya|ok|oke|siap|makasih|thanks|hmm+|wkwk+|haha+|hehe+|sun|zzzz+)$/i.test(t)) return true
+      return false
     }
 
     // === MODE AGENT AI (Yuki Agent Skills ReAct Loop) ===
