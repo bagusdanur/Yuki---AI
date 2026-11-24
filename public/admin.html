@@ -7,7 +7,7 @@
 <title>Yuki Control</title>
 <link rel="icon" type="image/svg+xml" href="/yuki-icon.svg">
 <link rel="alternate icon" href="/favicon.ico">
-<link rel="stylesheet" href="/admin.css?v=5.3.2">
+<link rel="stylesheet" href="/admin.css?v=5.4.0">
 </head>
 <body>
 
@@ -59,6 +59,7 @@
       <button class="nav-link" data-view="view-usage"><i class="ico" data-icon="trend"></i>Penggunaan</button>
       <button class="nav-link" data-view="view-users"><i class="ico" data-icon="users"></i>Pengguna</button>
       <button class="nav-link" data-view="view-database"><i class="ico" data-icon="database"></i>Database</button>
+      <button class="nav-link" data-view="view-skills"><i class="ico" data-icon="package"></i>Skills &amp; Plugin</button>
       <button class="nav-link" data-view="view-providers"><i class="ico" data-icon="plug"></i>Provider LLM</button>
       <button class="nav-link" data-view="view-tts"><i class="ico" data-icon="volume"></i>Suara (TTS)</button>
       <button class="nav-link" data-view="view-alerts"><i class="ico" data-icon="bell"></i>Alert<span class="nav-badge" id="nav-alert-count">0</span></button>
@@ -536,6 +537,78 @@
         </div>
       </div>
 
+      <!-- ══════ SKILLS & PLUGIN (Claude SKILL.md Manager) ══════ -->
+      <div class="view" id="view-skills">
+        <div class="block">
+          <div class="block-head">
+            <div><small>Agent Engine</small><h2><i class="ico" data-icon="package"></i> Skills &amp; Plugin Manager</h2></div>
+            <button class="btn ghost sm" id="sk-refresh"><i class="ico" data-icon="refresh"></i> Muat Ulang</button>
+          </div>
+          <div class="block-body">
+            <div class="kpi-grid">
+              <div class="kpi hero"><span class="kpi-label">Total Skills</span><span class="kpi-value sm" id="sk-total">—</span><span class="kpi-sub">bawaan + plugin</span></div>
+              <div class="kpi violet"><span class="kpi-label">Skills Aktif</span><span class="kpi-value sm" id="sk-enabled">—</span><span class="kpi-sub">siap dipakai agent</span></div>
+              <div class="kpi pink"><span class="kpi-label">Plugin Kustom</span><span class="kpi-value sm" id="sk-custom">—</span><span class="kpi-sub">format Claude SKILL.md</span></div>
+              <div class="kpi"><span class="kpi-label">Total Tools</span><span class="kpi-value sm" id="sk-tools">—</span><span class="kpi-sub">function calling</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="block-head">
+            <div><small>Pasang Plugin Baru</small><h2><i class="ico" data-icon="zap"></i> Import Claude SKILL.md</h2></div>
+            <span class="tag">Hot-Reload Otomatis</span>
+          </div>
+          <div class="block-body">
+            <div class="note">Pasang skill berformat <b>Claude SKILL.md</b> langsung dari link GitHub (contoh <code>github.com/anthropics/skills/.../SKILL.md</code>) atau tempel manual di bawah. Begitu disimpan, Yuki Agent langsung memakainya tanpa perlu restart server.</div>
+          </div>
+          <div class="block-body">
+            <h2 class="mini-h" style="margin-bottom:10px">1 · Import dari URL GitHub / Raw SKILL.md</h2>
+            <div class="sk-import-row">
+              <input id="sk-url" type="text" placeholder="https://github.com/owner/repo/blob/main/skills/nama/SKILL.md">
+              <input id="sk-url-slug" type="text" placeholder="Slug opsional" style="max-width:170px">
+              <button type="button" class="btn" id="sk-import-btn">Pasang dari URL</button>
+            </div>
+            <p class="status-line" id="sk-import-status" style="margin-top:8px"></p>
+          </div>
+          <div class="block-body">
+            <div class="between" style="margin-bottom:10px">
+              <h2 class="mini-h">2 · Buat / Edit SKILL.md Manual</h2>
+              <button type="button" class="btn ghost sm" id="sk-template-btn">Isi Template Claude Skill</button>
+            </div>
+            <div class="field">
+              <label for="sk-manual-slug">Slug Skill (huruf kecil, angka, tanda hubung)</label>
+              <input id="sk-manual-slug" type="text" placeholder="contoh: seo-audit-pro">
+            </div>
+            <div class="field">
+              <label for="sk-manual-md">Isi SKILL.md (YAML frontmatter + panduan markdown)</label>
+              <textarea id="sk-manual-md" rows="10" class="mono" style="font-size:12px;line-height:1.5" placeholder="---&#10;name: seo-audit-pro&#10;title: SEO Audit Pro&#10;description: Audit SEO halaman web&#10;triggers: seo, meta, lighthouse&#10;---&#10;&#10;# Instruksi Skill..."></textarea>
+            </div>
+            <div class="between">
+              <span class="status-line" id="sk-manual-status">Siap menyimpan plugin baru.</span>
+              <button type="button" class="btn" id="sk-save-btn">Simpan &amp; Aktifkan</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="block-head">
+            <div><small>Katalog Terpasang</small><h2><i class="ico" data-icon="grid"></i> Daftar Skills &amp; Plugin</h2></div>
+            <div class="row">
+              <input id="sk-search" type="search" placeholder="Cari skill…" style="width:180px">
+              <select id="sk-filter" style="width:auto">
+                <option value="all">Semua</option>
+                <option value="builtin">Built-in</option>
+                <option value="custom">Plugin Kustom</option>
+              </select>
+            </div>
+          </div>
+          <div class="block-body" id="sk-list">
+            <div class="rec-empty">Memuat daftar skill…</div>
+          </div>
+        </div>
+      </div>
+
       <!-- ══════ PROVIDER ══════ -->
       <div class="view" id="view-providers">
         <form id="provider-form">
@@ -712,7 +785,7 @@
 <p id="global-error" class="status-line err" style="text-align:center;padding:12px"></p>
 
 <script src="/lucide-icons.js"></script>
-<script src="/admin.js?v=5.3.2" defer></script>
+<script src="/admin.js?v=5.4.0" defer></script>
 <script src="/admin-tts.js" defer></script>
 </body>
 </html>

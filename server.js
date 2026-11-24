@@ -26,6 +26,7 @@ import { splitNaturalBurst } from './lib/burst-chat.js'
 import { startProactivePushLoop } from './lib/proactive-push.js'
 import { registerGameRoutes } from './routes/games.js'
 import { registerCompanionRoutes } from './routes/companion.js'
+import { registerAdminSkillRoutes } from './routes/admin-skills.js'
 import { responseTarget, shouldInitiate, validateCharacterReply, repairCharacterReply, stripStrayComicBlocks } from './lib/character-quality.js'
 import { warmupEmbedder } from './lib/semantic.js'
 import { searchComics, latestComics, wantsComic, wantsLatestComics, detectRequestedGenre, extractQuery, buildComicContext } from './lib/ryukomik.js'
@@ -1344,6 +1345,9 @@ app.listen(PORT, HOST, () => {
 
 // ═══════════════ COMPANION ROUTES (Modular: routes/companion.js) ═══════════════
 registerCompanionRoutes(app, { requireSession, rateLimit, getEmotion })
+
+// ═══════════════ ADMIN SKILLS & PLUGIN MANAGER (routes/admin-skills.js) ═══════════════
+registerAdminSkillRoutes(app, { requireAdmin, rateLimit })
 
 app.delete('/api/account', requireSession, rateLimit({ max: 3, windowMs: 3600_000 }), (req, res) => {
   deleteScheduledTasks(req.authUserId); deletePushSubscriptions(req.authUserId); deleteAgentMemoryData(req.authUserId); deleteDynamicSkillData(req.authUserId); deleteUserWorkflows(req.authUserId); deleteUserAgentRuns(req.authUserId); deleteUserData(req.authUserId); deleteWorkspaceData(req.authUserId); sessions.delete(req.authUserId); turnCounters.delete(req.authUserId)

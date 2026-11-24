@@ -506,6 +506,7 @@ const VIEW_LOADERS = {
   'view-summary': () => loadSummary(),
   'view-users': () => loadUsers(),
   'view-database': () => loadDbTables(),
+  'view-skills': () => loadAdminSkills(),
   'view-providers': () => loadProviders(),
   'view-alerts': loadOverview,
 }
@@ -1128,6 +1129,205 @@ if ($('db-search')) {
 if ($('alert-refresh')) $('alert-refresh').onclick = loadOverview
 
 /* ═══════════════════════════════════════════════════════
+   SKILLS & PLUGIN MANAGER (Claude SKILL.md Compatible)
+   ═══════════════════════════════════════════════════════ */
+let skillsCache = []
+
+async function loadAdminSkills() {
+  try {
+    const data = await request('/api/admin/skills', { headers: headers() })
+    skillsCache = data.skills || []
+    const s = data.summary || {}
+    if ($('sk-total')) $('sk-total').textContent = fmt(s.total || 0)
+    if ($('sk-enabled')) $('sk-enabled').textContent = fmt(s.enabled || 0)
+    if ($('sk-custom')) $('sk-custom').textContent = fmt(s.custom || 0)
+    if ($('sk-tools')) $('sk-tools').textContent = fmt(s.tools || 0)
+    renderAdminSkills()
+  } catch (e) { showError(e.message) }
+}
+
+function renderAdminSkills() {
+  const box = $('sk-list')
+  if (!box) return
+  const q = ($('sk-search')?.value || '').trim().toLowerCase()
+  const filter = $('sk-filter')?.value || 'all'
+  const items = skillsCache.filter(sk => {
+    if (filter === 'builtin' && sk.isCustom) return false
+    if (filter === 'custom' && !sk.isCustom) return false
+    if (!q) return true
+    return [sk.name, sk.title, sk.category, sk.description, ...(sk.tools || []), ...(sk.triggers || [])]
+      .join(' ').toLowerCase().includes(q)
+  })
+  if (!items.length) {
+    box.innerHTML = '<div class="rec-empty">Tidak ada skill yang cocok dengan filter.</div>'
+    return
+  }
+
+  box.innerHTML = `<div class="sk-grid">${items.map(sk => {
+    const chips = [
+      ...(sk.tools || []).map(t => `<span class="rec-kv"><b>tool</b><span>${esc(t)}</span></span>`),
+      ...(sk.triggers || []).map(t => `<span class="rec-kv"><b>trigger</b><span>${esc(t)}</span></span>`)
+    ].join('')
+    return `<article class="sk-card ${sk.enabled ? '' : 'is-disabled'}" data-sk="${esc(sk.name)}">
+      <div class="sk-head">
+        <div>
+          <div class="rec-badges" style="margin-bottom:4px">
+            <span class="rec-badge ${sk.isCustom ? 'tone-violet' : 'tone-info'}">${sk.isCustom ? 'Plugin Kustom' : 'Built-in'}</span>
+            <span class="rec-badge tone-dim">${esc(sk.category)}</span>
+            <span class="rec-badge tone-dim">v${esc(sk.version)}</span>
+            <span class="rec-badge ${sk.enabled ? 'tone-ok' : 'tone-warn'}">${sk.enabled ? 'Aktif' : 'Nonaktif'}</span>
+          </div>
+          <h3 class="sk-title">${esc(sk.title)} <span class="rec-id">(${esc(sk.name)})</span></h3>
+        </div>
+      </div>
+      <p class="sk-desc">${esc(sk.description || 'Tidak ada deskripsi.')}</p>
+      ${sk.source ? `<div class="muted mono" style="font-size:11px">Sumber: ${esc(sk.source)}</div>` : ''}
+      ${chips ? `<div class="rec-meta">${chips}</div>` : ''}
+      <div class="sk-test-out hidden" data-sk-out="${esc(sk.name)}"></div>
+      <div class="sk-actions">
+        <button type="button" class="btn sm ${sk.enabled ? 'ghost' : 'ok'}" data-sk-toggle="${esc(sk.name)}" data-next="${sk.enabled ? '0' : '1'}">${sk.enabled ? 'Nonaktifkan' : 'Aktifkan'}</button>
+        <button type="button" class="btn ghost sm" data-sk-test="${esc(sk.name)}">Tes Skill</button>
+        <button type="button" class="btn ghost sm" data-sk-view="${esc(sk.name)}">${sk.isCustom ? 'Edit SKILL.md' : 'Lihat SKILL.md'}</button>
+        ${sk.isCustom ? `<button type="button" class="btn bad sm" data-sk-del="${esc(sk.name)}">Hapus</button>` : ''}
+      </div>
+    </article>`
+  }).join('')}</div>`
+
+  box.querySelectorAll('[data-sk-toggle]').forEach(btn => {
+    btn.onclick = async () => {
+      const name = btn.dataset.skToggle
+      const enabled = btn.dataset.next === '1'
+      btn.disabled = true
+      try {
+        await request(`/api/admin/skills/${encodeURIComponent(name)}/toggle`, {
+          method: 'POST', headers: headers(true), body: JSON.stringify({ enabled })
+        })
+        await loadAdminSkills()
+      } catch (e) { showError(e.message); btn.disabled = false }
+    }
+  })
+
+  box.querySelectorAll('[data-sk-test]').forEach(btn => {
+    btn.onclick = async () => {
+      const name = btn.dataset.skTest
+      const out = box.querySelector(`[data-sk-out="${CSS.escape(name)}"]`)
+      btn.disabled = true
+      btn.textContent = 'Menguji…'
+      if (out) { out.classList.remove('hidden', 'ok', 'bad'); out.textContent = 'Menjalankan tes skill…' }
+      try {
+        const res = await request(`/api/admin/skills/${encodeURIComponent(name)}/test`, { method: 'POST', headers: headers() })
+        if (out) {
+          out.classList.add(res.ok ? 'ok' : 'bad')
+          out.textContent = `${res.ok ? '✓ OK' : '✗ GAGAL'} (${res.durationMs ?? 0}ms): ${res.summary || res.error || ''}`
+        }
+      } catch (e) {
+        if (out) { out.classList.add('bad'); out.textContent = `✗ ERROR: ${e.message}` }
+      } finally {
+        btn.disabled = false
+        btn.textContent = 'Tes Skill'
+      }
+    }
+  })
+
+  box.querySelectorAll('[data-sk-view]').forEach(btn => {
+    btn.onclick = () => {
+      const sk = skillsCache.find(x => x.name === btn.dataset.skView)
+      if (!sk) return
+      if ($('sk-manual-slug')) $('sk-manual-slug').value = sk.isCustom ? sk.name : `${sk.name}-custom`
+      if ($('sk-manual-md')) $('sk-manual-md').value = sk.rawMarkdown || ''
+      if ($('sk-manual-status')) {
+        $('sk-manual-status').textContent = sk.isCustom
+          ? `Mengedit plugin "${sk.name}". Klik Simpan & Aktifkan untuk memperbarui.`
+          : `Menampilkan salinan SKILL.md bawaan "${sk.name}" (simpan sebagai slug baru untuk kustomisasi).`
+        $('sk-manual-status').className = 'status-line'
+      }
+      $('sk-manual-md')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  })
+
+  box.querySelectorAll('[data-sk-del]').forEach(btn => {
+    btn.onclick = async () => {
+      const name = btn.dataset.skDel
+      if (!confirm(`Hapus plugin kustom "${name}"?`)) return
+      btn.disabled = true
+      try {
+        await request(`/api/admin/skills/${encodeURIComponent(name)}`, { method: 'DELETE', headers: headers() })
+        await loadAdminSkills()
+      } catch (e) { showError(e.message); btn.disabled = false }
+    }
+  })
+}
+
+if ($('sk-refresh')) $('sk-refresh').onclick = () => loadAdminSkills()
+if ($('sk-search')) $('sk-search').oninput = () => renderAdminSkills()
+if ($('sk-filter')) $('sk-filter').onchange = () => renderAdminSkills()
+
+if ($('sk-template-btn')) {
+  $('sk-template-btn').onclick = () => {
+    if ($('sk-manual-slug') && !$('sk-manual-slug').value.trim()) $('sk-manual-slug').value = 'seo-audit-pro'
+    if ($('sk-manual-md')) {
+      $('sk-manual-md').value = `---
+name: seo-audit-pro
+title: SEO & Copywriting Audit
+category: plugin
+description: Audit SEO on-page, struktur heading, meta tag, dan saran optimasi artikel/landing page.
+version: 1.0.0
+triggers: seo, meta tag, heading, copywriting, landing page
+---
+
+# SEO & Copywriting Audit Skill
+
+Gunakan panduan ini saat pengguna meminta audit SEO atau perbaikan copywriting web:
+1. Periksa title tag (ideal 50-60 karakter), meta description (140-160 karakter), dan hirarki H1-H3.
+2. Evaluasi kejelasan value proposition, CTA, dan keterbacaan di layar HP.
+3. Berikan rekomendasi konkret berupa teks siap pakai (sebelum -> sesudah), bukan saran umum.`
+    }
+  }
+}
+
+if ($('sk-import-btn')) {
+  $('sk-import-btn').onclick = async () => {
+    const url = ($('sk-url')?.value || '').trim()
+    const slug = ($('sk-url-slug')?.value || '').trim()
+    const st = $('sk-import-status')
+    if (!url) { if (st) { st.textContent = 'Masukkan URL GitHub / raw SKILL.md dulu.'; st.className = 'status-line err' } return }
+    $('sk-import-btn').disabled = true
+    if (st) { st.textContent = 'Mengunduh & memasang SKILL.md…'; st.className = 'status-line' }
+    try {
+      const res = await request('/api/admin/skills/import-url', {
+        method: 'POST', headers: headers(true), body: JSON.stringify({ url, slug })
+      })
+      if ($('sk-url')) $('sk-url').value = ''
+      if ($('sk-url-slug')) $('sk-url-slug').value = ''
+      if (st) { st.textContent = `Berhasil dipasang & aktif: ${res.skill?.title || res.skill?.name}`; st.className = 'status-line ok' }
+      await loadAdminSkills()
+    } catch (e) {
+      if (st) { st.textContent = `Gagal: ${e.message}`; st.className = 'status-line err' }
+    } finally { $('sk-import-btn').disabled = false }
+  }
+}
+
+if ($('sk-save-btn')) {
+  $('sk-save-btn').onclick = async () => {
+    const slug = ($('sk-manual-slug')?.value || '').trim()
+    const markdown = ($('sk-manual-md')?.value || '').trim()
+    const st = $('sk-manual-status')
+    if (!markdown) { if (st) { st.textContent = 'Isi SKILL.md tidak boleh kosong.'; st.className = 'status-line err' } return }
+    $('sk-save-btn').disabled = true
+    if (st) { st.textContent = 'Menyimpan & mengaktifkan plugin…'; st.className = 'status-line' }
+    try {
+      const res = await request('/api/admin/skills/install', {
+        method: 'POST', headers: headers(true), body: JSON.stringify({ slug, markdown })
+      })
+      if (st) { st.textContent = `Tersimpan & aktif: ${res.skill?.title || res.skill?.name}`; st.className = 'status-line ok' }
+      await loadAdminSkills()
+    } catch (e) {
+      if (st) { st.textContent = `Gagal: ${e.message}`; st.className = 'status-line err' }
+    } finally { $('sk-save-btn').disabled = false }
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
    AUTENTIKASI
    ═══════════════════════════════════════════════════════ */
 function showApp() {
@@ -1208,7 +1408,7 @@ async function boot() {
   // Pasang listener hash SEBELUM await lambat — klik tab yang terjadi di
   // tengah boot harus langsung direspons, bukan menunggu load data.
   const hashNow = () => location.hash.replace('#', '')
-  const valid = ['view-overview', 'view-summary', 'view-usage', 'view-users', 'view-memory', 'view-schedule', 'view-database', 'view-providers', 'view-tts', 'view-alerts']
+  const valid = ['view-overview', 'view-summary', 'view-usage', 'view-users', 'view-memory', 'view-schedule', 'view-database', 'view-skills', 'view-providers', 'view-tts', 'view-alerts']
   window.addEventListener('hashchange', () => {
     const h = hashNow()
     if (valid.includes(h)) { showView(h); const f = VIEW_LOADERS[h]; if (f) f() }

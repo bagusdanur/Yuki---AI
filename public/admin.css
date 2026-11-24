@@ -1321,3 +1321,70 @@ input:focus, select:focus, textarea:focus {
   .chat-rec, .record-card, .lk-card { padding: 11px 12px; }
   .rec-body { font-size: 13px; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   v5.4 — Skills & Plugin Manager (Claude SKILL.md Installer)
+   ═══════════════════════════════════════════════════════════════ */
+.sk-import-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.sk-import-row input:first-child { flex: 1 1 260px; min-width: 0; }
+
+.sk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(330px, 100%), 1fr));
+  gap: 12px;
+}
+.sk-card {
+  background: #0f131f;
+  border: 1px solid #22293d;
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color .15s ease, opacity .15s ease;
+}
+.sk-card:hover { border-color: #3a4568; }
+.sk-card.is-disabled { opacity: .62; border-style: dashed; }
+.sk-title {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.3;
+}
+.sk-desc {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-dim);
+  line-height: 1.5;
+}
+.sk-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid #1a2030;
+}
+.sk-test-out {
+  padding: 8px 10px;
+  border-radius: 9px;
+  font: 600 11px/1.45 var(--mono);
+  background: #141927;
+  border: 1px solid #262f47;
+  color: var(--ink-dim);
+  word-break: break-word;
+}
+.sk-test-out.ok { background: rgba(52, 211, 153, 0.1); border-color: rgba(52, 211, 153, 0.35); color: #6ee7b7; }
+.sk-test-out.bad { background: rgba(248, 113, 113, 0.1); border-color: rgba(248, 113, 113, 0.35); color: #fca5a5; }
+
+@media (max-width: 720px) {
+  .sk-import-row { flex-direction: column; align-items: stretch; }
+  .sk-import-row input { max-width: none !important; }
+  .sk-card { padding: 12px 13px; }
+}
